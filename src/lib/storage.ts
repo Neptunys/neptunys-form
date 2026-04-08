@@ -482,7 +482,7 @@ export async function signInAdmin(email: string, password: string, remember = tr
 
   if (localAdmin.isEnabled) {
     const emailMatches = localAdmin.email === normalizedEmail
-    const passwordMatches = localAdmin.password === normalizedPassword
+    const passwordMatches = localAdmin.passwords.includes(normalizedPassword)
 
     if (!emailMatches || !passwordMatches) {
       throw new Error('Invalid admin credentials.')
@@ -708,11 +708,16 @@ export function getAdminRememberPreference() {
 function getLocalAdminConfig() {
   const email = String(import.meta.env.VITE_ADMIN_EMAIL ?? '').trim().toLowerCase()
   const password = String(import.meta.env.VITE_ADMIN_PASSWORD ?? '').trim()
+  const passwords = Array.from(new Set([
+    password,
+    password.endsWith('.') ? password.slice(0, -1) : '',
+  ].filter(Boolean)))
 
   return {
     email,
     password,
-    isEnabled: Boolean(email && password),
+    passwords,
+    isEnabled: Boolean(email && passwords.length),
   }
 }
 
