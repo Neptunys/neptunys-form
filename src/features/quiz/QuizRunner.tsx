@@ -5,6 +5,7 @@ import { Button } from '../../components/Button'
 import { ProgressBar } from '../../components/ProgressBar'
 import { evaluateResult } from '../../lib/resultLogic'
 import { assignVariant, completeSession, resolveQuizContext, startSession, submitLead, trackEvent } from '../../lib/storage'
+import { useSharedControlWidth } from '../../lib/useSharedControlWidth'
 import type { LeadPayload, ProjectDefinition, Question, QuizDefinition, QuizWorkflowEdge, QuizWorkflowNode, ResultKey, SessionAnswers, SessionRecord, VariantKey } from '../../lib/types'
 
 const MICRO_MESSAGES = [
@@ -180,6 +181,21 @@ export function QuizRunner() {
   const activeProject = project ?? null
   const activeQuiz = quiz ?? null
   const activeVariant = variant ?? null
+  const activeBuilderTheme = useMemo(() => {
+    const builderDesign = activeQuiz?.builderDesign
+    if (!builderDesign?.themes?.length) {
+      return null
+    }
+
+    const selectedTheme = builderDesign.themes.find((theme) => theme.id === builderDesign.activeThemeId) ?? builderDesign.themes[0]
+
+    return {
+      ...selectedTheme,
+      buttonBorderColor: selectedTheme.buttonBorderColor ?? selectedTheme.buttonColor,
+      answerBorderColor: selectedTheme.answerBorderColor ?? 'rgba(255,255,255,0.18)',
+      answerTextColor: selectedTheme.answerTextColor ?? selectedTheme.textColor,
+    }
+  }, [activeQuiz])
 
   const workflowNodeLookup = useMemo(
     () => new Map(activeQuiz?.workflow.nodes.map((node) => [node.id, node]) ?? []),
@@ -278,6 +294,13 @@ export function QuizRunner() {
     '--quiz-progress-fill': activeQuiz?.theme.progressFill,
     '--quiz-radius': `${activeQuiz?.theme.radius ?? 28}px`,
     '--quiz-max-width': `${previewDevice === 'mobile' ? activeQuiz?.theme.mobileMaxWidth ?? 390 : activeQuiz?.theme.desktopMaxWidth ?? 880}px`,
+    '--quiz-builder-button-bg': activeBuilderTheme?.buttonColor,
+    '--quiz-builder-button-border': activeBuilderTheme?.buttonBorderColor,
+    '--quiz-builder-button-text': activeBuilderTheme?.buttonTextColor,
+    '--quiz-builder-answer-bg': activeBuilderTheme?.answerColor,
+    '--quiz-builder-answer-border': activeBuilderTheme?.answerBorderColor,
+    '--quiz-builder-answer-text': activeBuilderTheme?.answerTextColor,
+    '--quiz-control-radius': activeBuilderTheme ? ({ none: '0px', soft: '10px', pill: '999px' }[activeBuilderTheme.cornerRadius]) : undefined,
   } as CSSProperties
 
   useEffect(() => {
@@ -723,6 +746,110 @@ export function QuizRunner() {
 
   const result = resultKey && activeQuiz ? activeQuiz.resultContent[resultKey] : null
 
+  const introButtonLabels = useMemo(() => activeVariant ? [activeVariant.intro.cta] : [], [activeVariant])
+  const questionOptionLabels = useMemo(() => currentQuestion ? currentQuestion.options.map((option) => option.label) : [], [currentQuestion])
+  const questionContinueLabels = useMemo(() => currentQuestion?.kind === 'multi' ? ['Continue'] : [], [currentQuestion?.kind])
+  const resultButtonLabels = useMemo(() => result ? [result.primaryCta, result.secondaryCta ?? ''].filter(Boolean) : [], [result])
+  const transitionButtonLabels = useMemo(() => activeQuiz ? [activeQuiz.transitionScreen.cta] : [], [activeQuiz])
+  const leadSingleOptionLabels = useMemo(
+    () => currentLeadStep?.kind === 'single' && currentLeadStep.options ? currentLeadStep.options : [],
+    [currentLeadStep],
+  )
+  const leadTextButtonLabels = useMemo(() => {
+    if (!currentLeadStep || currentLeadStep.kind === 'single') {
+      return []
+    }
+
+    return [currentLeadStep.cta, currentLeadStep.id === 'email' ? 'Skip this step' : ''].filter(Boolean)
+  }, [currentLeadStep])
+  const consentSubmitLabel = isSubmitting ? 'Submitting...' : 'Submit'
+  const consentButtonLabels = useMemo(() => [consentSubmitLabel, 'Back'], [consentSubmitLabel])
+  const thankYouButtonLabels = useMemo(
+    () => activeQuiz ? [activeQuiz.thankYouScreen.primaryCta, activeQuiz.thankYouScreen.secondaryCta] : [],
+    [activeQuiz],
+  )
+  const liveViewButtonLabels = useMemo(() => ['Live view only'], [])
+
+  const introButtonWidth = useSharedControlWidth(introButtonLabels, {
+    fontFamily: activeBuilderTheme?.fontFamily ?? 'var(--font-sans)',
+    fontSizePx: 16,
+    fontWeight: 500,
+    minWidth: 180,
+    horizontalPadding: 22,
+  })
+
+  const questionOptionWidth = useSharedControlWidth(questionOptionLabels, {
+    fontFamily: activeBuilderTheme?.fontFamily ?? 'var(--font-sans)',
+    fontSizePx: 16,
+    fontWeight: 500,
+    minWidth: 220,
+    horizontalPadding: 22,
+  })
+
+  const questionContinueButtonWidth = useSharedControlWidth(questionContinueLabels, {
+    fontFamily: activeBuilderTheme?.fontFamily ?? 'var(--font-sans)',
+    fontSizePx: 16,
+    fontWeight: 500,
+    minWidth: 180,
+    horizontalPadding: 22,
+  })
+
+  const resultButtonWidth = useSharedControlWidth(resultButtonLabels, {
+    fontFamily: activeBuilderTheme?.fontFamily ?? 'var(--font-sans)',
+    fontSizePx: 16,
+    fontWeight: 500,
+    minWidth: 180,
+    horizontalPadding: 22,
+  })
+
+  const transitionButtonWidth = useSharedControlWidth(transitionButtonLabels, {
+    fontFamily: activeBuilderTheme?.fontFamily ?? 'var(--font-sans)',
+    fontSizePx: 16,
+    fontWeight: 500,
+    minWidth: 180,
+    horizontalPadding: 22,
+  })
+
+  const leadSingleOptionWidth = useSharedControlWidth(leadSingleOptionLabels, {
+    fontFamily: activeBuilderTheme?.fontFamily ?? 'var(--font-sans)',
+    fontSizePx: 16,
+    fontWeight: 500,
+    minWidth: 220,
+    horizontalPadding: 22,
+  })
+
+  const leadTextButtonWidth = useSharedControlWidth(leadTextButtonLabels, {
+    fontFamily: activeBuilderTheme?.fontFamily ?? 'var(--font-sans)',
+    fontSizePx: 16,
+    fontWeight: 500,
+    minWidth: 180,
+    horizontalPadding: 22,
+  })
+
+  const consentButtonWidth = useSharedControlWidth(consentButtonLabels, {
+    fontFamily: activeBuilderTheme?.fontFamily ?? 'var(--font-sans)',
+    fontSizePx: 16,
+    fontWeight: 500,
+    minWidth: 180,
+    horizontalPadding: 22,
+  })
+
+  const thankYouButtonWidth = useSharedControlWidth(thankYouButtonLabels, {
+    fontFamily: activeBuilderTheme?.fontFamily ?? 'var(--font-sans)',
+    fontSizePx: 16,
+    fontWeight: 500,
+    minWidth: 180,
+    horizontalPadding: 22,
+  })
+
+  const liveViewButtonWidth = useSharedControlWidth(liveViewButtonLabels, {
+    fontFamily: activeBuilderTheme?.fontFamily ?? 'var(--font-sans)',
+    fontSizePx: 16,
+    fontWeight: 500,
+    minWidth: 180,
+    horizontalPadding: 22,
+  })
+
   if (!activeProject || !activeQuiz || !activeVariant) {
     return (
       <div className="quiz-page">
@@ -766,9 +893,10 @@ export function QuizRunner() {
                   <span key={item} className="trust-chip">{item}</span>
                 ))}
               </div>
-              <div className="button-row">
+              <div className="button-row" ref={introButtonWidth.containerRef}>
                 <Button
                   tone="primary"
+                  style={introButtonWidth.controlStyle}
                   onClick={() => {
                     const firstQuestionNode = activeQuiz.workflow.nodes.find((node) => node.type === 'question' && node.variantId === variantId)
                     if (firstQuestionNode) {
@@ -791,7 +919,7 @@ export function QuizRunner() {
                 {currentQuestion.helper ? <p className="muted">{currentQuestion.helper}</p> : null}
               </div>
 
-              <div className={`option-grid ${currentQuestion.kind === 'multi' ? 'multi' : ''}`}>
+              <div className={`option-grid ${currentQuestion.kind === 'multi' ? 'multi' : ''}`} ref={questionOptionWidth.containerRef}>
                 {currentQuestion.options.map((option) => {
                   const currentAnswer = answers[currentQuestion.id]
                   const isSelected = Array.isArray(currentAnswer)
@@ -806,6 +934,7 @@ export function QuizRunner() {
                     <Button
                       key={option.id}
                       tone={tone}
+                      style={questionOptionWidth.controlStyle}
                       className={`option-button ${pendingChoice?.questionId === currentQuestion.id && pendingChoice.optionId === option.id ? 'is-committing' : ''}`}
                       disabled={pendingChoice?.questionId === currentQuestion.id}
                       onClick={() => {
@@ -827,8 +956,8 @@ export function QuizRunner() {
               </div>
 
               {currentQuestion.kind === 'multi' ? (
-                <div className="button-row">
-                  <Button tone="primary" onClick={() => recordAnswer(currentQuestion, (answers[currentQuestion.id] as string[]) ?? [])}>
+                <div className="button-row" ref={questionContinueButtonWidth.containerRef}>
+                  <Button tone="primary" style={questionContinueButtonWidth.controlStyle} onClick={() => recordAnswer(currentQuestion, (answers[currentQuestion.id] as string[]) ?? [])}>
                     Continue
                   </Button>
                 </div>
@@ -847,9 +976,9 @@ export function QuizRunner() {
                   ))}
                 </div>
               ) : null}
-              <div className="button-row">
-                <Button tone="primary" onClick={handleResultPrimary}>{result.primaryCta}</Button>
-                {result.secondaryCta ? <Button onClick={handleResultSecondary}>{result.secondaryCta}</Button> : null}
+              <div className="button-row" ref={resultButtonWidth.containerRef}>
+                <Button tone="primary" style={resultButtonWidth.controlStyle} onClick={handleResultPrimary}>{result.primaryCta}</Button>
+                {result.secondaryCta ? <Button style={resultButtonWidth.controlStyle} onClick={handleResultSecondary}>{result.secondaryCta}</Button> : null}
               </div>
             </div>
           ) : null}
@@ -863,9 +992,10 @@ export function QuizRunner() {
                   <span key={item} className="trust-chip">{item}</span>
                 ))}
               </div>
-              <div className="button-row">
+              <div className="button-row" ref={transitionButtonWidth.containerRef}>
                 <Button
                   tone="primary"
+                  style={transitionButtonWidth.controlStyle}
                   onClick={() => {
                     const firstLeadNode = resolveNextNode()
                     if (firstLeadNode && firstLeadNode.type === 'lead') {
@@ -889,13 +1019,14 @@ export function QuizRunner() {
               </div>
 
               {currentLeadStep.kind === 'single' && currentLeadStep.options ? (
-                <div className="option-grid">
+                <div className="option-grid" ref={leadSingleOptionWidth.containerRef}>
                   {currentLeadStep.options.map((option) => {
                     const selectedValue = currentLeadStep.id === 'contact-method' ? lead.contactMethod : lead.bestTime
                     return (
                       <Button
                         key={option}
                         tone={selectedValue === option ? 'selected' : 'secondary'}
+                        style={leadSingleOptionWidth.controlStyle}
                         className="option-button"
                         onClick={() => handleLeadSelection(currentLeadStep.id, option)}
                       >
@@ -919,9 +1050,9 @@ export function QuizRunner() {
                     }
                     onChange={(event) => updateLeadField(currentLeadStep.id, event.target.value)}
                   />
-                  <div className="button-row">
-                    <Button tone="primary" onClick={handleLeadTextStepSubmit}>{currentLeadStep.cta}</Button>
-                    {currentLeadStep.id === 'email' ? <Button onClick={() => setPhase('consent')}>Skip this step</Button> : null}
+                  <div className="button-row" ref={leadTextButtonWidth.containerRef}>
+                    <Button tone="primary" style={leadTextButtonWidth.controlStyle} onClick={handleLeadTextStepSubmit}>{currentLeadStep.cta}</Button>
+                    {currentLeadStep.id === 'email' ? <Button style={leadTextButtonWidth.controlStyle} onClick={() => setPhase('consent')}>Skip this step</Button> : null}
                   </div>
                 </div>
               )}
@@ -946,11 +1077,12 @@ export function QuizRunner() {
                 />
                 <span>I agree to be contacted about my eligibility check.</span>
               </label>
-              <div className="button-row">
-                <Button tone="primary" onClick={() => void handleSubmitLead()} disabled={isSubmitting}>
-                  {isSubmitting ? 'Submitting...' : 'Submit'}
+              <div className="button-row" ref={consentButtonWidth.containerRef}>
+                <Button tone="primary" style={consentButtonWidth.controlStyle} onClick={() => void handleSubmitLead()} disabled={isSubmitting}>
+                  {consentSubmitLabel}
                 </Button>
                 <Button
+                  style={consentButtonWidth.controlStyle}
                   onClick={() => {
                     const previousLeadStep = activeQuiz.leadSteps[Math.max(0, leadIndex - 1)]
                     const previousLeadNode = activeQuiz.workflow.nodes.find((node) => node.type === 'lead' && node.leadStepId === previousLeadStep?.id)
@@ -971,9 +1103,9 @@ export function QuizRunner() {
             <div className="stack">
               <h2 style={{ fontSize: '2rem', marginBottom: 0 }}>{activeQuiz.thankYouScreen.heading}</h2>
               <p className="muted">{activeQuiz.thankYouScreen.body}</p>
-              <div className="button-row">
-                <Button tone="primary">{activeQuiz.thankYouScreen.primaryCta}</Button>
-                <Button>{activeQuiz.thankYouScreen.secondaryCta}</Button>
+              <div className="button-row" ref={thankYouButtonWidth.containerRef}>
+                <Button tone="primary" style={thankYouButtonWidth.controlStyle}>{activeQuiz.thankYouScreen.primaryCta}</Button>
+                <Button style={thankYouButtonWidth.controlStyle}>{activeQuiz.thankYouScreen.secondaryCta}</Button>
               </div>
             </div>
           ) : null}
@@ -1000,8 +1132,8 @@ export function QuizRunner() {
             <p style={{ marginBottom: 8 }}>{Math.round(progressValue)}% complete</p>
             <span className="muted">Answers are stored to the current session for analytics and lead attribution.</span>
           </div>
-          <div className="button-row">
-            <Button tone="primary" onClick={() => window.open(`/q/${activeQuiz.slug}?live=1`, '_blank', 'noopener,noreferrer')}>
+          <div className="button-row" ref={liveViewButtonWidth.containerRef}>
+            <Button tone="primary" style={liveViewButtonWidth.controlStyle} onClick={() => window.open(`/q/${activeQuiz.slug}?live=1`, '_blank', 'noopener,noreferrer')}>
               Live view only
             </Button>
           </div>

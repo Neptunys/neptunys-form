@@ -106,8 +106,11 @@ export type QuizBuilderTheme = {
   questionAlign: 'left' | 'center' | 'right'
   contentOffsetX: number
   buttonColor: string
+  buttonBorderColor: string
   buttonTextColor: string
   answerColor: string
+  answerBorderColor: string
+  answerTextColor: string
   cornerRadius: 'none' | 'soft' | 'pill'
   backgroundColor: string
   backgroundImage: string

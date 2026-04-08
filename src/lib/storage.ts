@@ -6,6 +6,7 @@ import type {
   DashboardMetrics,
   LeadPayload,
   LeadRecord,
+  QuizBuilderDesign,
   ProjectAutomation,
   ProjectDefinition,
   QuizDefinition,
@@ -22,6 +23,7 @@ const LEADS_KEY = 'neptunys.leads'
 const ADMIN_KEY = 'neptunys.admin'
 const ADMIN_PERSIST_KEY = 'neptunys.admin.persist'
 const PROJECTS_KEY = 'neptunys.projects'
+const BUILDER_DESIGNS_KEY = 'neptunys.builder-designs'
 const AUTOMATIONS_KEY = 'neptunys.automations'
 
 type StartSessionInput = {
@@ -62,6 +64,8 @@ type QuizDomainRow = {
   quiz_id: string
   hostname: string
 }
+
+type BuilderDesignRegistry = Record<string, QuizBuilderDesign>
 
 function readList<T>(key: string): T[] {
   try {
@@ -252,6 +256,39 @@ function normalizeStoredProjects(projects: ProjectDefinition[]) {
   return isLegacyDemoRegistry(normalized) ? defaultProjects : normalized
 }
 
+function extractBuilderDesignRegistry(projects: ProjectDefinition[]): BuilderDesignRegistry {
+  return projects.reduce<BuilderDesignRegistry>((registry, project) => {
+    for (const quiz of project.quizzes) {
+      if (quiz.builderDesign) {
+        registry[quiz.id] = quiz.builderDesign
+      }
+    }
+
+    return registry
+  }, {})
+}
+
+function stripBuilderDesignsFromProjects(projects: ProjectDefinition[]): ProjectDefinition[] {
+  return projects.map((project) => ({
+    ...project,
+    quizzes: project.quizzes.map(({ builderDesign: _builderDesign, ...quiz }) => quiz),
+  }))
+}
+
+function readBuilderDesignRegistryLocal(): BuilderDesignRegistry {
+  return readRecord<BuilderDesignRegistry>(BUILDER_DESIGNS_KEY, {})
+}
+
+function mergeProjectsWithBuilderDesignRegistry(projects: ProjectDefinition[], builderDesigns: BuilderDesignRegistry) {
+  return projects.map((project) => ({
+    ...project,
+    quizzes: project.quizzes.map((quiz) => ({
+      ...quiz,
+      builderDesign: builderDesigns[quiz.id] ?? quiz.builderDesign,
+    })),
+  }))
+}
+
 async function fetchRemoteRegistry(options?: { publishedOnly?: boolean }) {
   if (!hasSupabaseConfig || !supabase) {
     return null
@@ -297,20 +334,22 @@ async function fetchRemoteRegistry(options?: { publishedOnly?: boolean }) {
 }
 
 function saveProjectRegistryLocal(projects: ProjectDefinition[]) {
-  window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects))
+  window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(stripBuilderDesignsFromProjects(projects)))
+  window.localStorage.setItem(BUILDER_DESIGNS_KEY, JSON.stringify(extractBuilderDesignRegistry(projects)))
 }
 
 export function getProjectRegistry(): ProjectDefinition[] {
   const stored = window.localStorage.getItem(PROJECTS_KEY)
+  const builderDesigns = readBuilderDesignRegistryLocal()
 
   if (!stored) {
-    return defaultProjects
+    return normalizeStoredProjects(mergeProjectsWithBuilderDesignRegistry(defaultProjects, builderDesigns))
   }
 
   try {
-    return normalizeStoredProjects(JSON.parse(stored) as ProjectDefinition[])
+    return normalizeStoredProjects(mergeProjectsWithBuilderDesignRegistry(JSON.parse(stored) as ProjectDefinition[], builderDesigns))
   } catch {
-    return defaultProjects
+    return normalizeStoredProjects(mergeProjectsWithBuilderDesignRegistry(defaultProjects, builderDesigns))
   }
 }
 
@@ -365,15 +404,22 @@ export function getProjectAutomationInsights(project: ProjectDefinition, automat
   }
 }
 
-export async function loadProjectRegistry() {
+export async function loadProjectRegistry(options?: { preferLocal?: boolean }) {
+  const localProjects = getProjectRegistry()
+  const localBuilderDesigns = readBuilderDesignRegistryLocal()
+
+  if (options?.preferLocal && localProjects.length) {
+    return localProjects
+  }
+
   const remote = await fetchRemoteRegistry()
   if (remote?.length) {
-    const normalizedRemote = normalizeStoredProjects(remote)
+    const normalizedRemote = normalizeStoredProjects(mergeProjectsWithBuilderDesignRegistry(remote, localBuilderDesigns))
     saveProjectRegistryLocal(normalizedRemote)
     return normalizedRemote
   }
 
-  return getProjectRegistry()
+  return localProjects
 }
 
 export async function saveProjectRegistry(projects: ProjectDefinition[]) {
@@ -459,14 +505,16 @@ function resolveQuizContextLocal(slug?: string) {
 export async function resolveQuizContext(slug?: string) {
   const remote = await fetchRemoteRegistry({ publishedOnly: true })
   if (remote?.length) {
-    saveProjectRegistryLocal(remote)
+    const localBuilderDesigns = readBuilderDesignRegistryLocal()
+    const normalizedRemote = normalizeStoredProjects(mergeProjectsWithBuilderDesignRegistry(remote, localBuilderDesigns))
+    saveProjectRegistryLocal(normalizedRemote)
 
-    const byHost = findQuizByHostname(remote, window.location.hostname)
+    const byHost = findQuizByHostname(normalizedRemote, window.location.hostname)
     if (byHost) {
       return byHost
     }
 
-    const bySlug = findQuizBySlug(remote, slug)
+    const bySlug = findQuizBySlug(normalizedRemote, slug)
     if (bySlug) {
       return bySlug
     }

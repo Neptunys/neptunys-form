@@ -1,4 +1,4 @@
-import type { MouseEvent, PropsWithChildren } from 'react'
+import type { CSSProperties, MouseEvent, PropsWithChildren } from 'react'
 import type { ButtonTone } from '../lib/types'
 
 type ButtonProps = PropsWithChildren<{
@@ -7,6 +7,7 @@ type ButtonProps = PropsWithChildren<{
   type?: 'button' | 'submit'
   disabled?: boolean
   className?: string
+  style?: CSSProperties
 }>
 
 export function Button({
@@ -16,6 +17,7 @@ export function Button({
   type = 'button',
   disabled,
   className = '',
+  style,
 }: ButtonProps) {
   function handlePointerDown(event: MouseEvent<HTMLButtonElement>) {
     const element = event.currentTarget
@@ -33,7 +35,7 @@ export function Button({
       onMouseDown={handlePointerDown}
       type={type}
       disabled={disabled}
-      style={{ opacity: disabled ? 0.5 : 1 }}
+      style={{ ...style, opacity: disabled ? 0.5 : 1 }}
     >
       {children}
     </button>

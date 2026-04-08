@@ -19,6 +19,7 @@ import {
 } from '../../lib/storage'
 import { hasSupabaseConfig } from '../../lib/supabase'
 import type { AutomationNode, LeadStep, ProjectAutomation, ProjectDefinition, Question, QuizBuilderDesign, QuizBuilderTheme, QuizDefinition, QuizVariant, QuizWorkflowNode, ResultKey } from '../../lib/types'
+import { useSharedControlWidth } from '../../lib/useSharedControlWidth'
 import { createId } from '../../lib/utils'
 import './admin-v2.css'
 
@@ -39,6 +40,10 @@ type BuilderLocale = 'en-GB' | 'en-US' | 'fr-FR'
 type BuilderToggleKey = 'required' | 'multipleSelection' | 'randomize' | 'otherOption' | 'verticalAlignment' | 'mapToContacts' | 'showLabels' | 'supersize' | 'maxCharacters' | 'answerValidation' | 'video' | 'audio' | 'allowTextAnswer'
 type BuilderDesignView = 'library' | 'editor'
 type BuilderThemeEditorTab = 'logo' | 'font' | 'buttons' | 'background'
+type ContentBranchingDraft = {
+  optionTargets: Record<string, string>
+  fallbackTargetId: string
+}
 type BuilderThemeFontSize = 'sm' | 'md' | 'lg'
 type BuilderThemeAlign = 'left' | 'center' | 'right'
 type BuilderThemeCornerRadius = QuizBuilderTheme['cornerRadius']
@@ -194,14 +199,130 @@ const BUILDER_THEME_FONT_OPTIONS = [
   { value: '"Trebuchet MS", sans-serif', label: 'Rounded sans' },
 ]
 
+const BUILDER_ANSWER_BACKGROUND_OPTIONS = [
+  { value: 'rgba(255,255,255,0.14)', label: 'Soft white' },
+  { value: 'rgba(243,196,65,0.18)', label: 'Gold tint' },
+  { value: 'rgba(126,167,216,0.2)', label: 'Blue tint' },
+  { value: 'rgba(17,27,35,0.55)', label: 'Deep navy' },
+] as const
+
+const BUILDER_BORDER_COLOR_OPTIONS = [
+  { value: 'rgba(255,255,255,0.18)', label: 'Soft white' },
+  { value: '#f3c441', label: 'Gold' },
+  { value: '#7ea7d8', label: 'Steel blue' },
+  { value: '#6e8f72', label: 'Military green' },
+  { value: '#1d2530', label: 'Deep navy' },
+] as const
+
 const BUILDER_THEME_SAMPLE_LOGO = 'data:image/svg+xml;utf8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72"%3E%3Crect width="72" height="72" rx="10" fill="%23324860"/%3E%3Cpath d="M22 48V24h10.6c7.3 0 12 4.9 12 11.8 0 7.1-4.9 12.2-12 12.2H22Zm6.2-5.2h4c3.7 0 6.2-2.8 6.2-7s-2.4-6.7-6.2-6.7h-4v13.7Z" fill="%23dbe7f6"/%3E%3C/svg%3E'
 
 const BUILDER_CORNER_RADIUS_OPTIONS: BuilderThemeCornerRadius[] = ['none', 'soft', 'pill']
 const BUILDER_CORNER_RADIUS_INDEX: Record<BuilderThemeCornerRadius, number> = { none: 0, soft: 1, pill: 2 }
 const BUILDER_CORNER_RADIUS_LABEL: Record<BuilderThemeCornerRadius, string> = { none: 'None', soft: 'Soft', pill: 'Pill' }
 const BUILDER_ALIGN_LABEL: Record<BuilderThemeAlign, string> = { left: 'Left', center: 'Center', right: 'Right' }
-const BUILDER_LOGO_SIZE_MIN = 72
-const BUILDER_LOGO_SIZE_MAX = 220
+const BUILDER_LOGO_SIZE_MIN = 20
+const BUILDER_LOGO_SIZE_MAX = 80
+
+function normalizeHexColor(value: string | undefined, fallback = '#ffffff') {
+  const input = (value ?? '').trim()
+  if (/^#[0-9a-f]{6}$/i.test(input)) {
+    return input.toLowerCase()
+  }
+
+  if (/^#[0-9a-f]{3}$/i.test(input)) {
+    const [red, green, blue] = input.slice(1).split('')
+    return `#${red}${red}${green}${green}${blue}${blue}`.toLowerCase()
+  }
+
+  return fallback
+}
+
+function hexToRgb(hex: string) {
+  const normalized = normalizeHexColor(hex)
+  const value = normalized.slice(1)
+  return {
+    red: Number.parseInt(value.slice(0, 2), 16),
+    green: Number.parseInt(value.slice(2, 4), 16),
+    blue: Number.parseInt(value.slice(4, 6), 16),
+  }
+}
+
+function rgbaFromHex(hex: string, alpha: number) {
+  const { red, green, blue } = hexToRgb(hex)
+  return `rgba(${red},${green},${blue},${alpha.toFixed(2)})`
+}
+
+function parseThemeColor(value: string | undefined, fallbackHex = '#ffffff', fallbackAlpha = 1) {
+  const input = (value ?? '').trim()
+
+  if (/^#[0-9a-f]{6}$/i.test(input) || /^#[0-9a-f]{3}$/i.test(input)) {
+    return { hex: normalizeHexColor(input, fallbackHex), alpha: 1 }
+  }
+
+  const rgbaMatch = input.match(/^rgba?\(([^)]+)\)$/i)
+  if (rgbaMatch) {
+    const [red = '255', green = '255', blue = '255', alpha = String(fallbackAlpha)] = rgbaMatch[1].split(',').map((part) => part.trim())
+    const nextHex = `#${[red, green, blue]
+      .map((channel) => Number.parseInt(channel, 10))
+      .map((channel) => Math.max(0, Math.min(255, Number.isFinite(channel) ? channel : 255)))
+      .map((channel) => channel.toString(16).padStart(2, '0'))
+      .join('')}`
+    const nextAlpha = Number.parseFloat(alpha)
+    return {
+      hex: normalizeHexColor(nextHex, fallbackHex),
+      alpha: Math.max(0, Math.min(1, Number.isFinite(nextAlpha) ? nextAlpha : fallbackAlpha)),
+    }
+  }
+
+  return { hex: normalizeHexColor(fallbackHex), alpha: fallbackAlpha }
+}
+
+function BuilderColorControl({
+  label,
+  value,
+  onChange,
+  allowAlpha = false,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  allowAlpha?: boolean
+}) {
+  const parsed = parseThemeColor(value)
+
+  return (
+    <div className="admin-v2-builder-color-control">
+      <div className="admin-v2-builder-color-control-head">
+        <span>{label}</span>
+        <small>{allowAlpha ? `${Math.round(parsed.alpha * 100)}%` : parsed.hex}</small>
+      </div>
+      <div className="admin-v2-builder-color-control-row">
+        <input
+          type="color"
+          value={parsed.hex}
+          onChange={(event) => onChange(allowAlpha ? rgbaFromHex(event.target.value, parsed.alpha) : event.target.value)}
+        />
+        <div className="admin-v2-builder-color-control-swatch" style={{ background: value }} />
+      </div>
+      {allowAlpha ? (
+        <label className="admin-v2-builder-color-control-opacity">
+          <span>Opacity</span>
+          <div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={Math.round(parsed.alpha * 100)}
+              onChange={(event) => onChange(rgbaFromHex(parsed.hex, Number(event.target.value) / 100))}
+            />
+            <small>{Math.round(parsed.alpha * 100)}%</small>
+          </div>
+        </label>
+      ) : null}
+    </div>
+  )
+}
 
 function normalizeBuilderThemeCornerRadius(value: string | undefined): BuilderThemeCornerRadius {
   if (value === 'none' || value === 'soft' || value === 'pill') {
@@ -225,14 +346,14 @@ function normalizeBuilderThemeLogoSize(value: number | string | undefined): numb
   }
 
   if (value === 'sm') {
-    return 96
+    return 32
   }
 
   if (value === 'lg') {
-    return 168
+    return 64
   }
 
-  return 128
+  return 48
 }
 
 function normalizeBuilderThemeAlign(value: string | undefined): BuilderThemeAlign {
@@ -246,6 +367,9 @@ function normalizeBuilderThemeAlign(value: string | undefined): BuilderThemeAlig
 function normalizeBuilderTheme(theme: BuilderTheme): BuilderTheme {
   return {
     ...theme,
+    buttonBorderColor: theme.buttonBorderColor ?? theme.buttonColor ?? '#4a3f4e',
+    answerBorderColor: theme.answerBorderColor ?? 'rgba(255,255,255,0.18)',
+    answerTextColor: theme.answerTextColor ?? theme.textColor ?? '#f4f6f8',
     cornerRadius: normalizeBuilderThemeCornerRadius(theme.cornerRadius),
     logoSize: normalizeBuilderThemeLogoSize(theme.logoSize),
     logoAlign: normalizeBuilderThemeAlign(theme.logoAlign),
@@ -269,8 +393,11 @@ function createBuilderTheme(id: string, name: string, source: BuilderTheme['sour
     questionAlign: 'left',
     contentOffsetX: -28,
     buttonColor: '#4a3f4e',
+    buttonBorderColor: '#4a3f4e',
     buttonTextColor: '#ffffff',
     answerColor: 'rgba(255,255,255,0.14)',
+    answerBorderColor: 'rgba(255,255,255,0.18)',
+    answerTextColor: '#f4f6f8',
     cornerRadius: 'soft',
     backgroundColor: '#d8d2cc',
     backgroundImage: '',
@@ -278,7 +405,7 @@ function createBuilderTheme(id: string, name: string, source: BuilderTheme['sour
     backgroundImageThumb: overrides.backgroundImageThumb,
     logoImage: '',
     logoAlt: '',
-    logoSize: 128,
+    logoSize: 48,
     logoAlign: 'left',
     ...overrides,
   })
@@ -295,8 +422,11 @@ const BUILDER_THEME_LIBRARY: BuilderTheme[] = [
   createBuilderTheme('theme-sand', 'Field notebook', 'mine', {
     preview: 'linear-gradient(135deg, #d8d2cc 0%, #cfc7bf 100%)',
     buttonColor: '#7d5f1d',
+    buttonBorderColor: '#f3c441',
     buttonTextColor: '#f9f3dc',
     answerColor: 'rgba(125,95,29,0.24)',
+    answerBorderColor: '#7d5f1d',
+    answerTextColor: '#f9f3dc',
   }),
 ]
 
@@ -984,6 +1114,8 @@ export function AdminV2App() {
   const [builderThemeCloseConfirmOpen, setBuilderThemeCloseConfirmOpen] = useState(false)
   const [builderThemeMenuId, setBuilderThemeMenuId] = useState<string | null>(null)
   const [builderThemeSaveState, setBuilderThemeSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [contentBranchingModal, setContentBranchingModal] = useState<{ nodeId: string; optionId: string | null } | null>(null)
+  const [contentBranchingDraft, setContentBranchingDraft] = useState<ContentBranchingDraft>({ optionTargets: {}, fallbackTargetId: '' })
   const builderRailSplitRef = useRef<HTMLDivElement | null>(null)
   const builderLogoInputRef = useRef<HTMLInputElement | null>(null)
   const builderBackgroundInputRef = useRef<HTMLInputElement | null>(null)
@@ -1096,7 +1228,7 @@ export function AdminV2App() {
           return
         }
 
-        const remoteProjects = await loadProjectRegistry()
+        const remoteProjects = await loadProjectRegistry({ preferLocal: true })
         setProjects(remoteProjects)
         setSelectedProjectId(remoteProjects[0]?.id ?? '')
         setSelectedQuizId(remoteProjects[0] ? getActiveQuiz(remoteProjects[0])?.id ?? '' : '')
@@ -1206,8 +1338,15 @@ export function AdminV2App() {
     setBuilderThemeSaveState('idle')
   }
 
-  function handleCreateBuilderTheme() {
-    openBuilderThemeEditor(createBuilderTheme(createId('theme'), 'My new theme', 'mine', { preview: 'linear-gradient(180deg, #d8d2cc 0%, #d8d2cc 100%)' }))
+  async function handleCreateBuilderTheme() {
+    const nextTheme = createBuilderTheme(createId('theme'), 'My new theme', 'mine', { preview: 'linear-gradient(180deg, #d8d2cc 0%, #d8d2cc 100%)' })
+    const patch = getSharedBuilderThemePatch((themes) => [nextTheme, ...themes], nextTheme.id)
+
+    if (patch) {
+      await persistProjects(patch.nextProjects)
+    }
+
+    openBuilderThemeEditor(nextTheme)
   }
 
   function closeBuilderDesign() {
@@ -1228,13 +1367,54 @@ export function AdminV2App() {
     setBuilderThemeDraft((current) => (current ? mutate(current) : current))
   }
 
-  async function readImageAsDataUrl(file: File) {
-    return await new Promise<string>((resolve, reject) => {
+  async function readImageAsDataUrl(
+    file: File,
+    options?: {
+      maxWidth: number
+      maxHeight: number
+      mimeType: string
+      quality?: number
+    },
+  ) {
+    const source = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader()
       reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '')
       reader.onerror = () => reject(reader.error)
       reader.readAsDataURL(file)
     })
+
+    if (!options || !source.startsWith('data:image/')) {
+      return source
+    }
+
+    try {
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const nextImage = new Image()
+        nextImage.onload = () => resolve(nextImage)
+        nextImage.onerror = () => reject(new Error('Image decode failed'))
+        nextImage.src = source
+      })
+
+      const scale = Math.min(1, options.maxWidth / image.width, options.maxHeight / image.height)
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.max(1, Math.round(image.width * scale))
+      canvas.height = Math.max(1, Math.round(image.height * scale))
+
+      const context = canvas.getContext('2d')
+      if (!context) {
+        return source
+      }
+
+      context.drawImage(image, 0, 0, canvas.width, canvas.height)
+      return canvas.toDataURL(options.mimeType, options.quality)
+    } catch {
+      return source
+    }
+  }
+
+  function autoResizePreviewTextarea(element: HTMLTextAreaElement) {
+    element.style.height = '0px'
+    element.style.height = `${element.scrollHeight}px`
   }
 
   async function handleBuilderThemeFileChange(event: ChangeEvent<HTMLInputElement>, target: 'logo' | 'background') {
@@ -1243,7 +1423,21 @@ export function AdminV2App() {
       return
     }
 
-    const dataUrl = await readImageAsDataUrl(file)
+    const dataUrl = await readImageAsDataUrl(
+      file,
+      target === 'background'
+        ? {
+            maxWidth: 1600,
+            maxHeight: 1600,
+            mimeType: 'image/jpeg',
+            quality: 0.82,
+          }
+        : {
+            maxWidth: 720,
+            maxHeight: 320,
+            mimeType: 'image/png',
+          },
+    )
 
     updateBuilderThemeDraft((theme) => ({
       ...theme,
@@ -1477,10 +1671,10 @@ export function AdminV2App() {
     const backgroundLayers = activeBuilderTheme.backgroundImage
       ? `linear-gradient(rgba(4, 7, 10, ${overlayOpacity}), rgba(4, 7, 10, ${overlayOpacity})), url(${activeBuilderTheme.backgroundImage})`
       : `linear-gradient(180deg, ${activeBuilderTheme.backgroundColor} 0%, ${activeBuilderTheme.backgroundColor} 100%)`
-    const fieldBorder = `color-mix(in srgb, ${activeBuilderTheme.textColor} 34%, transparent 66%)`
+    const fieldBorder = activeBuilderTheme.answerBorderColor
     const fieldBackground = activeBuilderTheme.answerColor
     const offsetX = builderDevice === 'desktop' ? activeBuilderTheme.contentOffsetX : 0
-    const logoInset = builderDevice === 'mobile' ? '8px' : '4px'
+    const logoInset = builderDevice === 'mobile' ? '20px' : '28px'
     const logoPositionStyle = activeBuilderTheme.logoAlign === 'center'
       ? {
           left: '50%',
@@ -1519,25 +1713,25 @@ export function AdminV2App() {
       } satisfies CSSProperties,
       choiceStyle: {
         background: activeBuilderTheme.answerColor,
-        borderColor: activeBuilderTheme.answerColor,
-        color: activeBuilderTheme.textColor,
+        borderColor: activeBuilderTheme.answerBorderColor,
+        color: activeBuilderTheme.answerTextColor,
         borderRadius: radiusMap[activeBuilderTheme.cornerRadius],
       } satisfies CSSProperties,
       multipleChoiceStyle: {
-        background: 'transparent',
-        borderColor: `color-mix(in srgb, ${activeBuilderTheme.textColor} 42%, transparent 58%)`,
-        color: activeBuilderTheme.textColor,
+        background: activeBuilderTheme.answerColor,
+        borderColor: activeBuilderTheme.answerBorderColor,
+        color: activeBuilderTheme.answerTextColor,
         borderRadius: radiusMap[activeBuilderTheme.cornerRadius],
       } satisfies CSSProperties,
       choiceBadgeStyle: {
-        borderColor: 'rgba(255,255,255,0.34)',
-        color: activeBuilderTheme.textColor,
+        borderColor: activeBuilderTheme.answerBorderColor,
+        color: activeBuilderTheme.answerTextColor,
         borderRadius: radiusMap[activeBuilderTheme.cornerRadius],
       } satisfies CSSProperties,
       multipleChoiceBadgeStyle: {
-        borderColor: `color-mix(in srgb, ${activeBuilderTheme.textColor} 48%, transparent 52%)`,
+        borderColor: activeBuilderTheme.answerBorderColor,
         background: 'transparent',
-        color: activeBuilderTheme.textColor,
+        color: activeBuilderTheme.answerTextColor,
         borderRadius: radiusMap[activeBuilderTheme.cornerRadius],
       } satisfies CSSProperties,
       addChoiceStyle: {
@@ -1545,29 +1739,34 @@ export function AdminV2App() {
       } satisfies CSSProperties,
       buttonStyle: {
         background: activeBuilderTheme.buttonColor,
+        border: `1px solid ${activeBuilderTheme.buttonBorderColor}`,
         color: activeBuilderTheme.buttonTextColor,
         borderRadius: radiusMap[activeBuilderTheme.cornerRadius],
       } satisfies CSSProperties,
       secondaryButtonStyle: {
-        background: 'rgba(255,255,255,0.08)',
-        color: activeBuilderTheme.textColor,
+        background: 'transparent',
+        border: `1px solid ${activeBuilderTheme.buttonBorderColor}`,
+        color: activeBuilderTheme.buttonTextColor,
         borderRadius: radiusMap[activeBuilderTheme.cornerRadius],
       } satisfies CSSProperties,
       fieldStyle: {
         background: fieldBackground,
         border: `1px solid ${fieldBorder}`,
-        color: activeBuilderTheme.textColor,
+        color: activeBuilderTheme.answerTextColor,
         borderRadius: '0px',
       } satisfies CSSProperties,
       logoWrapStyle: {
         top: logoInset,
         width: 'fit-content',
-        maxWidth: `calc(100% - (${logoInset} * 2))`,
+        height: 'fit-content',
+        maxWidth: '100%',
         ...logoPositionStyle,
       } satisfies CSSProperties,
       logoStyle: {
-        width: `${activeBuilderTheme.logoSize}px`,
-        height: `${activeBuilderTheme.logoSize}px`,
+        width: 'auto',
+        height: 'auto',
+        maxHeight: `${activeBuilderTheme.logoSize}px`,
+        maxWidth: `${Math.max(activeBuilderTheme.logoSize * 4, activeBuilderTheme.logoSize)}px`,
       } satisfies CSSProperties,
     }
   }, [activeBuilderTheme, builderDevice])
@@ -1631,9 +1830,102 @@ export function AdminV2App() {
     return selectedQuiz.leadSteps.find((step) => step.id === selection.stepId) ?? null
   }, [selectedQuiz, selection])
 
+  const previewQuestionControlLabels = useMemo(
+    () => selection?.kind === 'question' && selectedQuestion
+      ? selectedQuestion.options.map((option) => option.label)
+      : [],
+    [selection, selectedQuestion],
+  )
+
+  const previewLeadSingleControlLabels = useMemo(
+    () => selection?.kind === 'lead' && selectedLeadStep?.kind === 'single'
+      ? selectedLeadStep.options ?? []
+      : [],
+    [selection, selectedLeadStep],
+  )
+
+  const previewIntroButtonLabels = useMemo(
+    () => selection?.kind === 'intro' && selectedVariant
+      ? [selectedVariant.intro.cta]
+      : [],
+    [selection, selectedVariant],
+  )
+
+  const previewTransitionButtonLabels = useMemo(
+    () => selection?.kind === 'transition' && selectedQuiz
+      ? [selectedQuiz.transitionScreen.cta]
+      : [],
+    [selection, selectedQuiz],
+  )
+
+  const previewResultButtonLabels = useMemo(
+    () => {
+      if (!selectedQuiz || !selection || selection.kind !== 'result') {
+        return []
+      }
+
+      const result = selectedQuiz.resultContent[selection.resultKey]
+      return [result.primaryCta, result.secondaryCta ?? ''].filter(Boolean)
+    },
+    [selection, selectedQuiz],
+  )
+
+  const previewQuestionControlWidth = useSharedControlWidth(previewQuestionControlLabels, {
+    fontFamily: activeBuilderTheme?.fontFamily ?? 'var(--font-sans)',
+    fontSizePx: 16,
+    fontWeight: 500,
+    minWidth: 220,
+    horizontalPadding: 12,
+    extraWidth: 32,
+  })
+
+  const previewLeadSingleControlWidth = useSharedControlWidth(previewLeadSingleControlLabels, {
+    fontFamily: activeBuilderTheme?.fontFamily ?? 'var(--font-sans)',
+    fontSizePx: 16,
+    fontWeight: 500,
+    minWidth: 220,
+    horizontalPadding: 22,
+  })
+
+  const previewIntroButtonControlWidth = useSharedControlWidth(previewIntroButtonLabels, {
+    fontFamily: activeBuilderTheme?.fontFamily ?? 'var(--font-sans)',
+    fontSizePx: 16,
+    fontWeight: 500,
+    minWidth: 220,
+    horizontalPadding: 22,
+  })
+
+  const previewTransitionButtonControlWidth = useSharedControlWidth(previewTransitionButtonLabels, {
+    fontFamily: activeBuilderTheme?.fontFamily ?? 'var(--font-sans)',
+    fontSizePx: 16,
+    fontWeight: 500,
+    minWidth: 220,
+    horizontalPadding: 22,
+  })
+
+  const previewResultButtonControlWidth = useSharedControlWidth(previewResultButtonLabels, {
+    fontFamily: activeBuilderTheme?.fontFamily ?? 'var(--font-sans)',
+    fontSizePx: 16,
+    fontWeight: 500,
+    minWidth: 220,
+    horizontalPadding: 22,
+  })
+
   const selectedContentWorkflowNode = useMemo(() => {
     if (!selectedQuiz || !selection) {
       return null
+    }
+
+    if (selection.kind === 'question') {
+      return selectedQuiz.workflow.nodes.find((node) => (
+        node.type === 'question'
+        && node.variantId === selection.variantId
+        && node.questionId === selection.questionId
+      )) ?? null
+    }
+
+    if (selection.kind === 'lead') {
+      return selectedQuiz.workflow.nodes.find((node) => node.type === 'lead' && node.leadStepId === selection.stepId) ?? null
     }
 
     return selectedQuiz.workflow.nodes.find((node) => isBuilderSelectionEqual(getBuilderSelectionFromWorkflowNode(node), selection)) ?? null
@@ -1658,6 +1950,33 @@ export function AdminV2App() {
     () => selectedQuiz?.workflow.edges.find((edge) => edge.id === selectedWorkflowEdgeId) ?? null,
     [selectedQuiz, selectedWorkflowEdgeId],
   )
+
+  const contentBranchingNode = useMemo(
+    () => contentBranchingModal ? selectedQuiz?.workflow.nodes.find((node) => node.id === contentBranchingModal.nodeId) ?? null : null,
+    [contentBranchingModal, selectedQuiz],
+  )
+
+  const contentBranchingQuestion = useMemo(() => {
+    if (!selectedQuiz || !contentBranchingNode || contentBranchingNode.type !== 'question' || !contentBranchingNode.variantId || !contentBranchingNode.questionId) {
+      return null
+    }
+
+    const variant = selectedQuiz.variants.find((item) => item.id === contentBranchingNode.variantId)
+    return variant?.questions.find((question) => question.id === contentBranchingNode.questionId) ?? null
+  }, [contentBranchingNode, selectedQuiz])
+
+  const contentBranchingTargetOptions = useMemo(() => {
+    if (!selectedQuiz || !contentBranchingNode) {
+      return [] as Array<{ value: string; label: string }>
+    }
+
+    return selectedQuiz.workflow.nodes
+      .filter((node) => node.id !== contentBranchingNode.id)
+      .map((node) => ({
+        value: node.id,
+        label: node.type === 'thank-you' ? 'Default end' : node.title,
+      }))
+  }, [contentBranchingNode, selectedQuiz])
 
   const selectedConnectAutomation = useMemo(
     () => selectedQuizAutomations.find((automation) => automation.id === selectedConnectAutomationId) ?? selectedQuizAutomations[0] ?? null,
@@ -2039,7 +2358,104 @@ export function AdminV2App() {
     return 'Always'
   }
 
+  function buildContentBranchingDraft(nodeId: string): ContentBranchingDraft {
+    if (!selectedQuiz) {
+      return { optionTargets: {}, fallbackTargetId: '' }
+    }
+
+    const node = selectedQuiz.workflow.nodes.find((entry) => entry.id === nodeId)
+    if (!node || node.type !== 'question' || !node.variantId || !node.questionId) {
+      return { optionTargets: {}, fallbackTargetId: '' }
+    }
+
+    const variant = selectedQuiz.variants.find((entry) => entry.id === node.variantId)
+    const question = variant?.questions.find((entry) => entry.id === node.questionId)
+    if (!question) {
+      return { optionTargets: {}, fallbackTargetId: '' }
+    }
+
+    const outgoingEdges = selectedQuiz.workflow.edges.filter((edge) => edge.source === node.id)
+    return {
+      optionTargets: question.options.reduce<Record<string, string>>((registry, option) => {
+        registry[option.id] = outgoingEdges.find((edge) => edge.rule?.kind === 'answer' && edge.rule.answerValue === option.id)?.target ?? ''
+        return registry
+      }, {}),
+      fallbackTargetId: outgoingEdges.find((edge) => (edge.rule?.kind ?? 'always') === 'always')?.target ?? '',
+    }
+  }
+
+  function openContentBranchingModal(optionId: string | null = null) {
+    const questionNode = selectedContentWorkflowNode?.type === 'question'
+      ? selectedContentWorkflowNode
+      : selectedQuiz?.workflow.nodes.find((node) => (
+          node.type === 'question'
+          && node.variantId === selectedVariant?.id
+          && node.questionId === selectedQuestion?.id
+        )) ?? null
+
+    if (!questionNode) {
+      return
+    }
+
+    setContentBranchingDraft(buildContentBranchingDraft(questionNode.id))
+    setContentBranchingModal({ nodeId: questionNode.id, optionId })
+  }
+
+  function closeContentBranchingModal() {
+    setContentBranchingModal(null)
+    setContentBranchingDraft({ optionTargets: {}, fallbackTargetId: '' })
+  }
+
+  function handleSaveContentBranching() {
+    if (!contentBranchingNode || contentBranchingNode.type !== 'question' || !contentBranchingQuestion) {
+      return
+    }
+
+    updateSelectedQuizWorkflow((workflow) => {
+      const preservedEdges = workflow.edges.filter(
+        (edge) => edge.source !== contentBranchingNode.id || edge.rule?.kind === 'result',
+      )
+
+      const nextAnswerEdges = contentBranchingQuestion.options.flatMap((option, index) => {
+        const target = contentBranchingDraft.optionTargets[option.id]
+        if (!target) {
+          return []
+        }
+
+        return [{
+          id: createId('workflow-edge'),
+          source: contentBranchingNode.id,
+          target,
+          label: option.label || `${builderPreviewCopy.choiceFallback} ${index + 1}`,
+          rule: { kind: 'answer' as const, answerValue: option.id },
+        }]
+      })
+
+      const fallbackEdge = contentBranchingDraft.fallbackTargetId
+        ? [{
+            id: createId('workflow-edge'),
+            source: contentBranchingNode.id,
+            target: contentBranchingDraft.fallbackTargetId,
+            label: 'Next',
+            rule: { kind: 'always' as const },
+          }]
+        : []
+
+      return {
+        ...workflow,
+        edges: [...preservedEdges, ...nextAnswerEdges, ...fallbackEdge],
+      }
+    })
+
+    closeContentBranchingModal()
+  }
+
   function toggleBuilderToolPanel(tool: BuilderToolPanel) {
+    if (tool === 'logic' && builderTab === 'content' && selectedContentWorkflowNode?.type === 'question') {
+      openContentBranchingModal()
+      return
+    }
+
     setBuilderToolPanel((current) => current === tool ? null : tool)
   }
 
@@ -2383,6 +2799,67 @@ export function AdminV2App() {
     )
   }
 
+  function renderEditablePreviewChoiceOption(optionId: string, value: string, placeholder: string) {
+    return (
+      <textarea
+        rows={1}
+        value={value}
+        className="admin-v2-preview-inline-option admin-v2-preview-inline-option--multiline"
+        placeholder={placeholder}
+        onChange={(event) => handleUpdateSelectedQuestionOption(optionId, event.target.value)}
+        onInput={(event) => autoResizePreviewTextarea(event.currentTarget)}
+        ref={(node) => {
+          if (node) {
+            autoResizePreviewTextarea(node)
+          }
+        }}
+      />
+    )
+  }
+
+  function renderPreviewChoiceRow(
+    option: Question['options'][number],
+    index: number,
+    sharedWidthStyle: CSSProperties,
+    isMultipleChoice = false,
+  ) {
+    const canDelete = (selectedQuestion?.options.length ?? 0) > 1
+
+    return (
+      <div key={option.id} className="admin-v2-preview-choice-row">
+        <div
+          className={`admin-v2-preview-choice-field${isMultipleChoice ? ' is-multiple-choice' : ''}`}
+          style={{
+            ...sharedWidthStyle,
+            ...(isMultipleChoice ? builderPreviewStyles.multipleChoiceStyle : builderPreviewStyles.choiceStyle),
+          }}
+        >
+          <span className="admin-v2-preview-choice-badge" style={isMultipleChoice ? builderPreviewStyles.multipleChoiceBadgeStyle : builderPreviewStyles.choiceBadgeStyle}>{String.fromCharCode(65 + index)}</span>
+          {renderEditablePreviewChoiceOption(option.id, option.label, `${builderPreviewCopy.choiceFallback} ${index + 1}`)}
+        </div>
+        <div className="admin-v2-preview-choice-actions">
+          <button
+            type="button"
+            className="admin-v2-preview-choice-action"
+            aria-label="Delete choice"
+            onClick={() => handleRemoveSelectedQuestionOption(option.id)}
+            disabled={!canDelete}
+          >
+            ×
+          </button>
+          <button
+            type="button"
+            className="admin-v2-preview-choice-action"
+            aria-label="Edit branching"
+            onClick={() => openContentBranchingModal(option.id)}
+          >
+            <BuilderPanelIcon kind="logic" />
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   function renderQuestionPreviewBody() {
     if (!selectedQuestion) {
       return null
@@ -2562,13 +3039,8 @@ export function AdminV2App() {
     }
 
     return (
-      <div className="admin-v2-preview-choice-stack">
-        {selectedQuestion.options.map((option, index) => (
-          <div key={option.id} className={`admin-v2-preview-choice-field${selectedQuestionElementKey === 'multiple-choice' ? ' is-multiple-choice' : ''}`} style={selectedQuestionElementKey === 'multiple-choice' ? builderPreviewStyles.multipleChoiceStyle : builderPreviewStyles.choiceStyle}>
-            <span className="admin-v2-preview-choice-badge" style={selectedQuestionElementKey === 'multiple-choice' ? builderPreviewStyles.multipleChoiceBadgeStyle : builderPreviewStyles.choiceBadgeStyle}>{String.fromCharCode(65 + index)}</span>
-            {renderEditablePreviewOption(option.id, option.label, `${builderPreviewCopy.choiceFallback} ${index + 1}`)}
-          </div>
-        ))}
+      <div className="admin-v2-preview-choice-stack" ref={previewQuestionControlWidth.containerRef}>
+        {selectedQuestion.options.map((option, index) => renderPreviewChoiceRow(option, index, previewQuestionControlWidth.controlStyle, selectedQuestionElementKey === 'multiple-choice'))}
         <button type="button" className="admin-v2-preview-add-choice" style={builderPreviewStyles.addChoiceStyle} onClick={handleAddChoice}>{builderPreviewCopy.addChoice}</button>
       </div>
     )
@@ -2646,9 +3118,9 @@ export function AdminV2App() {
 
     if (selectedLeadStep.kind === 'single') {
       return (
-        <div className="admin-v2-preview-options">
+        <div className="admin-v2-preview-options" ref={previewLeadSingleControlWidth.containerRef}>
           {(selectedLeadStep.options ?? []).map((option) => (
-            <button key={option} type="button" className="admin-v2-preview-option" style={builderPreviewStyles.choiceStyle}>{option}</button>
+            <button key={option} type="button" className="admin-v2-preview-option" style={{ ...previewLeadSingleControlWidth.controlStyle, ...builderPreviewStyles.choiceStyle }}>{option}</button>
           ))}
         </div>
       )
@@ -3102,7 +3574,7 @@ export function AdminV2App() {
     try {
       setLoginError('')
       await signInAdmin(email, password, rememberMe)
-      const nextProjects = await loadProjectRegistry()
+      const nextProjects = await loadProjectRegistry({ preferLocal: true })
       setProjects(nextProjects)
       setSelectedProjectId(nextProjects[0]?.id ?? '')
       setSelectedQuizId(nextProjects[0] ? getActiveQuiz(nextProjects[0])?.id ?? '' : '')
@@ -3743,9 +4215,30 @@ export function AdminV2App() {
   }
 
   function handleUpdateSelectedQuestionOption(optionId: string, value: string) {
-    updateSelectedQuestion((question) => ({
-      ...question,
-      options: question.options.map((option) => option.id === optionId ? { ...option, label: value } : option),
+    if (!selectedQuestion || !selectedVariant) {
+      return
+    }
+
+    updateSelectedQuiz((quiz) => ({
+      ...quiz,
+      variants: quiz.variants.map((variant) =>
+        variant.id === selectedVariant.id
+          ? {
+              ...variant,
+              questions: variant.questions.map((question) => question.id === selectedQuestion.id
+                ? { ...question, options: question.options.map((option) => option.id === optionId ? { ...option, label: value } : option) }
+                : question),
+            }
+          : variant,
+      ),
+      workflow: selectedContentWorkflowNode
+        ? {
+            ...quiz.workflow,
+            edges: quiz.workflow.edges.map((edge) => edge.source === selectedContentWorkflowNode.id && edge.rule?.kind === 'answer' && edge.rule.answerValue === optionId
+              ? { ...edge, label: value }
+              : edge),
+          }
+        : quiz.workflow,
     }))
   }
 
@@ -3754,10 +4247,29 @@ export function AdminV2App() {
       return
     }
 
-    updateSelectedQuestion((question) => ({
-      ...question,
-      options: question.options.filter((option) => option.id !== optionId),
+    updateSelectedQuiz((quiz) => ({
+      ...quiz,
+      variants: quiz.variants.map((variant) =>
+        !selectedVariant || variant.id !== selectedVariant.id
+          ? variant
+          : {
+              ...variant,
+              questions: variant.questions.map((question) => question.id === selectedQuestion.id
+                ? { ...question, options: question.options.filter((option) => option.id !== optionId) }
+                : question),
+            },
+      ),
+      workflow: selectedContentWorkflowNode
+        ? {
+            ...quiz.workflow,
+            edges: quiz.workflow.edges.filter((edge) => !(edge.source === selectedContentWorkflowNode.id && edge.rule?.kind === 'answer' && edge.rule.answerValue === optionId)),
+          }
+        : quiz.workflow,
     }))
+
+    if (contentBranchingModal?.optionId === optionId) {
+      setContentBranchingModal((current) => current ? { ...current, optionId: null } : current)
+    }
   }
 
   function handleAddEnding(type: 'end-screen' | 'redirect') {
@@ -4231,7 +4743,9 @@ export function AdminV2App() {
                 <span key={point} style={builderPreviewStyles.secondaryButtonStyle}>{point}</span>
               ))}
             </div>
-            <button type="button" className="admin-v2-preview-button" style={builderPreviewStyles.buttonStyle}>{selectedVariant.intro.cta}</button>
+            <div className="admin-v2-preview-actions-row" ref={previewIntroButtonControlWidth.containerRef}>
+              <button type="button" className="admin-v2-preview-button" style={{ ...previewIntroButtonControlWidth.controlStyle, ...builderPreviewStyles.buttonStyle }}>{selectedVariant.intro.cta}</button>
+            </div>
           </div>
         </div>
       )
@@ -4299,7 +4813,9 @@ export function AdminV2App() {
             <div className="admin-v2-preview-kicker">{builderPreviewCopy.transition}</div>
             <h2 style={builderPreviewStyles.titleStyle}>{selectedQuiz.transitionScreen.heading}</h2>
             <p style={builderPreviewStyles.descriptionStyle}>{selectedQuiz.transitionScreen.body}</p>
-            <button type="button" className="admin-v2-preview-button" style={builderPreviewStyles.buttonStyle}>{selectedQuiz.transitionScreen.cta}</button>
+            <div className="admin-v2-preview-actions-row" ref={previewTransitionButtonControlWidth.containerRef}>
+              <button type="button" className="admin-v2-preview-button" style={{ ...previewTransitionButtonControlWidth.controlStyle, ...builderPreviewStyles.buttonStyle }}>{selectedQuiz.transitionScreen.cta}</button>
+            </div>
           </div>
         </div>
       )
@@ -4307,6 +4823,7 @@ export function AdminV2App() {
 
     if (selection.kind === 'result') {
       const result = selectedQuiz.resultContent[selection.resultKey]
+
       return (
         <div className="admin-v2-preview-card admin-v2-preview-card--themed" style={builderPreviewStyles.cardStyle}>
           {previewLogo}
@@ -4314,9 +4831,9 @@ export function AdminV2App() {
             <div className="admin-v2-preview-kicker">{builderPreviewCopy.result}</div>
             <h2 style={builderPreviewStyles.titleStyle}>{result.title}</h2>
             <p style={builderPreviewStyles.descriptionStyle}>{result.body}</p>
-            <div className="admin-v2-preview-actions-row">
-              <button type="button" className="admin-v2-preview-button" style={builderPreviewStyles.buttonStyle}>{result.primaryCta}</button>
-              {result.secondaryCta ? <button type="button" className="admin-v2-preview-secondary" style={builderPreviewStyles.secondaryButtonStyle}>{result.secondaryCta}</button> : null}
+            <div className="admin-v2-preview-actions-row" ref={previewResultButtonControlWidth.containerRef}>
+              <button type="button" className="admin-v2-preview-button" style={{ ...previewResultButtonControlWidth.controlStyle, ...builderPreviewStyles.buttonStyle }}>{result.primaryCta}</button>
+              {result.secondaryCta ? <button type="button" className="admin-v2-preview-secondary" style={{ ...previewResultButtonControlWidth.controlStyle, ...builderPreviewStyles.secondaryButtonStyle }}>{result.secondaryCta}</button> : null}
             </div>
           </div>
         </div>
@@ -4769,9 +5286,9 @@ export function AdminV2App() {
             ) : null}
           </div>
 
-          {selection?.kind === 'lead' ? renderLeadInspectorFields() : renderQuestionInspectorFields()}
+          {selection?.kind === 'lead' ? renderLeadInspectorFields() : null}
 
-          {(selection?.kind === 'lead' ? renderLeadInspectorFields() : renderQuestionInspectorFields()) ? <div className="admin-v2-builder-divider" /> : null}
+          {selection?.kind === 'lead' ? <div className="admin-v2-builder-divider" /> : null}
 
           {selection?.kind === 'lead' ? renderLeadInspectorToggles() : renderQuestionInspectorToggles()}
 
@@ -4787,13 +5304,81 @@ export function AdminV2App() {
           </div>
         </section>
 
-        <section className="admin-v2-builder-panel-card is-branching">
-          <div className="admin-v2-builder-toggle-row is-compact">
-            <span>Branching</span>
-            <button type="button" className="admin-v2-builder-plus-button">＋</button>
-          </div>
-        </section>
       </aside>
+    )
+  }
+
+  function renderContentBranchingModal() {
+    if (!contentBranchingModal || !contentBranchingNode || !contentBranchingQuestion) {
+      return null
+    }
+
+    return (
+      <div className="admin-v2-modal-backdrop" onClick={closeContentBranchingModal}>
+        <div className="admin-v2-modal admin-v2-branching-modal" onClick={(event) => event.stopPropagation()}>
+          <div className="admin-v2-branching-modal-topbar">
+            <button
+              type="button"
+              className="admin-v2-branching-link"
+              onClick={() => {
+                closeContentBranchingModal()
+                setBuilderTab('workflow')
+                setSelectedWorkflowNodeId(contentBranchingNode.id)
+              }}
+            >
+              See all rules
+            </button>
+            <button type="button" className="admin-v2-modal-close" onClick={closeContentBranchingModal}>×</button>
+          </div>
+
+          <div className="admin-v2-branching-modal-head">
+            <h3>Edit logic for {contentBranchingNode.title || 'question'}</h3>
+            <span>{contentBranchingQuestion.options.length} choices</span>
+          </div>
+
+          <div className="admin-v2-branching-card">
+            {contentBranchingQuestion.options.map((option, index) => (
+              <div key={option.id} className={`admin-v2-branching-row ${contentBranchingModal.optionId === option.id ? 'is-highlighted' : ''}`}>
+                <div className="admin-v2-branching-row-head">
+                  <span className="admin-v2-branching-chip">{String.fromCharCode(65 + index)}</span>
+                  <strong>{option.label || `${builderPreviewCopy.choiceFallback} ${index + 1}`}</strong>
+                </div>
+                <label className="admin-v2-branching-field">
+                  <span>Go to</span>
+                  <select
+                    value={contentBranchingDraft.optionTargets[option.id] ?? ''}
+                    onChange={(event) => setContentBranchingDraft((current) => ({
+                      ...current,
+                      optionTargets: { ...current.optionTargets, [option.id]: event.target.value },
+                    }))}
+                  >
+                    <option value="">No route</option>
+                    {contentBranchingTargetOptions.map((target) => <option key={target.value} value={target.value}>{target.label}</option>)}
+                  </select>
+                </label>
+              </div>
+            ))}
+
+            <div className="admin-v2-branching-row is-fallback">
+              <div className="admin-v2-branching-row-head">
+                <strong>All other cases go to</strong>
+              </div>
+              <label className="admin-v2-branching-field">
+                <span>Fallback</span>
+                <select value={contentBranchingDraft.fallbackTargetId} onChange={(event) => setContentBranchingDraft((current) => ({ ...current, fallbackTargetId: event.target.value }))}>
+                  <option value="">No fallback</option>
+                  {contentBranchingTargetOptions.map((target) => <option key={target.value} value={target.value}>{target.label}</option>)}
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div className="admin-v2-modal-actions">
+            <Button tone="secondary" onClick={closeContentBranchingModal}>Cancel</Button>
+            <Button tone="primary" onClick={handleSaveContentBranching}>Save</Button>
+          </div>
+        </div>
+      </div>
     )
   }
 
@@ -4851,7 +5436,7 @@ export function AdminV2App() {
                         type="range"
                         min={BUILDER_LOGO_SIZE_MIN}
                         max={BUILDER_LOGO_SIZE_MAX}
-                        step={4}
+                        step={1}
                         value={builderThemeDraft.logoSize}
                         onChange={(event) => updateBuilderThemeDraft((theme) => ({ ...theme, logoSize: Number(event.target.value) }))}
                       />
@@ -4949,9 +5534,12 @@ export function AdminV2App() {
 
             {builderThemeEditorTab === 'buttons' ? (
               <>
-                <label className="admin-v2-builder-design-field"><span>Buttons</span><select value={builderThemeDraft.buttonColor} onChange={(event) => updateBuilderThemeDraft((theme) => ({ ...theme, buttonColor: event.target.value }))}>{BUILDER_THEME_COLOR_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-                <label className="admin-v2-builder-design-field"><span>Button text</span><select value={builderThemeDraft.buttonTextColor} onChange={(event) => updateBuilderThemeDraft((theme) => ({ ...theme, buttonTextColor: event.target.value }))}>{BUILDER_THEME_COLOR_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-                <label className="admin-v2-builder-design-field"><span>Answers</span><select value={builderThemeDraft.answerColor} onChange={(event) => updateBuilderThemeDraft((theme) => ({ ...theme, answerColor: event.target.value }))}><option value="rgba(255,255,255,0.14)">Soft white</option><option value="rgba(243,196,65,0.18)">Gold tint</option><option value="rgba(126,167,216,0.2)">Blue tint</option><option value="rgba(17,27,35,0.55)">Deep navy</option></select></label>
+                <BuilderColorControl label="Button background" value={builderThemeDraft.buttonColor} onChange={(value) => updateBuilderThemeDraft((theme) => ({ ...theme, buttonColor: value }))} allowAlpha />
+                <BuilderColorControl label="Button border" value={builderThemeDraft.buttonBorderColor} onChange={(value) => updateBuilderThemeDraft((theme) => ({ ...theme, buttonBorderColor: value }))} allowAlpha />
+                <BuilderColorControl label="Button text" value={builderThemeDraft.buttonTextColor} onChange={(value) => updateBuilderThemeDraft((theme) => ({ ...theme, buttonTextColor: value }))} />
+                <BuilderColorControl label="Answer background" value={builderThemeDraft.answerColor} onChange={(value) => updateBuilderThemeDraft((theme) => ({ ...theme, answerColor: value }))} allowAlpha />
+                <BuilderColorControl label="Answer border" value={builderThemeDraft.answerBorderColor} onChange={(value) => updateBuilderThemeDraft((theme) => ({ ...theme, answerBorderColor: value }))} allowAlpha />
+                <BuilderColorControl label="Answer text" value={builderThemeDraft.answerTextColor} onChange={(value) => updateBuilderThemeDraft((theme) => ({ ...theme, answerTextColor: value }))} />
                 <div className="admin-v2-builder-design-fieldset">
                   <span>Corner radius</span>
                   <label className="admin-v2-builder-design-range">
@@ -5029,7 +5617,7 @@ export function AdminV2App() {
         <div className="admin-v2-builder-design-body">
           <div className="admin-v2-builder-design-inline-row">
             <span>My themes</span>
-            <button type="button" className="admin-v2-builder-theme-mini-button" onClick={handleCreateBuilderTheme}>＋</button>
+            <button type="button" className="admin-v2-builder-theme-mini-button" onClick={() => void handleCreateBuilderTheme()}>＋</button>
           </div>
 
           <div className="admin-v2-builder-theme-grid">
@@ -5364,6 +5952,7 @@ export function AdminV2App() {
         </div>
 
         {renderBuilderThemeConfirmModal()}
+        {renderContentBranchingModal()}
       </div>
     )
   }
