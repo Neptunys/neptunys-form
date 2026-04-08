@@ -71,6 +71,19 @@ Important upstream areas:
 - webhook integration: `vendor/heyform-upstream/packages/server/src/apps/webhook.ts`
 - theme contract: `vendor/heyform-upstream/packages/shared-types-enums/src/form.ts`
 
+## Local Boot
+
+Use the helper scripts from this repo root:
+
+1. `powershell -ExecutionPolicy Bypass -File .\scripts\start-heyform-local.ps1`
+2. Open `http://localhost:9513`
+3. Open `http://localhost:8025` to catch verification emails in Mailpit
+4. Stop with `powershell -ExecutionPolicy Bypass -File .\scripts\stop-heyform-local.ps1`
+
+Required local dependency:
+
+- Docker Desktop with a running engine
+
 ## Branding Mapping
 
 Map the current builder theme into HeyForm theme settings as follows:
