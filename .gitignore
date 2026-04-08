@@ -8,3 +8,5 @@ dist/
 *.tsbuildinfo
 supabase/.temp/
 .env*.local
+live-app.js
+vendor/heyform-upstream/
