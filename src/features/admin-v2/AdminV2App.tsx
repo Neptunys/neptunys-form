@@ -3993,35 +3993,66 @@ export function AdminV2App() {
   function renderLogin() {
     return (
       <div className="admin-v2-login-shell">
-        <div className="admin-v2-login-card">
-          <div className="admin-v2-chip">Admin access</div>
-          <h1>Open builder</h1>
-          <p>Sign in to manage forms, contacts, automations, and the new builder workspace.</p>
-          <label>
-            <span>Email</span>
-            <input value={email} onChange={(event) => setEmail(event.target.value)} />
-          </label>
-          <label>
-            <span>Password</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  void handleSignIn()
-                }
-              }}
-            />
-          </label>
-          <label className="admin-v2-check">
-            <input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} />
-            <span>Remember me</span>
-          </label>
-          <div className="admin-v2-login-actions">
-            <Button tone="primary" onClick={() => void handleSignIn()}>Enter builder</Button>
-          </div>
-          {loginError ? <p className="admin-v2-error">{loginError}</p> : null}
+        <div className="admin-v2-login-stage">
+          <section className="admin-v2-login-brand-panel">
+            <div className="admin-v2-chip">Builder workspace</div>
+            <h1>Admin control for forms, themes, automations, and leads.</h1>
+            <p>Use the same dark builder workspace online, with shared themes across forms and production persistence through Supabase.</p>
+            <div className="admin-v2-login-feature-list">
+              <div>
+                <strong>Shared theme library</strong>
+                <span>Create once and reuse across every form.</span>
+              </div>
+              <div>
+                <strong>Per-form isolation</strong>
+                <span>Content, flow, and settings stay scoped to each form.</span>
+              </div>
+              <div>
+                <strong>Live workspace</strong>
+                <span>Changes persist across sessions and deployments.</span>
+              </div>
+            </div>
+          </section>
+
+          <section className="admin-v2-login-card">
+            <div className="admin-v2-login-header">
+              <div className="admin-v2-chip">Admin access</div>
+              <span className="admin-v2-login-kicker">Secure sign-in</span>
+            </div>
+            <div className="admin-v2-login-copy">
+              <h2>Open builder</h2>
+              <p>Sign in to manage forms, contacts, automations, and the builder workspace.</p>
+            </div>
+            <label className="admin-v2-login-field">
+              <span>Email</span>
+              <input value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" />
+            </label>
+            <label className="admin-v2-login-field">
+              <span>Password</span>
+              <input
+                type="password"
+                value={password}
+                autoComplete="current-password"
+                onChange={(event) => setPassword(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    void handleSignIn()
+                  }
+                }}
+              />
+            </label>
+            <div className="admin-v2-login-meta">
+              <label className="admin-v2-check">
+                <input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} />
+                <span>Remember me</span>
+              </label>
+              <span className="admin-v2-login-note">Live access currently uses your admin account credentials.</span>
+            </div>
+            <div className="admin-v2-login-actions">
+              <Button tone="primary" onClick={() => void handleSignIn()}>Enter builder</Button>
+            </div>
+            {loginError ? <p className="admin-v2-error">{loginError}</p> : null}
+          </section>
         </div>
       </div>
     )
