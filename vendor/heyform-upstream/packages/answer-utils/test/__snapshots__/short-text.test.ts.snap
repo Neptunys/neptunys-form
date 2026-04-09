@@ -1,0 +1,49 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`correct value should be verified 1`] = `
+[
+  {
+    "id": "SHORT_TEXT",
+    "kind": "short_text",
+    "properties": {},
+    "title": "short-text.test",
+    "value": "hello world",
+  },
+]
+`;
+
+exports[`empty value should be verified if not required 1`] = `
+[
+  {
+    "id": "SHORT_TEXT",
+    "kind": "short_text",
+    "properties": {},
+    "title": "short-text.test",
+    "value": "",
+  },
+]
+`;
+
+exports[`should be verified if value length greater then 5 1`] = `
+[
+  {
+    "id": "SHORT_TEXT",
+    "kind": "short_text",
+    "properties": {},
+    "title": "short-text.test",
+    "value": "hello world",
+  },
+]
+`;
+
+exports[`undefined value should be verified if not required 1`] = `
+[
+  {
+    "id": "SHORT_TEXT",
+    "kind": "short_text",
+    "properties": {},
+    "title": "short-text.test",
+    "value": "",
+  },
+]
+`;

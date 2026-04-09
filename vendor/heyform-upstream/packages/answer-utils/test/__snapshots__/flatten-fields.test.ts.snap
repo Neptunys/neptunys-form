@@ -1,0 +1,290 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`should flatten fields 1`] = `
+[
+  {
+    "description": "Three Rings for Elven-kings under the sky,
+Seven for the Dwarf-lords in their halls of stone,
+Nine for Mortal Men doomed to die,
+
+One for the Dark Lord on his dark throne
+In the Land of Mordor where the shadows lie.
+
+One Ring to rule them all, One Ring to find them,
+One Ring to bring them all and in the darkness bind them
+In the Land of Mordor where the shadows lie.",
+    "id": "Z90w4JfKzc9c",
+    "kind": "statement",
+    "properties": {
+      "choices": [],
+    },
+    "title": "",
+    "validations": {
+      "required": true,
+    },
+  },
+  {
+    "id": "5c8Rgj9et1r2",
+    "kind": "text",
+    "properties": {
+      "allowMultiple": true,
+    },
+    "title": "Description",
+    "validations": {
+      "required": false,
+    },
+  },
+  {
+    "id": "vyLu2NkN70xkS",
+    "kind": "multiple_choice",
+    "properties": {
+      "allowMultiple": true,
+      "choices": [
+        {
+          "id": "F7XrAjByBk2w",
+          "label": "Group Choice 1",
+        },
+        {
+          "id": "cFEkKnnXmBP6",
+          "label": "Group Choice 2",
+        },
+      ],
+    },
+    "title": "Group Multiple Choose ",
+    "validations": {
+      "required": true,
+    },
+  },
+  {
+    "id": "1rc8Rgj9et52",
+    "kind": "text",
+    "properties": {
+      "choices": [],
+    },
+    "title": "🌟 Your Name ",
+    "validations": {
+      "required": false,
+    },
+  },
+  {
+    "id": "bcFvi1syrp66",
+    "kind": "phone_number",
+    "properties": {
+      "choices": [],
+      "defaultCountry": "US",
+    },
+    "title": "☎️  Your MobilePhone ",
+    "validations": {
+      "required": false,
+    },
+  },
+  {
+    "id": "yLxkSvkN7u2N",
+    "kind": "multiple_choice",
+    "properties": {
+      "allowMultiple": true,
+      "choices": [
+        {
+          "id": "kF7XrAjByB2w",
+          "label": "Choice 1",
+        },
+        {
+          "id": "BP6cFEkKnnXm",
+          "label": "Choice 2",
+        },
+      ],
+    },
+    "title": "🧱 Multiple Choose ",
+    "validations": {
+      "required": true,
+    },
+  },
+  {
+    "id": "MVlZfnmjZlye",
+    "kind": "multiple_choice",
+    "properties": {
+      "allowMultiple": false,
+      "choices": [
+        {
+          "id": "14wZu5EyC73q",
+          "label": "🍫 Chocolate",
+        },
+        {
+          "id": "MesZoaRCdR5Y",
+          "label": "🍍 Pineapple",
+        },
+      ],
+    },
+    "title": "👋 Just choose one",
+    "validations": {
+      "required": true,
+    },
+  },
+  {
+    "id": "X9F47wrnJImk",
+    "kind": "yes_no",
+    "properties": {
+      "choices": [
+        {
+          "id": "adUm2Hhr1OOW",
+          "label": "Yes",
+        },
+        {
+          "id": "QMR1nZV0u84M",
+          "label": "No",
+        },
+      ],
+    },
+    "title": "👍 Do you agree with us ",
+    "validations": {
+      "required": true,
+    },
+  },
+  {
+    "id": "EF9tbsJj3CNZ",
+    "kind": "picture_choice",
+    "properties": {
+      "allowMultiple": false,
+      "choices": [
+        {
+          "id": "XKV4vls1pkAX",
+          "image": "http://qej6l0046.bkt.clouddn.com/form/5f2b64476481e3096526715b/1596679926__0-I_F2_OBINdzLx39o3nvZfzXwepkYO9mey0__doge.jpeg",
+          "label": "Choice 1",
+        },
+        {
+          "id": "FN5cCteg6SOa",
+          "image": "http://qej6l0046.bkt.clouddn.com/form/5f2b64476481e3096526715b/1596679934__iAGYraz-j8J7gIxaC8GDJi017YJWUS16EzU7__p640.jpg",
+          "label": "Choice 2",
+        },
+        {
+          "id": "1Fl7MP9Nv2TM",
+          "image": "http://qej6l0046.bkt.clouddn.com/form/5f2b64476481e3096526715b/1596679940__IKke45HeAlbu-v_yqOvbUjQHffRQRFSdl8OJ__p225-2.jpeg",
+          "label": "Choice 3",
+        },
+      ],
+    },
+    "title": "🐶 Choose the dog ",
+    "validations": {
+      "required": true,
+    },
+  },
+  {
+    "id": "iiOqCptRe2SN",
+    "kind": "paragraph",
+    "properties": {
+      "choices": [],
+    },
+    "title": "🌹 What else do you want to say ",
+    "validations": {
+      "required": false,
+    },
+  },
+  {
+    "id": "Ri2SiOqCpteN",
+    "kind": "code_block",
+    "title": "🀄️ Do some code ",
+    "validations": {
+      "required": false,
+    },
+  },
+  {
+    "id": "qCpteNRi2SiO",
+    "kind": "file_upload",
+    "title": "🈴️ Upload you avatar ",
+    "validations": {
+      "required": false,
+    },
+  },
+  {
+    "id": "NqCpSqCpteiO",
+    "kind": "file_upload",
+    "title": "You sig here",
+    "validations": {
+      "required": false,
+    },
+  },
+  {
+    "id": "qFN5cteg6SOa",
+    "kind": "rating",
+    "properties": {
+      "total": 10,
+    },
+    "title": "🪐 Rate here ",
+    "validations": {
+      "required": false,
+    },
+  },
+  {
+    "id": "g6Oayu81jkdqcte",
+    "kind": "full_name",
+    "title": "Full name",
+    "validations": {
+      "required": false,
+    },
+  },
+  {
+    "id": "NteSqF9g5cOa6",
+    "kind": "input_table",
+    "properties": {
+      "tableColumns": [
+        {
+          "id": "name",
+          "title": "Name",
+        },
+        {
+          "id": "age",
+          "title": "Age",
+        },
+      ],
+    },
+    "title": "Input table",
+    "validations": {
+      "required": true,
+    },
+  },
+  {
+    "id": "u1NyLxkSvkN7",
+    "kind": "multiple_choice",
+    "properties": {
+      "allowMultiple": true,
+      "allowOther": true,
+      "choices": [
+        {
+          "id": "krAjByF7XB2w",
+          "label": "Choice 1",
+        },
+        {
+          "id": "P6cnBFEkKnXm",
+          "label": "Choice 2",
+        },
+      ],
+    },
+    "title": "✈ Multiple Choose with other",
+    "validations": {
+      "required": true,
+    },
+  },
+  {
+    "id": "Svky0NLxkN7u",
+    "kind": "multiple_choice",
+    "properties": {
+      "allowMultiple": false,
+      "allowOther": true,
+      "choices": [
+        {
+          "id": "kB2wF7XrAjBy",
+          "label": "Choice 1",
+        },
+        {
+          "id": "BPnXm6cFEkKn",
+          "label": "Choice 2",
+        },
+      ],
+    },
+    "title": "🎉 Single Choose with other",
+    "validations": {
+      "required": true,
+    },
+  },
+]
+`;

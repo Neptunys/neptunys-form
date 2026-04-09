@@ -1,61 +1,75 @@
-# Neptunys Quizz
+# Neptunys Form
 
-Neptunys Quizz is a React + Supabase quiz funnel focused on military hearing-loss paid traffic. It includes:
+This repository now uses HeyForm as the live form platform.
 
-- Variant A and Variant B quiz flows
-- Embedded analytics events and drop-off tracking
-- Progressive lead capture
-- Admin dashboard with lead export and funnel reporting
-- Supabase-ready schema and deployment setup
+The active application source lives in `vendor/heyform-upstream` and is tracked by this root repository.
+The older custom Vite + Supabase quiz app still exists in the repo, but it is no longer the deployment target for the live form builder/runtime.
 
-## Quick start
+## Source Of Truth
 
-```bash
-npm install
-npm run dev
+- Root git repo: `neptunys-form`
+- Active app: `vendor/heyform-upstream`
+- Local helper scripts: `scripts/start-heyform-native.ps1` and `scripts/stop-heyform-native.ps1`
+
+## Local Run
+
+Start the native Windows stack:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-heyform-native.ps1
 ```
 
-## Environment
+Services:
 
-Copy `.env.example` to `.env` and set the Supabase keys when ready. The app can still run in demo mode without them.
+- Webapp: `http://127.0.0.1:3000`
+- Backend: `http://127.0.0.1:9157`
+- Mailpit: `http://127.0.0.1:8025`
 
-For admin access, set both `VITE_ADMIN_EMAIL` and `VITE_ADMIN_PASSWORD` for a local dashboard login, or leave both unset and use Supabase Auth email/password login instead. There is no built-in fallback password.
+Stop the local stack:
 
-Required variables:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\stop-heyform-native.ps1
+```
 
-- `VITE_SUPABASE_URL`: Supabase project URL used for shared project registry, leads, and Edge Functions
-- `VITE_SUPABASE_ANON_KEY`: Supabase anon key used by the frontend client
-- `VITE_ADMIN_EMAIL`: Optional local-only admin login email when not using Supabase Auth
-- `VITE_ADMIN_PASSWORD`: Optional local-only admin login password when not using Supabase Auth
+## What Was Wired
 
-## Persistence
+The HeyForm integration in this repo includes:
 
-The app always works in local demo mode through browser local storage. For shared persistence across devices and deployments, configure Supabase and apply the SQL migrations in [supabase/migrations](supabase/migrations).
+- local Windows boot flow without Docker Desktop
+- upload persistence under the server static upload directory
+- dev proxy support for uploaded assets
+- builder and runtime support for uploaded logo/background images
+- theme controls for answer radius, button radius, and logo size
+- builder preview/runtime fixes so saved theme data is reflected outside the edit canvas
 
-Important: builder theme persistence now depends on the migration at [supabase/migrations/202604080002_add_builder_design_json.sql](supabase/migrations/202604080002_add_builder_design_json.sql). Apply that migration before using the admin builder against a remote registry.
+## Free Deployment Recommendation
 
-## GitHub And Deploy
+For full live usage, use a host that runs the HeyForm server container and keep the frontend and backend on the same origin where possible.
 
-Recommended flow:
+Recommended free-ish stack:
 
-1. Push this repository to GitHub.
-2. Import the repo into Vercel.
-3. Add the environment variables from `.env.example` in the Vercel project settings.
-4. Apply the Supabase migrations, including [supabase/migrations/202604080002_add_builder_design_json.sql](supabase/migrations/202604080002_add_builder_design_json.sql).
-5. Redeploy so the admin app and shared theme registry persist remotely.
+1. Backend app: Render web service using `vendor/heyform-upstream/Dockerfile`
+2. Database: MongoDB Atlas free tier
+3. Redis/Bull: Upstash Redis free tier
+4. Frontend: either
+   - same backend host via the HeyForm server container, or
+   - Vercel only after API/static/logout proxying is configured to the backend host
 
-## Deploy
+Important:
 
-- Frontend: Vercel
-- Backend: Supabase
-- Notifications: Resend or webhook automation
+- Supabase can be used for other project data, but it does not replace the HeyForm NestJS backend.
+- Vercel alone is not enough for full live usage of HeyForm because auth, uploads, GraphQL, and static uploaded assets depend on the backend.
 
-## Brand system
+## Git And Deploy Notes
 
-The app now uses a shared brand system derived from the builder UI so the home, builder, and shared primitives stay visually aligned.
+- This root repository now tracks the HeyForm source directly under `vendor/heyform-upstream`.
+- The nested upstream `.git` metadata was moved into `.heyform-local/repo-backups` so root git can own the app files.
+- If you deploy the frontend on Vercel, point the project at the HeyForm webapp folder or update the root Vercel project to build from that source.
 
-- Palette: obsidian backgrounds, smoke panels, porcelain text, orchid accent, electric-blue signal color
-- Typography: San Francisco for both interface copy and display headings
-- Surfaces: soft layered dark panels with subtle inner highlights instead of flat greys
-- Interactive states: orchid for selected/brand emphasis, blue for signal/progress/action feedback
-- Principle: new UI should use shared tokens in [src/styles/tokens.css](src/styles/tokens.css) and shared primitives in [src/styles/global.css](src/styles/global.css) instead of introducing local hardcoded colors
+## Next Deployment Step
+
+To finish live deployment from this machine, the remaining external requirements are:
+
+1. a backend hosting account and linked project on a free provider such as Render
+2. working git push access to the project GitHub repo
+3. a Vercel-authenticated CLI session if you want me to trigger the live frontend deployment from here

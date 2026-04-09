@@ -1,0 +1,25 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`correct value should be verified 1`] = `
+[
+  {
+    "id": "PHONE_NUMBER",
+    "kind": "phone_number",
+    "properties": {},
+    "title": "phone-number.test",
+    "value": "+12015550123",
+  },
+]
+`;
+
+exports[`undefined value should be verified if not required 1`] = `
+[
+  {
+    "id": "PHONE_NUMBER",
+    "kind": "phone_number",
+    "properties": {},
+    "title": "phone-number.test",
+    "value": "",
+  },
+]
+`;

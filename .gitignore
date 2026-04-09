@@ -9,4 +9,5 @@ dist/
 supabase/.temp/
 .env*.local
 live-app.js
-vendor/heyform-upstream/
+.heyform-local/
+vendor/heyform-upstream/packages/webapp/src/assets/fonts/

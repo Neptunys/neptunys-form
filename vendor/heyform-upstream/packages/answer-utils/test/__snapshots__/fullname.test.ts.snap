@@ -1,0 +1,42 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`correct value should be verified 1`] = `
+[
+  {
+    "id": "FULL_NAME",
+    "kind": "full_name",
+    "properties": {},
+    "title": "full_name.test",
+    "value": {
+      "firstName": "firstName",
+      "lastName": "lastName",
+    },
+  },
+]
+`;
+
+exports[`transform full name to html 1`] = `
+"<ol>
+<li>
+  <h3>full_name.test</h3>
+  <p>firstName lastName</p>
+</li>
+</ol>"
+`;
+
+exports[`transform full name to text 1`] = `
+"full_name.test
+firstName lastName"
+`;
+
+exports[`undefined value should be verified if not required 1`] = `
+[
+  {
+    "id": "FULL_NAME",
+    "kind": "full_name",
+    "properties": {},
+    "title": "full_name.test",
+    "value": "",
+  },
+]
+`;

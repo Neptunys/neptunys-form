@@ -1,0 +1,25 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`correct value should be verified 1`] = `
+[
+  {
+    "id": "EMAIL",
+    "kind": "email",
+    "properties": {},
+    "title": "number.test",
+    "value": "email@example.com",
+  },
+]
+`;
+
+exports[`undefined value should be verified if not required 1`] = `
+[
+  {
+    "id": "EMAIL",
+    "kind": "email",
+    "properties": {},
+    "title": "number.test",
+    "value": "",
+  },
+]
+`;

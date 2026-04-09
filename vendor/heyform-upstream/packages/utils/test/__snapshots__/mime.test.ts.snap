@@ -1,0 +1,34 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`common file mime type 1`] = `
+[
+  "image/jpeg",
+  "image/png",
+  "image/bmp",
+  "image/webp",
+  "image/gif",
+  "text/plain",
+  "text/markdown",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/csv",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/pdf",
+  "video/mp4",
+  "video/x-ms-wmv",
+  "image/svg+xml",
+]
+`;
+
+exports[`common image mime type 1`] = `
+[
+  "image/jpeg",
+  "image/png",
+  "image/bmp",
+  "image/webp",
+  "image/gif",
+]
+`;

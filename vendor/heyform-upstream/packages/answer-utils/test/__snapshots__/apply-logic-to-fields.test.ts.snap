@@ -1,0 +1,47 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`apply to group fields 1`] = `
+[
+  {
+    "id": "id_short_text",
+    "index": 1,
+    "isTouched": true,
+    "kind": "short_text",
+    "title": "Short Text",
+  },
+  {
+    "id": "id_group",
+    "index": 2,
+    "kind": "group",
+    "title": "Group",
+  },
+  {
+    "id": "id_number",
+    "index": 1,
+    "kind": "number",
+    "parent": {
+      "id": "id_group",
+      "index": 2,
+      "kind": "group",
+      "title": "Group",
+    },
+    "title": "Number",
+  },
+  {
+    "id": "id_statement2",
+    "kind": "statement",
+    "parent": {
+      "id": "id_group",
+      "kind": "group",
+      "title": "Group",
+    },
+    "title": "Statement2",
+  },
+  {
+    "id": "id_date",
+    "index": 3,
+    "kind": "date",
+    "title": "Date",
+  },
+]
+`;

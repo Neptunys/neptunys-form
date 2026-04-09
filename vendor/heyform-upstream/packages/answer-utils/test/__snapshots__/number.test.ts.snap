@@ -1,0 +1,37 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`correct value should be verified 1`] = `
+[
+  {
+    "id": "NUMBER",
+    "kind": "number",
+    "properties": {},
+    "title": "number.test",
+    "value": 5,
+  },
+]
+`;
+
+exports[`should be verified if value greater then 5 1`] = `
+[
+  {
+    "id": "NUMBER",
+    "kind": "number",
+    "properties": {},
+    "title": "number.test",
+    "value": 7,
+  },
+]
+`;
+
+exports[`undefined value should be verified if not required 1`] = `
+[
+  {
+    "id": "NUMBER",
+    "kind": "number",
+    "properties": {},
+    "title": "number.test",
+    "value": "",
+  },
+]
+`;

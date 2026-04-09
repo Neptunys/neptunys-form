@@ -84,6 +84,94 @@ Required local dependency:
 
 - Docker Desktop with a running engine
 
+## Native Windows Boot
+
+The free native Windows path is now validated on this machine.
+
+Use the native helper scripts from this repo root:
+
+1. `powershell -ExecutionPolicy Bypass -File .\scripts\start-heyform-native.ps1`
+2. Open `http://127.0.0.1:3000`
+3. Open `http://127.0.0.1:8025` for Mailpit
+4. Stop with `powershell -ExecutionPolicy Bypass -File .\scripts\stop-heyform-native.ps1`
+
+Required local dependencies for the native path:
+
+- MongoDB running locally on `127.0.0.1:27017`
+- Redis service running locally on `127.0.0.1:6379`
+- Mailpit installed via `winget`
+- `corepack pnpm` available
+
+Current validated local ports:
+
+- webapp: `3000`
+- server: `9157`
+- Mailpit UI: `8025`
+- Mailpit SMTP: `1025`
+
+For local verification emails, HeyForm sends mail into Mailpit instead of a real external mailbox.
+Open `http://127.0.0.1:8025` to read the verification code.
+
+## Free Setup Options
+
+There is no requirement to pay for Docker to make this migration work.
+
+### Recommended fastest free path
+
+Use a free container runtime and keep the existing compose-based boot flow.
+
+Best option:
+
+1. Rancher Desktop
+
+Why:
+
+- free
+- easiest match for the current compose workflow
+- avoids spending time hand-installing MongoDB and Redis-compatible services
+- best chance of getting operational fastest
+
+Alternative:
+
+1. Podman Desktop
+
+Why not the first choice:
+
+- also free
+- workable, but compose and Docker-compatibility tend to require a bit more adjustment on Windows
+
+### Strict no-container path
+
+This is also possible and still free, but slower:
+
+1. Use `corepack pnpm` for the workspace package manager
+2. Install MongoDB Community Server
+3. Install a Redis-compatible local service
+4. Run the HeyForm server and webapp natively
+
+Notes:
+
+- `corepack pnpm` already works on this machine
+- MongoDB Community is available via `winget`
+- Redis on native Windows is the awkward part; that is why the free container path is faster
+
+### Free cloud path
+
+For testing only, a free hosted combination is also possible:
+
+1. MongoDB Atlas free tier
+2. Upstash or another free Redis tier
+
+This avoids local infra entirely, but requires external accounts and is not the fastest for an offline local workflow.
+
+## Recommendation
+
+If the goal is operational ASAP without paying:
+
+1. Use the native Windows boot path that is already working locally
+2. Keep the compose path only as a fallback if you later want isolated containerized infra
+3. Move straight into account setup, branding, branching, and webhook configuration
+
 ## Branding Mapping
 
 Map the current builder theme into HeyForm theme settings as follows:

@@ -1,0 +1,164 @@
+import { Injectable } from '@nestjs/common'
+import { InjectModel } from '@nestjs/mongoose'
+import { Model } from 'mongoose'
+
+import { helper } from '@heyform-inc/utils'
+import { ProjectMemberModel, ProjectModel } from '@model'
+
+@Injectable()
+export class ProjectService {
+  constructor(
+    @InjectModel(ProjectModel.name)
+    private readonly projectModel: Model<ProjectModel>,
+    @InjectModel(ProjectMemberModel.name)
+    private readonly projectMemberModel: Model<ProjectMemberModel>
+  ) {}
+
+  async findAllInTeam(teamId: string): Promise<ProjectModel[]> {
+    return this.projectModel
+      .find({
+        teamId
+      })
+      .sort({
+        createdAt: -1
+      })
+  }
+
+  async findOne(conditions: any) {
+    return this.projectModel.findOne(conditions)
+  }
+
+  async findById(id: string): Promise<ProjectModel | null> {
+    return this.projectModel.findById(id)
+  }
+
+  async findByIds(ids: string[], conditions?: Record<string, any>): Promise<ProjectModel[]> {
+    return this.projectModel
+      .find({
+        _id: {
+          $in: ids
+        },
+        ...conditions
+      })
+      .sort({
+        createdAt: -1
+      })
+  }
+
+  public async create(project: ProjectModel | any): Promise<string> {
+    const result = await this.projectModel.create(project)
+    return result.id
+  }
+
+  public async update(id: string, updates: Record<string, any>): Promise<boolean> {
+    const result = await this.projectModel.updateOne(
+      {
+        _id: id
+      },
+      updates
+    )
+    return result.acknowledged
+  }
+
+  public async delete(id: string): Promise<boolean> {
+    const result = await this.projectModel.deleteOne({
+      _id: id
+    })
+    return (result.deletedCount ?? 0) > 0
+  }
+
+  public async findMemberById(
+    projectId: string,
+    memberId: string
+  ): Promise<ProjectMemberModel | null> {
+    return this.projectMemberModel.findOne({
+      projectId,
+      memberId
+    })
+  }
+
+  public async findProjectByMemberId(memberId: string, projectId: string) {
+    return this.projectMemberModel.findOne({
+      memberId,
+      projectId
+    })
+  }
+
+  public async findProjectsByMemberId(memberId: string): Promise<string[]> {
+    const members = await this.projectMemberModel.find({
+      memberId
+    })
+    return members.map(row => row.projectId)
+  }
+
+  public async findMembers(projectId: string | string[]): Promise<ProjectMemberModel[]> {
+    return this.projectMemberModel.find({
+      projectId: helper.isArray(projectId) ? { $in: projectId } : projectId
+    })
+  }
+
+  public async memberCount(projectId: string): Promise<number> {
+    return this.projectMemberModel.countDocuments({
+      projectId
+    })
+  }
+
+  public async addMembers(members: any): Promise<any> {
+    return this.projectMemberModel.insertMany(members, {
+      ordered: false
+    })
+  }
+
+  public async createMember(member: ProjectMemberModel | any): Promise<boolean> {
+    const result = await this.projectMemberModel.create(member)
+    return !!result.id
+  }
+
+  public async deleteMember(projectId: string, memberId: string): Promise<boolean> {
+    const result = await this.projectMemberModel.deleteOne({
+      projectId,
+      memberId
+    })
+    return (result.deletedCount ?? 0) > 0
+  }
+
+  public async deleteMembers(projectId: string, memberIds: string[]): Promise<boolean> {
+    const result = await this.projectMemberModel.deleteMany({
+      projectId,
+      memberId: {
+        $in: memberIds
+      }
+    })
+    return (result.deletedCount ?? 0) > 0
+  }
+
+  public async deleteMemberInProjects(projectIds: string[], memberId: string): Promise<boolean> {
+    const result = await this.projectMemberModel.deleteMany({
+      projectId: {
+        $in: projectIds
+      },
+      memberId
+    })
+    return (result.deletedCount ?? 0) > 0
+  }
+
+  public async deleteAllMemberInProject(projectId: string): Promise<boolean> {
+    const result = await this.projectMemberModel.deleteMany({
+      projectId
+    })
+    return (result.deletedCount ?? 0) > 0
+  }
+
+  async createByNewTeam(teamId: string, ownerId: string, projectName: string): Promise<void> {
+    const projectId = await this.create({
+      teamId,
+      name: projectName,
+      ownerId
+    })
+
+    await this.createMember({
+      projectId,
+      memberId: ownerId
+    })
+  }
+}

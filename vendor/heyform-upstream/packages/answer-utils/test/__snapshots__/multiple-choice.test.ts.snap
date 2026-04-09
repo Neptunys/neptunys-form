@@ -1,0 +1,160 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`multiple values should be verified 1`] = `
+[
+  {
+    "id": "MULTIPLE_CHOICE",
+    "kind": "multiple_choice",
+    "properties": {
+      "allowMultiple": true,
+      "choices": [
+        {
+          "id": "id_a",
+          "label": "A",
+        },
+        {
+          "id": "id_b",
+          "label": "B",
+        },
+        {
+          "id": "id_c",
+          "label": "C",
+        },
+      ],
+    },
+    "title": "multiple-choice.test",
+    "value": {
+      "value": [
+        "id_a",
+        "id_b",
+      ],
+    },
+  },
+]
+`;
+
+exports[`multiple values with other should be verified 1`] = `
+[
+  {
+    "id": "MULTIPLE_CHOICE",
+    "kind": "multiple_choice",
+    "properties": {
+      "allowMultiple": true,
+      "allowOther": true,
+      "choices": [
+        {
+          "id": "id_a",
+          "label": "A",
+        },
+        {
+          "id": "id_b",
+          "label": "B",
+        },
+        {
+          "id": "id_c",
+          "label": "C",
+        },
+      ],
+    },
+    "title": "multiple-choice.test",
+    "value": {
+      "other": "Other answer",
+      "value": [
+        "id_a",
+        "id_b",
+      ],
+    },
+  },
+]
+`;
+
+exports[`single value should be verified 1`] = `
+[
+  {
+    "id": "MULTIPLE_CHOICE",
+    "kind": "multiple_choice",
+    "properties": {
+      "choices": [
+        {
+          "id": "id_a",
+          "label": "A",
+        },
+        {
+          "id": "id_b",
+          "label": "B",
+        },
+        {
+          "id": "id_c",
+          "label": "C",
+        },
+      ],
+    },
+    "title": "multiple-choice.test",
+    "value": {
+      "value": [
+        "id_a",
+      ],
+    },
+  },
+]
+`;
+
+exports[`single value with other should be verified 1`] = `
+[
+  {
+    "id": "MULTIPLE_CHOICE",
+    "kind": "multiple_choice",
+    "properties": {
+      "allowOther": true,
+      "choices": [
+        {
+          "id": "id_a",
+          "label": "A",
+        },
+        {
+          "id": "id_b",
+          "label": "B",
+        },
+        {
+          "id": "id_c",
+          "label": "C",
+        },
+      ],
+    },
+    "title": "multiple-choice.test",
+    "value": {
+      "other": "Other answer",
+      "value": [],
+    },
+  },
+]
+`;
+
+exports[`undefined value should be verified if not required 1`] = `
+[
+  {
+    "id": "MULTIPLE_CHOICE",
+    "kind": "multiple_choice",
+    "properties": {
+      "choices": [
+        {
+          "id": "id_a",
+          "label": "A",
+        },
+        {
+          "id": "id_b",
+          "label": "B",
+        },
+        {
+          "id": "id_c",
+          "label": "C",
+        },
+      ],
+    },
+    "title": "multiple-choice.test",
+    "value": {
+      "value": [],
+    },
+  },
+]
+`;
