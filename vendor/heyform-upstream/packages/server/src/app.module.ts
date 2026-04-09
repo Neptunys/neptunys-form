@@ -45,6 +45,7 @@ class ServiceModule {}
         limit: 1000
       }
     ]),
+    ModelModule,
     ServiceModule
   ],
   controllers: [...Object.values(Controllers)],
