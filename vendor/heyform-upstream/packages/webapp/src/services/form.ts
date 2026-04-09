@@ -56,9 +56,13 @@ import { TemplateType } from '@/types'
 function normalizeGraphQLEnumValue(
   enumObject: Record<string, string | number>,
   value: string | number
-): string {
+): string | number {
   if (typeof value === 'number') {
-    return String(enumObject[value])
+    return value
+  }
+
+  if (/^\d+$/.test(value)) {
+    return Number(value)
   }
 
   return value
