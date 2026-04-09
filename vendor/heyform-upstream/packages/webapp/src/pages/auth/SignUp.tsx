@@ -7,6 +7,7 @@ import { useRouter } from '@/utils'
 import { helper } from '@heyform-inc/utils'
 
 import { Form, Input, PasswordStrength } from '@/components'
+import { VERIFY_USER_EMAIL } from '@/consts'
 import { useUserStore } from '@/store'
 
 import SocialLogin from './SocialLogin'
@@ -27,9 +28,14 @@ const SignUp = () => {
   async function fetch(values: any) {
     await AuthService.signUp(values)
 
-    setTemporaryEmail(values.email)
-    setVerifyEmailSentAt(Date.now())
-    router.replace('/verify-email')
+    if (VERIFY_USER_EMAIL) {
+      setTemporaryEmail(values.email)
+      setVerifyEmailSentAt(Date.now())
+      router.replace('/verify-email')
+      return
+    }
+
+    router.replace('/workspace/create')
   }
 
   return (

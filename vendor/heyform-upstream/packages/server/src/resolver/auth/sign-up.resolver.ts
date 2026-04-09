@@ -1,7 +1,7 @@
 import { BadRequestException, UseGuards } from '@nestjs/common'
 
 import { GraphqlResponse } from '@decorator'
-import { APP_DISABLE_REGISTRATION, BCRYPT_SALT } from '@environments'
+import { APP_DISABLE_REGISTRATION, BCRYPT_SALT, VERIFY_USER_EMAIL } from '@environments'
 import { SignUpInput } from '@graphql'
 import { DeviceIdGuard } from '@guard'
 import { helper } from '@heyform-inc/utils'
@@ -47,7 +47,8 @@ export class SignUpResolver {
       email: input.email,
       password: await passwordHash(input.password, BCRYPT_SALT),
       avatar: gravatar(input.email),
-      lang: client.lang
+      lang: client.lang,
+      isEmailVerified: !VERIFY_USER_EMAIL
     })
 
     this.authService.createUserActivity({
@@ -62,8 +63,10 @@ export class SignUpResolver {
       deviceId: client.deviceId
     })
 
-    const code = await this.authService.getVerificationCodeWithRateLimit(`verify_email:${userId}`)
-    this.mailService.emailVerificationRequest(input.email, code)
+    if (VERIFY_USER_EMAIL) {
+      const code = await this.authService.getVerificationCodeWithRateLimit(`verify_email:${userId}`)
+      this.mailService.emailVerificationRequest(input.email, code)
+    }
 
     return true
   }
