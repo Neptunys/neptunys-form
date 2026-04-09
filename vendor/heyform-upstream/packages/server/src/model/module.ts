@@ -27,6 +27,8 @@ import {
   ProjectMemberSchema,
   ProjectModel,
   ProjectSchema,
+  StoredUploadModel,
+  StoredUploadSchema,
   SubmissionIpLimitModel,
   SubmissionIpLimitSchema,
   SubmissionModel,
@@ -78,5 +80,6 @@ export const ModelModule = MongooseModule.forFeature([
   { name: ProjectModel.name, schema: ProjectSchema },
   { name: ProjectGroupModel.name, schema: ProjectGroupSchema },
   { name: ProjectMemberModel.name, schema: ProjectMemberSchema },
+  { name: StoredUploadModel.name, schema: StoredUploadSchema },
   { name: BrandKitModel.name, schema: BrandKitSchema }
 ])

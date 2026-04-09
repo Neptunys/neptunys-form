@@ -1,6 +1,5 @@
 import { S3Client } from '@aws-sdk/client-s3'
-import { mkdirpSync, pathExistsSync } from 'fs-extra'
-import { diskStorage } from 'multer'
+import { memoryStorage } from 'multer'
 import * as multerS3 from 'multer-s3'
 
 import {
@@ -8,8 +7,7 @@ import {
   S3_BUCKET,
   S3_ENDPOINT,
   S3_REGION,
-  S3_SECRET_ACCESS_KEY,
-  UPLOAD_DIR
+  S3_SECRET_ACCESS_KEY
 } from '@environments'
 import { helper, nanoid } from '@heyform-inc/utils'
 
@@ -43,18 +41,5 @@ export function getMulterStorage() {
     })
   }
 
-  return diskStorage({
-    destination: (req: any, file: any, cb: any) => {
-      const uploadPath = UPLOAD_DIR
-
-      if (!pathExistsSync(uploadPath)) {
-        mkdirpSync(uploadPath)
-      }
-
-      cb(null, uploadPath)
-    },
-    filename: (req: any, file: any, cb: any) => {
-      cb(null, `${nanoid(12)}-${file.originalname}`)
-    }
-  })
+  return memoryStorage()
 }
