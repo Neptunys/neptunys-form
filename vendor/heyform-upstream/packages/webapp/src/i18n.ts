@@ -79,7 +79,7 @@ i18n
       transKeepBasicHtmlNodesFor: ['br', 'strong', 'b', 'i', 'a']
     },
     detection: {
-      order: ['cookie', 'navigator'],
+      order: ['cookie'],
       caches: ['cookie'],
       lookupCookie: LOCALE_COOKIE_NAME,
       convertDetectedLanguage: (lng: string) => {
