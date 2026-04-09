@@ -17,11 +17,25 @@ if (fs.existsSync(SERVER_ROOT_PATH)) {
   loadEnv(NODE_ENV, SERVER_ROOT_PATH)
 }
 
+const RENDER_EXTERNAL_URL = process.env.RENDER_EXTERNAL_URL
+
+let parsedRedisUrl: URL | undefined
+
+if (process.env.REDIS_URL) {
+  try {
+    parsedRedisUrl = new URL(process.env.REDIS_URL)
+  } catch (_) {}
+}
+
+const parsedRedisDb = parsedRedisUrl?.pathname.replace(/^\/+/, '')
+
 // App serve
-export const APP_LISTEN_PORT: number = +process.env.APP_LISTEN_PORT || 9157
+export const APP_LISTEN_PORT: number = +(process.env.APP_LISTEN_PORT || process.env.PORT || 9157)
 export const APP_LISTEN_HOSTNAME: string = process.env.APP_LISTEN_HOSTNAME || '0.0.0.0'
 export const APP_HOMEPAGE_URL: string =
-  process.env.APP_HOMEPAGE_URL || `http://${APP_LISTEN_HOSTNAME}:${APP_LISTEN_PORT}`
+  process.env.APP_HOMEPAGE_URL ||
+  RENDER_EXTERNAL_URL ||
+  `http://${APP_LISTEN_HOSTNAME}:${APP_LISTEN_PORT}`
 export const APP_DISABLE_REGISTRATION: boolean = helper.isTrue(process.env.APP_DISABLE_REGISTRATION)
 export const ENABLE_GOOGLE_FONTS: boolean =
   process.env.ENABLE_GOOGLE_FONTS === undefined
@@ -66,10 +80,16 @@ export const MONGO_SSL_CA_PATH: Buffer[] | undefined = process.env.MONGO_SSL_CA_
   : undefined
 
 // Redis
-export const REDIS_HOST: string = process.env.REDIS_HOST || '127.0.0.1'
-export const REDIS_PORT: number = +process.env.REDIS_PORT || 6379
-export const REDIS_PASSWORD: string = process.env.REDIS_PASSWORD
-export const REDIS_DB: number = +process.env.REDIS_DB || 0
+export const REDIS_HOST: string = process.env.REDIS_HOST || parsedRedisUrl?.hostname || '127.0.0.1'
+export const REDIS_PORT: number = +(process.env.REDIS_PORT || parsedRedisUrl?.port || 6379)
+export const REDIS_USERNAME: string | undefined =
+  process.env.REDIS_USERNAME || parsedRedisUrl?.username || undefined
+export const REDIS_PASSWORD: string | undefined =
+  process.env.REDIS_PASSWORD || parsedRedisUrl?.password || undefined
+export const REDIS_DB: number = +(process.env.REDIS_DB || parsedRedisDb || 0)
+export const REDIS_TLS: boolean = process.env.REDIS_TLS
+  ? helper.isTrue(process.env.REDIS_TLS)
+  : parsedRedisUrl?.protocol === 'rediss:'
 
 // SMTP
 export const VERIFY_USER_EMAIL: boolean = toBool(process.env.VERIFY_USER_EMAIL, false)

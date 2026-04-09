@@ -1,0 +1,45 @@
+services:
+  - type: web
+    name: neptunys-form
+    runtime: docker
+    plan: free
+    region: oregon
+    rootDir: vendor/heyform-upstream
+    dockerfilePath: vendor/heyform-upstream/Dockerfile
+    dockerContext: vendor/heyform-upstream
+    autoDeployTrigger: commit
+    healthCheckPath: /health/ready
+    buildFilter:
+      paths:
+        - vendor/heyform-upstream/**
+        - render.yaml
+        - DEPLOY_RENDER.md
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_LISTEN_PORT
+        value: "10000"
+      - key: ENABLE_GOOGLE_FONTS
+        value: "false"
+      - key: VERIFY_USER_EMAIL
+        value: "false"
+      - key: SESSION_KEY
+        generateValue: true
+      - key: FORM_ENCRYPTION_KEY
+        generateValue: true
+      - key: MONGO_URI
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_REGION
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: S3_PUBLIC_URL
+        sync: false

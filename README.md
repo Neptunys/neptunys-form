@@ -55,6 +55,8 @@ Recommended free-ish stack:
    - same backend host via the HeyForm server container, or
    - Vercel only after API/static/logout proxying is configured to the backend host
 
+This repo now includes a ready Render Blueprint in `render.yaml` and a step-by-step deployment guide in `DEPLOY_RENDER.md`.
+
 Important:
 
 - Supabase can be used for other project data, but it does not replace the HeyForm NestJS backend.
