@@ -29,6 +29,10 @@ interface HdelOptions extends BaseOptions {
 export class RedisService {
   constructor(@InjectRedis() private readonly redis: Redis) {}
 
+  public status(): string {
+    return this.redis.status
+  }
+
   public get(key: string): Promise<string | null> {
     return this.redis.get(key)
   }
