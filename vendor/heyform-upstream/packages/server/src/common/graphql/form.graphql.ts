@@ -323,6 +323,7 @@ export class CreateFormInput {
 
   @Field(type => GraphQLJSON, { nullable: true })
   @IsArray()
+  @IsOptional()
   nameSchema?: any[]
 
   @Field(type => GraphQLJSON)
