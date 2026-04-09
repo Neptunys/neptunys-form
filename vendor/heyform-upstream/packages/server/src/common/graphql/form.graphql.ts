@@ -325,11 +325,11 @@ export class CreateFormInput {
   @IsArray()
   nameSchema?: any[]
 
-  @Field()
+  @Field(type => GraphQLJSON)
   @IsEnum(InteractiveModeEnum)
   interactiveMode: InteractiveModeEnum
 
-  @Field()
+  @Field(type => GraphQLJSON)
   @IsEnum(FormKindEnum)
   kind: FormKindEnum
 }
