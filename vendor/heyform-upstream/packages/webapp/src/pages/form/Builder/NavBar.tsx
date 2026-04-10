@@ -55,7 +55,10 @@ export default function BuilderNavBar() {
           canPublish: false
         })
 
-        router.push(`/workspace/${workspaceId}/project/${projectId}/form/${formId}/share`)
+        toast({
+          title: 'Published',
+          message: 'The form was published successfully.'
+        })
       }
     },
     {

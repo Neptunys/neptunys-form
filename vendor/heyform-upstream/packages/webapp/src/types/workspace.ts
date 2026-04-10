@@ -26,6 +26,7 @@ export interface WorkspaceType {
   name: string
   ownerId: string
   avatar?: string
+  customDomain?: string
   removeBranding?: boolean
   inviteCode: string
   inviteCodeExpireAt?: number

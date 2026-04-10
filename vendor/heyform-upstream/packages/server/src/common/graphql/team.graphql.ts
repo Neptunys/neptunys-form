@@ -126,6 +126,13 @@ export class UpdateTeamInput extends TeamDetailInput {
 }
 
 @InputType()
+export class AddCustomDomainInput extends TeamDetailInput {
+  @Field({ nullable: true })
+  @IsOptional()
+  domain?: string
+}
+
+@InputType()
 export class CreateInvitationInput extends TeamDetailInput {
   @Field(type => [String])
   emails: string[]
@@ -247,6 +254,9 @@ export class TeamType extends PublicTeamType {
 
   @Field({ nullable: true })
   removeBranding?: boolean
+
+  @Field({ nullable: true })
+  customDomain?: string
 
   @Field()
   createdAt: Date

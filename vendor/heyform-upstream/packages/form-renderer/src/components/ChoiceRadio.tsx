@@ -1,4 +1,4 @@
-import { IconCheck, IconPhoto } from '@tabler/icons-react'
+import { IconPhoto } from '@tabler/icons-react'
 import clsx from 'clsx'
 import { FC, ReactNode, useCallback, useMemo } from 'react'
 
@@ -81,7 +81,7 @@ export const ChoiceRadio: FC<ChoiceRadioProps> = ({
       )
     }
 
-    return label
+    return <div className="heyform-radio-label-text">{label}</div>
   }, [isChecked, isOther, label, value])
 
   useKey(keyName?.toLowerCase() as string, handleClick)
@@ -116,9 +116,6 @@ export const ChoiceRadio: FC<ChoiceRadioProps> = ({
         <div className="heyform-radio-content">
           {keyName && isHotkeyShow && <div className="heyform-radio-hotkey">{keyName}</div>}
           <div className="heyform-radio-label">{labelChildren}</div>
-        </div>
-        <div className="heyform-radio-icon">
-          <IconCheck />
         </div>
       </div>
     </div>

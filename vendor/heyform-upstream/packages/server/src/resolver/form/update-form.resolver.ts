@@ -33,6 +33,8 @@ export class UpdateFormResolver {
       ['ipLimitCount', 'settings.ipLimitCount'],
       ['ipLimitTime', 'settings.ipLimitTime'],
       ['enableProgress', 'settings.enableProgress'],
+      ['progressStyle', 'settings.progressStyle'],
+      ['autoAdvanceSingleChoice', 'settings.autoAdvanceSingleChoice'],
       ['enableQuestionList', 'settings.enableQuestionList'],
       ['enableNavigationArrows', 'settings.enableNavigationArrows'],
       ['locale', 'settings.locale'],

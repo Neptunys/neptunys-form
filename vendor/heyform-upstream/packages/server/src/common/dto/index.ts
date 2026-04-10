@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer'
 import {
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -74,4 +75,8 @@ export class ImageResizingDto {
 export class ExportSubmissionsDto {
   @IsString()
   formId: string
+
+  @IsOptional()
+  @IsIn(['csv', 'xlsx'])
+  format?: 'csv' | 'xlsx'
 }

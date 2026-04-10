@@ -10,6 +10,7 @@ import { Progress } from './Progress'
 
 export const Header: FC = () => {
   const { state, dispatch } = useStore()
+  const progressStyle = state.settings?.progressStyle === 'top-bar' ? 'top-bar' : 'circular'
 
   async function handleCountdownEnd() {
     // Submit form
@@ -31,6 +32,8 @@ export const Header: FC = () => {
 
   return (
     <div className="heyform-header">
+      {state.settings?.enableProgress && progressStyle === 'top-bar' && <Progress />}
+
       <div className="heyform-header-wrapper">
         <div className="heyform-header-left">
           {state.logo && (
@@ -44,7 +47,7 @@ export const Header: FC = () => {
           {state.settings?.enableTimeLimit && state.settings.timeLimit && (
             <Countdown settings={state.settings!} onEnd={handleCountdownEndCallback} />
           )}
-          {state.settings?.enableProgress && <Progress />}
+          {state.settings?.enableProgress && progressStyle !== 'top-bar' && <Progress />}
         </div>
       </div>
     </div>

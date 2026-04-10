@@ -20,6 +20,12 @@ export class TeamService {
     return this.teamModel.findById(id)
   }
 
+  async findByCustomDomain(domain: string): Promise<TeamModel | null> {
+    return this.teamModel.findOne({
+      customDomain: domain
+    })
+  }
+
   async findAllBy(conditions: Record<string, any>): Promise<TeamModel[]> {
     return this.teamModel.find(conditions)
   }

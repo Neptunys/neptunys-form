@@ -140,7 +140,7 @@ const TemplatePreview: FC<TemplatePreviewProps> = ({ template: rawTemplate, onBa
                 autoSave={false}
                 query={{}}
                 locale={i18n.language}
-                alwaysShowNextButton={true}
+                alwaysShowNextButton={!template?.settings?.autoAdvanceSingleChoice}
                 enableQuestionList={true}
                 enableNavigationArrows={true}
               />

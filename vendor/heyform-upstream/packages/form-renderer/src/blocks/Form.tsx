@@ -1,6 +1,5 @@
 import type { FormField } from '@heyform-inc/shared-types-enums'
 import { FieldKindEnum, NumberPrice } from '@heyform-inc/shared-types-enums'
-import { IconChevronRight } from '@tabler/icons-react'
 import Big from 'big.js'
 import clsx from 'clsx'
 import type { FormProps as RCFormProps } from 'rc-field-form'
@@ -30,8 +29,6 @@ interface FormProps extends RCFormProps {
   children?: ReactNode
 }
 
-const NextIcon = <IconChevronRight />
-
 export const Form: FC<FormProps> = ({
   field,
   autoSubmit: rawAutoSubmit = false,
@@ -58,6 +55,8 @@ export const Form: FC<FormProps> = ({
     () => state.scrollIndex! >= state.fields.length - 1,
     [state.fields.length, state.scrollIndex]
   )
+  const hasPreviousBlock = useMemo(() => state.scrollIndex! > 0, [state.scrollIndex])
+  const actionText = useMemo(() => field.properties?.buttonText || 'OK', [field.properties?.buttonText])
 
   const initialValues = getValues ? getValues(restProps.initialValues) : restProps.initialValues
   const isSubmitShow = useMemo(
@@ -264,6 +263,10 @@ export const Form: FC<FormProps> = ({
     dispatch({ type: 'scrollNext' })
   }
 
+  function handlePrevious() {
+    dispatch({ type: 'scrollPrevious' })
+  }
+
   useEnterKey(`heyform-${state.instanceId}-${field.id}`, (event: KeyboardEvent) => {
     if (window.heyform.device.mobile) {
       return event.preventDefault()
@@ -300,37 +303,46 @@ export const Form: FC<FormProps> = ({
               <div className="heyform-validation-error">{submitError}</div>
             </div>
           )}
-          <Field shouldUpdate={true}>
-            <Submit text={t('Submit')} loading={loading} />
-          </Field>
+          <div className="heyform-form-actions">
+            <Field shouldUpdate={true}>
+              <Submit className="!mt-0" text={actionText} loading={loading} />
+            </Field>
+            {hasPreviousBlock && (
+              <button
+                className="heyform-back-button"
+                type="button"
+                disabled={loading}
+                onClick={handlePrevious}
+              >
+                {t('paginationPrevious')}
+              </button>
+            )}
+          </div>
         </>
       ) : (
-        <div className="mt-8 flex items-center gap-2">
+        <div className="heyform-form-actions">
           {submitVisible && (
             <Field shouldUpdate={true}>
               {state.alwaysShowNextButton ? (
-                <Submit
-                  className="!mt-0"
-                  text={field.properties?.buttonText || t('Next')}
-                  icon={NextIcon}
-                />
+                <Submit className="!mt-0" text={actionText} />
               ) : (
                 (_, __, { getFieldsError }) => {
+                  const hasError = getFieldsError().some(({ errors }) => errors.length)
+
                   return (
-                    !getFieldsError().some(({ errors }) => errors.length) && (
-                      <Submit
-                        className="!mt-0"
-                        text={field.properties?.buttonText || t('Next')}
-                        icon={NextIcon}
-                      />
-                    )
+                    <Submit className="!mt-0" text={actionText} disabled={hasError} />
                   )
                 }
               )}
             </Field>
           )}
+          {hasPreviousBlock && (
+            <button className="heyform-back-button" type="button" onClick={handlePrevious}>
+              {t('paginationPrevious')}
+            </button>
+          )}
           {isSkippable && (
-            <button className="heyform-skip-button" onClick={handleSkip}>
+            <button className="heyform-skip-button" type="button" onClick={handleSkip}>
               {t('Skip')}
             </button>
           )}

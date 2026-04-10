@@ -527,6 +527,14 @@ export class UpdateFormInput extends FormDetailInput {
 
   @Field({ nullable: true })
   @IsOptional()
+  progressStyle?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  autoAdvanceSingleChoice?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
   enableQuestionList?: boolean
 
   @Field({ nullable: true })
@@ -772,9 +780,21 @@ export class FormThemeInput {
   backgroundImage?: string
 
   @Field({ nullable: true })
+  desktopBackgroundImage?: string
+
+  @Field({ nullable: true })
+  mobileBackgroundImage?: string
+
+  @Field({ nullable: true })
   @Min(-100)
   @Max(100)
   backgroundBrightness?: number
+
+  @Field({ nullable: true })
+  progressColor?: string
+
+  @Field({ nullable: true })
+  progressTrackColor?: string
 
   @Field({ nullable: true })
   customCSS?: string
@@ -963,6 +983,12 @@ export class FormSettingType {
 
   @Field({ nullable: true })
   enableProgress?: boolean
+
+  @Field({ nullable: true })
+  progressStyle?: string
+
+  @Field({ nullable: true })
+  autoAdvanceSingleChoice?: boolean
 
   @Field({ nullable: true })
   enableQuestionList?: boolean

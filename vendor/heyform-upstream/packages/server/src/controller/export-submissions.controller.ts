@@ -32,15 +32,22 @@ export class ExportSubmissionsController {
       throw new BadRequestException('The submissions does not exist')
     }
 
-    const data = await this.exportFileService.csv(
-      flattenFields(form.fields),
-      form.hiddenFields,
-      submissions
-    )
+    const format = input.format || 'csv'
+    const fields = flattenFields(form.fields)
     const dateStr = date().format('YYYY-MM-DD')
-    const filename = `${encodeURIComponent(form.name)}-${dateStr}.csv`
+    const filename = `${encodeURIComponent(form.name)}-${dateStr}.${format}`
+
+    const data =
+      format === 'xlsx'
+        ? await this.exportFileService.xlsx(fields, form.hiddenFields, submissions)
+        : await this.exportFileService.csv(fields, form.hiddenFields, submissions)
 
     res.header('Content-Disposition', `attachment; filename="${filename}"`)
+    if (format === 'xlsx') {
+      res.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    } else {
+      res.type('text/csv; charset=utf-8')
+    }
     res.send(data)
   }
 }

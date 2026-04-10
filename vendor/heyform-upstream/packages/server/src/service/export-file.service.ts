@@ -7,6 +7,7 @@ import {
 } from '@heyform-inc/shared-types-enums'
 import { Injectable } from '@nestjs/common'
 import { parseAsync } from 'json2csv'
+import XLSX from 'xlsx'
 
 import { htmlUtils, parsePlainAnswer } from '@heyform-inc/answer-utils'
 import { helper, unixDate } from '@heyform-inc/utils'
@@ -16,6 +17,11 @@ const FIELD_ID_KEY = '#'
 const START_DATE_KEY = 'Start Date (UTC)'
 const SUBMIT_DATE_KEY = 'Submit Date (UTC)'
 
+interface ExportDataset {
+  fields: string[]
+  records: Record<string, any>[]
+}
+
 @Injectable()
 export class ExportFileService {
   async csv(
@@ -23,6 +29,35 @@ export class ExportFileService {
     selectedHiddenFields: HiddenField[],
     submissions: SubmissionModel[]
   ): Promise<string> {
+    const { fields, records } = this.buildDataset(formFields, selectedHiddenFields, submissions)
+
+    return parseAsync(records, {
+      fields
+    })
+  }
+
+  async xlsx(
+    formFields: FormField[],
+    selectedHiddenFields: HiddenField[],
+    submissions: SubmissionModel[]
+  ): Promise<Buffer> {
+    const { records } = this.buildDataset(formFields, selectedHiddenFields, submissions)
+    const workbook = XLSX.utils.book_new()
+    const worksheet = XLSX.utils.json_to_sheet(records)
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Submissions')
+
+    return XLSX.write(workbook, {
+      type: 'buffer',
+      bookType: 'xlsx'
+    }) as Buffer
+  }
+
+  private buildDataset(
+    formFields: FormField[],
+    selectedHiddenFields: HiddenField[],
+    submissions: SubmissionModel[]
+  ): ExportDataset {
     const records: Record<string, any>[] = []
     const selectedFormFields = formFields
       .filter(field => !STATEMENT_FIELD_KINDS.includes(field.kind))
@@ -70,9 +105,10 @@ export class ExportFileService {
       records.push(record)
     }
 
-    return parseAsync(records, {
-      fields
-    })
+    return {
+      fields,
+      records
+    }
   }
 
   private parseAnswer(answer: Answer): string {

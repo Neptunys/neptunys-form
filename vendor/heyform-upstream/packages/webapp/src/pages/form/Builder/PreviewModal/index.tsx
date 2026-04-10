@@ -69,7 +69,7 @@ const PreviewComponent: FC<PreviewComponentProps> = () => {
                 autoSave={false}
                 query={{}}
                 locale={form?.settings?.locale || 'en'}
-                alwaysShowNextButton={true}
+                alwaysShowNextButton={!form?.settings?.autoAdvanceSingleChoice}
                 enableQuestionList={form?.settings?.enableQuestionList}
                 enableNavigationArrows={form?.settings?.enableNavigationArrows}
               />

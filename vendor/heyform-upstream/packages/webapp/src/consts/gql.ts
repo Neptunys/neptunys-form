@@ -71,6 +71,7 @@ export const WORKSPACES_GQL = gql`
       name
       ownerId
       avatar
+      customDomain
       storageQuota
       memberCount
       additionalSeats
@@ -155,6 +156,8 @@ export const WORKSPACE_RECENT_FORMS_GQL = gql`
         ipLimitCount
         ipLimitTime
         enableProgress
+        progressStyle
+        autoAdvanceSingleChoice
         enableQuestionList
         enableNavigationArrows
         locale
@@ -559,6 +562,8 @@ export const FORM_DETAIL_GQL = gql`
         ipLimitCount
         ipLimitTime
         enableProgress
+        progressStyle
+        autoAdvanceSingleChoice
         enableQuestionList
         enableNavigationArrows
         enableEmailNotification
@@ -1416,6 +1421,8 @@ export const PUBLIC_FORM_GQL = gql`
         ipLimitCount
         ipLimitTime
         enableProgress
+        progressStyle
+        autoAdvanceSingleChoice
         enableQuestionList
         enableNavigationArrows
         locale

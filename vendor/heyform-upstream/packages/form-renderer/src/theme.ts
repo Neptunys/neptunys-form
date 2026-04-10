@@ -2,6 +2,14 @@ import type { FormTheme } from '@heyform-inc/shared-types-enums'
 
 import { alpha, helper, hexToRgb, isDarkColor } from '@heyform-inc/utils'
 
+type RendererFormTheme = FormTheme & {
+  logoSize?: number
+  desktopBackgroundImage?: string
+  mobileBackgroundImage?: string
+  progressColor?: string
+  progressTrackColor?: string
+}
+
 export const SYSTEM_FONTS =
   '-apple-system, BlinkMacSystemFont, Helvetica, Roboto, Tahoma, Arial, "PingFang SC", "Hiragino Sans GB", "Heiti SC", STXihei, "Microsoft YaHei", SimHei, "WenQuanYi Micro Hei", serif'
 
@@ -57,7 +65,7 @@ const FONT_FAMILY_ALIASES: Record<string, string> = {
   'Source Sans Pro': 'Source Sans 3'
 }
 
-export const DEFAULT_THEME: FormTheme = {
+export const DEFAULT_THEME: RendererFormTheme = {
   fontFamily: GOOGLE_FONTS[0],
   questionTextColor: '#000',
   answerTextColor: '#0445AF',
@@ -66,7 +74,9 @@ export const DEFAULT_THEME: FormTheme = {
   buttonBackground: '#0445AF',
   buttonTextColor: '#fff',
   buttonBorderRadius: 6,
-  backgroundColor: '#fff'
+  backgroundColor: '#fff',
+  progressColor: '#0445AF',
+  progressTrackColor: 'rgba(4, 69, 175, 0.15)'
 }
 
 function isGoogleFontsEnabled() {
@@ -149,10 +159,27 @@ function getAdaptedColor(color: string, alphaNum = 0.5, step = 20): string {
   return `rgba(${red}, ${green}, ${blue}, ${alphaNum})`
 }
 
-export function getThemeStyle(theme: FormTheme, query?: Record<string, any>): string {
+export function getThemeStyle(theme: RendererFormTheme, query?: Record<string, any>): string {
   if (helper.isTrue(query?.transparentBackground)) {
     theme.backgroundColor = 'transparent'
     theme.backgroundImage = undefined
+    theme.desktopBackgroundImage = undefined
+    theme.mobileBackgroundImage = undefined
+  }
+
+  const sharedBackgroundImage = theme.backgroundImage
+  const desktopBackgroundImage = theme.desktopBackgroundImage || sharedBackgroundImage
+  const mobileBackgroundImage = theme.mobileBackgroundImage || theme.desktopBackgroundImage || sharedBackgroundImage
+  const progressColor = theme.progressColor || theme.buttonBackground
+  const progressTrackColor =
+    theme.progressTrackColor || alpha(progressColor || theme.buttonBackground!, 0.18)
+
+  const backgroundImageRule = (value?: string) => {
+    if (!value) {
+      return ''
+    }
+
+    return isImageSource(value) ? `background-image: url(${value});` : `background-image: ${value};`
   }
 
   return `
@@ -175,6 +202,8 @@ export function getThemeStyle(theme: FormTheme, query?: Record<string, any>): st
     --heyform-button-radius: ${theme.buttonBorderRadius}px;
     --heyform-background-color: ${theme.backgroundColor};
     --heyform-group-background-color: ${getAdaptedColor(theme.backgroundColor!)};
+    --heyform-progress-color: ${progressColor};
+    --heyform-progress-track-color: ${progressTrackColor};
   }
   
   .heyform-theme-background {
@@ -188,7 +217,13 @@ export function getThemeStyle(theme: FormTheme, query?: Record<string, any>): st
     background-position: center;
     pointer-events: none;
     background-color: var(--heyform-background-color);
-    ${theme.backgroundImage ? (isImageSource(theme.backgroundImage) ? `background-image: url(${theme.backgroundImage});` : `background-image: ${theme.backgroundImage}`) : ''}
+    ${backgroundImageRule(desktopBackgroundImage)}
+  }
+
+  @media (max-width: 800px) {
+    .heyform-theme-background {
+      ${backgroundImageRule(mobileBackgroundImage)}
+    }
   }
 
   .heyform-block-group {

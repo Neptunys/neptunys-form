@@ -1,6 +1,17 @@
 import { useTranslation } from 'react-i18next'
 
-import { Form, Switch } from '@/components'
+import { Form, Select, Switch } from '@/components'
+
+const PROGRESS_STYLE_OPTIONS = [
+  {
+    value: 'circular',
+    label: 'Current progress chip'
+  },
+  {
+    value: 'top-bar',
+    label: 'Top bar progress'
+  }
+]
 
 export default function FormSettingsGeneral() {
   const { t } = useTranslation()
@@ -25,6 +36,26 @@ export default function FormSettingsGeneral() {
           name="enableProgress"
           label={t('form.settings.general.progressBar.headline')}
           description={t('form.settings.general.progressBar.subHeadline')}
+          isInline
+        >
+          <Switch />
+        </Form.Item>
+
+        <Form.Item name="progressStyle" label="Progress style">
+          <Select
+            className="w-full"
+            options={PROGRESS_STYLE_OPTIONS}
+            contentProps={{
+              position: 'popper'
+            }}
+          />
+        </Form.Item>
+
+        <Form.Item
+          className="[&_[data-slot=content]]:pt-1.5"
+          name="autoAdvanceSingleChoice"
+          label="Auto-advance single choice"
+          description="Go straight to the next screen when a single-answer option is selected."
           isInline
         >
           <Switch />

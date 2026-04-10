@@ -195,7 +195,7 @@ export class WorkspaceService {
     })
   }
 
-  static async addCustomDomain(teamId: string, domain: string) {
+  static async addCustomDomain(teamId: string, domain?: string) {
     return apollo.mutate({
       mutation: ADD_CUSTOM_DOMAIN_GQL,
       variables: {

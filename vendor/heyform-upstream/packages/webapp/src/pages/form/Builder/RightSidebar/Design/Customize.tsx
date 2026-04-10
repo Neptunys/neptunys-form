@@ -161,7 +161,11 @@ export default function Customize() {
   function handleValuesChange(_: AnyMap, values: FormTheme & { logo?: string }) {
     const { logo, ...theme } = values
 
-    if (helper.isEmpty(theme.backgroundImage)) {
+    if (
+      helper.isEmpty(theme.backgroundImage) &&
+      helper.isEmpty(theme.desktopBackgroundImage) &&
+      helper.isEmpty(theme.mobileBackgroundImage)
+    ) {
       theme.backgroundBrightness = 0
 
       nextTick(() => {
@@ -289,6 +293,32 @@ export default function Customize() {
           </Form.Item>
 
           <Form.Item
+            name="progressColor"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:flex [&_[data-slot=control]]:items-center [&_[data-slot=control]]:justify-between"
+            label="Progress color"
+          >
+            <ColorPicker
+              contentProps={{
+                side: 'bottom',
+                align: 'end'
+              }}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="progressTrackColor"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:flex [&_[data-slot=control]]:items-center [&_[data-slot=control]]:justify-between"
+            label="Progress track"
+          >
+            <ColorPicker
+              contentProps={{
+                side: 'bottom',
+                align: 'end'
+              }}
+            />
+          </Form.Item>
+
+          <Form.Item
             name="answerBorderRadius"
             className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:block"
             label="Answer radius"
@@ -328,10 +358,36 @@ export default function Customize() {
           </Form.Item>
         </div>
 
-        {helper.isValid(themeSettings?.theme?.backgroundImage) && (
+        <div className="border-accent-light border-t pt-4 space-y-4">
+          <Form.Item
+            name="desktopBackgroundImage"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:flex [&_[data-slot=control]]:items-center [&_[data-slot=control]]:justify-between"
+            label="Desktop background image"
+          >
+            <BackgroundImage />
+          </Form.Item>
+
+          <Form.Item
+            name="mobileBackgroundImage"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:flex [&_[data-slot=control]]:items-center [&_[data-slot=control]]:justify-between"
+            label="Mobile background image"
+          >
+            <BackgroundImage />
+          </Form.Item>
+        </div>
+
+        {(helper.isValid(themeSettings?.theme?.backgroundImage) ||
+          helper.isValid(themeSettings?.theme?.desktopBackgroundImage) ||
+          helper.isValid(themeSettings?.theme?.mobileBackgroundImage)) && (
           <div className="border-accent-light border-t pt-4">
             <Form.Item name="backgroundBrightness">
-              <ImageBrightness imageURL={themeSettings?.theme?.backgroundImage} />
+              <ImageBrightness
+                imageURL={
+                  themeSettings?.theme?.desktopBackgroundImage ||
+                  themeSettings?.theme?.mobileBackgroundImage ||
+                  themeSettings?.theme?.backgroundImage
+                }
+              />
             </Form.Item>
           </div>
         )}

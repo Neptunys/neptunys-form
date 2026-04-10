@@ -216,8 +216,10 @@ export default function FormSubmissions() {
     toggle()
   }
 
-  function handleDownload() {
-    window.open(`/api/export/submissions?formId=${encodeURIComponent(formId)}`)
+  function handleDownload(format: 'csv' | 'xlsx' = 'csv') {
+    window.open(
+      `/api/export/submissions?formId=${encodeURIComponent(formId)}&format=${format}`
+    )
   }
 
   function handleClose() {
@@ -275,8 +277,15 @@ export default function FormSubmissions() {
 
           <div className="flex items-center gap-x-2.5">
             <Tooltip label={t('form.submissions.downloadCSV')}>
-              <Button.Ghost size="md" iconOnly onClick={handleDownload}>
+              <Button.Ghost size="md" iconOnly onClick={() => handleDownload('csv')}>
                 <IconDownload className="h-5 w-5" />
+              </Button.Ghost>
+            </Tooltip>
+
+            <Tooltip label="Download Excel">
+              <Button.Ghost size="md" onClick={() => handleDownload('xlsx')}>
+                <IconDownload className="h-5 w-5" />
+                <span className="hidden sm:block">XLSX</span>
               </Button.Ghost>
             </Tooltip>
 

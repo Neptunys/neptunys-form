@@ -36,6 +36,8 @@ export interface FormSettings {
   ipLimitCount?: number
   ipLimitTime?: number
   enableProgress?: boolean
+  progressStyle?: 'circular' | 'top-bar'
+  autoAdvanceSingleChoice?: boolean
 
   // Translation
   locale?: string
@@ -215,7 +217,11 @@ export interface FormTheme {
   buttonBorderRadius?: number
   backgroundColor?: string
   backgroundImage?: string
+  desktopBackgroundImage?: string
+  mobileBackgroundImage?: string
   backgroundBrightness?: number
+  progressColor?: string
+  progressTrackColor?: string
   logo?: string
 
   // Custom CSS

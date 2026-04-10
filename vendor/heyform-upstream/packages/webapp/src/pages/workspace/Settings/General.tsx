@@ -3,9 +3,23 @@ import { useTranslation } from 'react-i18next'
 
 import { WorkspaceService } from '@/services'
 import { useParam } from '@/utils'
+import { helper } from '@heyform-inc/utils'
 
 import { ImageFormPicker, Input } from '@/components'
 import { useWorkspaceStore } from '@/store'
+
+function normalizeCustomDomain(value?: string) {
+  if (!helper.isValid(value)) {
+    return undefined
+  }
+
+  let normalized = value!.trim().toLowerCase()
+  normalized = normalized.replace(/^https?:\/\//, '')
+  normalized = normalized.replace(/\/.*$/, '')
+  normalized = normalized.replace(/\.+$/, '')
+
+  return normalized || undefined
+}
 
 export default function WorkspaceGeneral() {
   const { t } = useTranslation()
@@ -44,6 +58,21 @@ export default function WorkspaceGeneral() {
     }
   )
 
+  const { run: handleCustomDomainChange } = useRequest(
+    async (domain?: string) => {
+      const normalizedDomain = normalizeCustomDomain(domain)
+      await WorkspaceService.addCustomDomain(workspaceId, normalizedDomain)
+      updateWorkspace(workspaceId, {
+        customDomain: normalizedDomain
+      })
+    },
+    {
+      debounceWait: 300,
+      manual: true,
+      refreshDeps: [workspaceId]
+    }
+  )
+
   return (
     <section id="general" className="border-accent-light border-b pb-10">
       <h2 className="hf-section-title">{t('settings.general.title')}</h2>
@@ -73,6 +102,23 @@ export default function WorkspaceGeneral() {
               height: 100
             }}
             onChange={handleAvatarChange}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <div className="space-y-1">
+            <label htmlFor="custom-domain" className="text-primary block text-sm/6 font-medium leading-6">
+              {t('form.share.link.useCustomDomain')}
+            </label>
+            <p data-slot="text" className="text-secondary text-base/5 sm:text-sm/5">
+              Point this domain or subdomain to the same deployment and public form links will use it automatically.
+            </p>
+          </div>
+          <Input
+            id="custom-domain"
+            placeholder="forms.example.com"
+            value={workspace?.customDomain || ''}
+            onChange={handleCustomDomainChange}
           />
         </div>
       </div>

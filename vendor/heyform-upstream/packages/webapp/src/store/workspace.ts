@@ -57,6 +57,16 @@ const computeState = (state: WorkspaceStoreType): ComputedStoreType => {
     members = state._memberMap[workspace.id] || []
     project = workspace.projects.find(p => p.id === state.currentProjectId)
 
+    if (helper.isValid(workspace.customDomain)) {
+      const normalizedDomain = workspace.customDomain
+        .replace(/^https?:\/\//, '')
+        .replace(/\/.*$/, '')
+        .replace(/\.+$/, '')
+        .replace(/\/+$/, '')
+
+      sharingURLPrefix = `https://${normalizedDomain}`
+    }
+
     if (project) {
       forms = state._formMap[project.id] || []
     }
