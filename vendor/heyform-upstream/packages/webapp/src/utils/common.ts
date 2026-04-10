@@ -81,15 +81,40 @@ export function getDecoratedURL(url: string, query: Record<string, string>) {
   return toURLQuery(query, url)
 }
 
+function isCssImageValue(value: string) {
+  const normalizedValue = value.trim().toLowerCase()
+
+  return (
+    normalizedValue.startsWith('url(') ||
+    normalizedValue.startsWith('linear-gradient(') ||
+    normalizedValue.startsWith('radial-gradient(') ||
+    normalizedValue.startsWith('conic-gradient(') ||
+    normalizedValue.startsWith('repeating-linear-gradient(') ||
+    normalizedValue.startsWith('repeating-radial-gradient(') ||
+    normalizedValue.startsWith('repeating-conic-gradient(') ||
+    normalizedValue.startsWith('image-set(') ||
+    normalizedValue.startsWith('var(')
+  )
+}
+
 export function isRenderableImageSource(value?: string | null) {
   if (!helper.isValid(value)) {
     return false
   }
 
+  const normalizedValue = value.trim()
+
+  if (!normalizedValue || isCssImageValue(normalizedValue)) {
+    return false
+  }
+
   return (
-    helper.isURL(value) ||
-    value.startsWith('/static/upload/') ||
-    value.startsWith('data:image/')
+    helper.isURL(normalizedValue) ||
+    normalizedValue.startsWith('/') ||
+    normalizedValue.startsWith('./') ||
+    normalizedValue.startsWith('../') ||
+    normalizedValue.startsWith('blob:') ||
+    normalizedValue.startsWith('data:image/')
   )
 }
 
