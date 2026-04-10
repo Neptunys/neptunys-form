@@ -9,6 +9,7 @@ RUN apk add --no-cache python3 make g++
 COPY package.json $APP_PATH/package.json
 COPY pnpm-lock.yaml $APP_PATH/pnpm-lock.yaml
 COPY pnpm-workspace.yaml $APP_PATH/pnpm-workspace.yaml
+COPY packages/shared-types-enums $APP_PATH/packages/shared-types-enums
 COPY packages/server $APP_PATH/packages/server
 RUN mkdir -p $APP_PATH/packages/server/static/upload
 COPY packages/webapp $APP_PATH/packages/webapp
@@ -16,6 +17,7 @@ COPY packages/form-renderer $APP_PATH/packages/form-renderer
 COPY packages/server/view/index.html $APP_PATH/packages/webapp/index.html
 
 RUN pnpm install
+RUN pnpm --filter ./packages/shared-types-enums build
 RUN pnpm build:server
 RUN pnpm build:webapp
 RUN mkdir -p $APP_PATH/packages/server/static
