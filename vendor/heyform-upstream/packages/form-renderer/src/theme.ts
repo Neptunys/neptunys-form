@@ -169,8 +169,45 @@ export function getTheme(theme?: FormTheme): FormTheme {
   return newTheme
 }
 
+function isCssImageValue(value: string) {
+  const normalizedValue = value.trim().toLowerCase()
+
+  return (
+    normalizedValue.startsWith('url(') ||
+    normalizedValue.startsWith('linear-gradient(') ||
+    normalizedValue.startsWith('radial-gradient(') ||
+    normalizedValue.startsWith('conic-gradient(') ||
+    normalizedValue.startsWith('repeating-linear-gradient(') ||
+    normalizedValue.startsWith('repeating-radial-gradient(') ||
+    normalizedValue.startsWith('repeating-conic-gradient(') ||
+    normalizedValue.startsWith('image-set(') ||
+    normalizedValue.startsWith('var(')
+  )
+}
+
 function isImageSource(value?: string) {
-  return !!value && (helper.isURL(value) || value.startsWith('/static/upload/') || value.startsWith('data:image/'))
+  if (!value) {
+    return false
+  }
+
+  const normalizedValue = value.trim()
+
+  if (!normalizedValue || isCssImageValue(normalizedValue)) {
+    return false
+  }
+
+  return (
+    helper.isURL(normalizedValue) ||
+    normalizedValue.startsWith('/') ||
+    normalizedValue.startsWith('./') ||
+    normalizedValue.startsWith('../') ||
+    normalizedValue.startsWith('blob:') ||
+    normalizedValue.startsWith('data:image/')
+  )
+}
+
+function escapeCssUrl(value: string) {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 }
 
 function getAdaptedColor(color: string, alphaNum = 0.5, step = 20): string {
@@ -203,7 +240,11 @@ export function getThemeStyle(theme: RendererFormTheme, query?: Record<string, a
       return ''
     }
 
-    return isImageSource(value) ? `background-image: url(${value});` : `background-image: ${value};`
+    const normalizedValue = value.trim()
+
+    return isImageSource(normalizedValue)
+      ? `background-image: url("${escapeCssUrl(normalizedValue)}");`
+      : `background-image: ${normalizedValue};`
   }
 
   return `

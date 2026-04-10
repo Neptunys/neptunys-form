@@ -1136,13 +1136,48 @@ button.button-icon-only {
 // ----------------------------------------------------------------------------
 // Picture choice
 .heyform-picture-choice {
+  .heyform-block-main {
+    max-width: min(100%, var(--heyform-answer-width-desktop));
+
+    @media (max-width: 800px) {
+      max-width: min(100%, var(--heyform-answer-width-mobile));
+    }
+  }
+
   .heyform-radio-group {
-    @apply -mx-1 -mb-2 flex flex-wrap items-stretch;
+    @apply flex flex-wrap items-stretch;
+    gap: var(--heyform-answer-gap-desktop);
+
+    @media (max-width: 800px) {
+      gap: var(--heyform-answer-gap-mobile);
+    }
   }
 
   .heyform-radio {
-    @apply mb-2 w-1/2 px-1 md:w-1/3 lg:w-1/4 self-stretch;
+    @apply mb-0 self-stretch px-0;
     height: 12rem;
+    width: calc(50% - (var(--heyform-answer-gap-desktop) / 2));
+    max-width: calc(50% - (var(--heyform-answer-gap-desktop) / 2));
+
+    @media (max-width: 800px) {
+      width: calc(50% - (var(--heyform-answer-gap-mobile) / 2));
+      max-width: calc(50% - (var(--heyform-answer-gap-mobile) / 2));
+    }
+
+    @media (min-width: 960px) {
+      width: calc((100% - (2 * var(--heyform-answer-gap-desktop))) / 3);
+      max-width: calc((100% - (2 * var(--heyform-answer-gap-desktop))) / 3);
+    }
+
+    @media (min-width: 1280px) {
+      width: calc((100% - (3 * var(--heyform-answer-gap-desktop))) / 4);
+      max-width: calc((100% - (3 * var(--heyform-answer-gap-desktop))) / 4);
+    }
+
+    @media (max-width: 520px) {
+      width: 100%;
+      max-width: 100%;
+    }
 
     &:hover {
       .heyform-radio-actions {
