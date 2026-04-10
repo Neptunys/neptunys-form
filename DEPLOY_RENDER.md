@@ -44,6 +44,7 @@ The included Blueprint prompts for these values:
 - `S3_ACCESS_KEY_ID`
 - `S3_SECRET_ACCESS_KEY`
 - `S3_PUBLIC_URL`
+- `OPENAI_API_KEY` if you want AI form creation enabled
 
 The Blueprint generates these automatically:
 
@@ -55,6 +56,7 @@ The app now also supports:
 - platform `PORT` values such as Render's default `10000`
 - `RENDER_EXTERNAL_URL` as the default homepage URL
 - a single `REDIS_URL`, including TLS `rediss://` URLs from providers like Upstash
+- `OPENAI_GPT_MODEL` if you want to override the default AI model
 
 ## S3-Compatible Upload Notes
 

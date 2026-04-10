@@ -43,3 +43,7 @@ services:
         sync: false
       - key: S3_PUBLIC_URL
         sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_GPT_MODEL
+        value: gpt-4.1-mini
