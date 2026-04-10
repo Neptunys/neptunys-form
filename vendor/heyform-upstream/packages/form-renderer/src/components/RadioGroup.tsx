@@ -1,6 +1,6 @@
 import clsx from 'clsx'
 import type { FC } from 'react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 
 import { helper } from '@heyform-inc/utils'
 
@@ -33,7 +33,7 @@ export const RadioGroup: FC<RadioGroupProps> = ({
   onChange,
   ...restProps
 }) => {
-  const [values, setValues] = useState<any[]>(resetArray(rawValue))
+  const values = useMemo(() => resetArray(rawValue), [rawValue])
   const isDisabled = useMemo(() => max > 0 && values.length >= max, [values, max])
 
   function handleClick(value: any) {
@@ -49,11 +49,10 @@ export const RadioGroup: FC<RadioGroupProps> = ({
       }
     }
 
-    setValues(newValues)
     onChange?.(newValues)
   }
 
-  const handleClickCallback = useCallback(handleClick, [values, isDisabled])
+  const handleClickCallback = useCallback(handleClick, [allowMultiple, isDisabled, onChange, values])
 
   return (
     <div

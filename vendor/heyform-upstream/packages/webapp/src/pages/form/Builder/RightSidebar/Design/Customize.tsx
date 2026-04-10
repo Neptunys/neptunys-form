@@ -24,6 +24,31 @@ import { useFormStore } from '@/store'
 
 import ImageBrightness, { ImageBrightnessProps } from '../Question/ImageBrightness'
 
+function normalizeThemeValues(theme?: FormTheme): FormTheme {
+  const nextTheme = {
+    ...theme
+  }
+  const hasResponsiveBackgrounds =
+    helper.isValid(nextTheme.desktopBackgroundImage) || helper.isValid(nextTheme.mobileBackgroundImage)
+
+  if (!hasResponsiveBackgrounds && helper.isValid(nextTheme.backgroundImage)) {
+    nextTheme.desktopBackgroundImage = nextTheme.backgroundImage
+    nextTheme.mobileBackgroundImage = nextTheme.backgroundImage
+  }
+
+  nextTheme.backgroundImage = undefined
+
+  return nextTheme
+}
+
+function getBackgroundPreviewImage(theme?: FormTheme) {
+  if (!theme) {
+    return undefined
+  }
+
+  return theme.desktopBackgroundImage || theme.mobileBackgroundImage
+}
+
 export const BackgroundImage: FC<Pick<ImageBrightnessProps, 'value' | 'onChange'>> = ({
   value,
   onChange
@@ -52,22 +77,53 @@ interface RadiusControlProps {
   onChange?: (value?: number) => void
 }
 
-const RadiusControl: FC<RadiusControlProps> = ({ value = 6, onChange }) => {
+interface SliderControlProps extends RadiusControlProps {
+  min: number
+  max: number
+  step?: number
+  fallbackValue: number
+  allowReset?: boolean
+}
+
+const SliderControl: FC<SliderControlProps> = ({
+  value,
+  onChange,
+  min,
+  max,
+  step = 1,
+  fallbackValue,
+  allowReset = false
+}) => {
+  const hasValue = helper.isNumber(value)
+
   return (
     <div className="flex items-center gap-3">
-      <div className="text-secondary min-w-10 text-right text-sm/6">{value}px</div>
-      <Slider className="flex-1" min={0} max={32} step={1} value={value} onChange={onChange} />
+      <div className="text-secondary min-w-14 text-right text-sm/6">
+        {hasValue ? `${value}px` : 'Auto'}
+      </div>
+      <Slider
+        className="flex-1"
+        min={min}
+        max={max}
+        step={step}
+        value={hasValue ? value : fallbackValue}
+        onChange={onChange}
+      />
+      {allowReset && (
+        <Button.Ghost size="sm" onClick={() => onChange?.(undefined)}>
+          Auto
+        </Button.Ghost>
+      )}
     </div>
   )
 }
 
+const RadiusControl: FC<RadiusControlProps> = ({ value = 6, onChange }) => {
+  return <SliderControl min={0} max={32} fallbackValue={6} value={value} onChange={onChange} />
+}
+
 const LogoSizeControl: FC<RadiusControlProps> = ({ value = 40, onChange }) => {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="text-secondary min-w-10 text-right text-sm/6">{value}px</div>
-      <Slider className="flex-1" min={16} max={96} step={1} value={value} onChange={onChange} />
-    </div>
-  )
+  return <SliderControl min={16} max={96} fallbackValue={40} value={value} onChange={onChange} />
 }
 
 export default function Customize() {
@@ -77,10 +133,15 @@ export default function Customize() {
   const toast = useToast()
   const [rcForm] = useRCForm()
   const { form, themeSettings, updateForm, updateThemeSettings, revertThemeSettings } = useFormStore()
+  const normalizedTheme = useMemo(
+    () => normalizeThemeValues(themeSettings?.theme),
+    [themeSettings?.theme]
+  )
 
   const { loading, run } = useRequest(
     async (values: any) => {
-      const { logo, ...theme } = values
+      const { logo, ...rawTheme } = values
+      const theme = normalizeThemeValues(rawTheme)
 
       await FormService.updateTheme({
         formId,
@@ -92,7 +153,8 @@ export default function Customize() {
       refreshDeps: [formId],
       manual: true,
       onSuccess: (_data, values) => {
-        const { logo, ...theme } = values as FormTheme & { logo?: string }
+        const { logo, ...rawTheme } = values as FormTheme & { logo?: string }
+        const theme = normalizeThemeValues(rawTheme)
 
         updateForm({
           themeSettings: {
@@ -152,17 +214,17 @@ export default function Customize() {
     nextTick(() => {
       rcForm.setFieldsValue({
         logo: form?.themeSettings?.logo,
-        ...form?.themeSettings?.theme
+        ...normalizeThemeValues(form?.themeSettings?.theme)
       })
       rcForm.resetFields()
     })
   }
 
   function handleValuesChange(_: AnyMap, values: FormTheme & { logo?: string }) {
-    const { logo, ...theme } = values
+    const { logo, ...rawTheme } = values
+    const theme = normalizeThemeValues(rawTheme)
 
     if (
-      helper.isEmpty(theme.backgroundImage) &&
       helper.isEmpty(theme.desktopBackgroundImage) &&
       helper.isEmpty(theme.mobileBackgroundImage)
     ) {
@@ -189,7 +251,7 @@ export default function Customize() {
         form={rcForm}
         initialValues={{
           logo: themeSettings?.logo,
-          ...themeSettings?.theme
+          ...normalizedTheme
         }}
         className="space-y-4 p-4"
         onValuesChange={handleValuesChange}
@@ -346,15 +408,37 @@ export default function Customize() {
               }}
             />
           </Form.Item>
-        </div>
 
-        <div className="border-accent-light border-t pt-4">
           <Form.Item
-            name="backgroundImage"
-            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:flex [&_[data-slot=control]]:items-center [&_[data-slot=control]]:justify-between"
-            label={t('form.builder.design.customize.backgroundImage')}
+            name="desktopAnswerWidth"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:block"
+            label="Desktop answer width"
           >
-            <BackgroundImage />
+            <SliderControl min={240} max={960} fallbackValue={496} allowReset />
+          </Form.Item>
+
+          <Form.Item
+            name="mobileAnswerWidth"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:block"
+            label="Mobile answer width"
+          >
+            <SliderControl min={160} max={640} fallbackValue={320} allowReset />
+          </Form.Item>
+
+          <Form.Item
+            name="desktopAnswerGap"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:block"
+            label="Desktop answer gap"
+          >
+            <SliderControl min={0} max={48} fallbackValue={12} allowReset />
+          </Form.Item>
+
+          <Form.Item
+            name="mobileAnswerGap"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:block"
+            label="Mobile answer gap"
+          >
+            <SliderControl min={0} max={32} fallbackValue={10} allowReset />
           </Form.Item>
         </div>
 
@@ -376,18 +460,10 @@ export default function Customize() {
           </Form.Item>
         </div>
 
-        {(helper.isValid(themeSettings?.theme?.backgroundImage) ||
-          helper.isValid(themeSettings?.theme?.desktopBackgroundImage) ||
-          helper.isValid(themeSettings?.theme?.mobileBackgroundImage)) && (
+        {helper.isValid(getBackgroundPreviewImage(normalizedTheme)) && (
           <div className="border-accent-light border-t pt-4">
             <Form.Item name="backgroundBrightness">
-              <ImageBrightness
-                imageURL={
-                  themeSettings?.theme?.desktopBackgroundImage ||
-                  themeSettings?.theme?.mobileBackgroundImage ||
-                  themeSettings?.theme?.backgroundImage
-                }
-              />
+              <ImageBrightness imageURL={getBackgroundPreviewImage(normalizedTheme)} />
             </Form.Item>
           </div>
         )}

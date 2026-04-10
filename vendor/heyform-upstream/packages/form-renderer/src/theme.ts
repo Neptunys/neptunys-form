@@ -6,6 +6,10 @@ type RendererFormTheme = FormTheme & {
   logoSize?: number
   desktopBackgroundImage?: string
   mobileBackgroundImage?: string
+  desktopAnswerWidth?: number
+  mobileAnswerWidth?: number
+  desktopAnswerGap?: number
+  mobileAnswerGap?: number
   progressColor?: string
   progressTrackColor?: string
 }
@@ -79,6 +83,24 @@ export const DEFAULT_THEME: RendererFormTheme = {
   progressTrackColor: 'rgba(4, 69, 175, 0.15)'
 }
 
+function normalizeBackgroundImages(theme: RendererFormTheme): RendererFormTheme {
+  const normalizedTheme = {
+    ...theme
+  }
+  const hasResponsiveBackgrounds =
+    helper.isValid(normalizedTheme.desktopBackgroundImage) ||
+    helper.isValid(normalizedTheme.mobileBackgroundImage)
+
+  if (!hasResponsiveBackgrounds && helper.isValid(normalizedTheme.backgroundImage)) {
+    normalizedTheme.desktopBackgroundImage = normalizedTheme.backgroundImage
+    normalizedTheme.mobileBackgroundImage = normalizedTheme.backgroundImage
+  }
+
+  normalizedTheme.backgroundImage = undefined
+
+  return normalizedTheme
+}
+
 function isGoogleFontsEnabled() {
   if (typeof window === 'undefined') {
     return true
@@ -131,10 +153,10 @@ export function insertWebFont(name?: string | string[], id = 'heyform-webfont') 
 }
 
 export function getTheme(theme?: FormTheme): FormTheme {
-  const newTheme = {
+  const newTheme = normalizeBackgroundImages({
     ...DEFAULT_THEME,
     ...theme
-  }
+  })
 
   if (newTheme.fontFamily) {
     newTheme.fontFamily = FONT_FAMILY_ALIASES[newTheme.fontFamily] || newTheme.fontFamily
@@ -160,19 +182,21 @@ function getAdaptedColor(color: string, alphaNum = 0.5, step = 20): string {
 }
 
 export function getThemeStyle(theme: RendererFormTheme, query?: Record<string, any>): string {
+  const normalizedTheme = normalizeBackgroundImages({ ...theme })
+
   if (helper.isTrue(query?.transparentBackground)) {
-    theme.backgroundColor = 'transparent'
-    theme.backgroundImage = undefined
-    theme.desktopBackgroundImage = undefined
-    theme.mobileBackgroundImage = undefined
+    normalizedTheme.backgroundColor = 'transparent'
+    normalizedTheme.backgroundImage = undefined
+    normalizedTheme.desktopBackgroundImage = undefined
+    normalizedTheme.mobileBackgroundImage = undefined
   }
 
-  const sharedBackgroundImage = theme.backgroundImage
-  const desktopBackgroundImage = theme.desktopBackgroundImage || sharedBackgroundImage
-  const mobileBackgroundImage = theme.mobileBackgroundImage || theme.desktopBackgroundImage || sharedBackgroundImage
-  const progressColor = theme.progressColor || theme.buttonBackground
+  const desktopBackgroundImage = normalizedTheme.desktopBackgroundImage
+  const mobileBackgroundImage = normalizedTheme.mobileBackgroundImage
+  const progressColor = normalizedTheme.progressColor || normalizedTheme.buttonBackground
   const progressTrackColor =
-    theme.progressTrackColor || alpha(progressColor || theme.buttonBackground!, 0.18)
+    normalizedTheme.progressTrackColor ||
+    alpha(progressColor || normalizedTheme.buttonBackground!, 0.18)
 
   const backgroundImageRule = (value?: string) => {
     if (!value) {
@@ -184,24 +208,28 @@ export function getThemeStyle(theme: RendererFormTheme, query?: Record<string, a
 
   return `
   html {
-    --heyform-font-family: ${theme.fontFamily};
-    --heyform-question-color: ${theme.questionTextColor};
-    --heyform-description-color: ${alpha(theme.questionTextColor!, 0.8)};
-    --heyform-label-color: ${alpha(theme.questionTextColor!, 0.5)};
-    --heyform-answer-color: ${theme.answerTextColor};
-    --heyform-answer-opacity-80-color: ${alpha(theme.answerTextColor!, 0.8)};
-    --heyform-answer-opacity-60-color: ${alpha(theme.answerTextColor!, 0.6)};
-    --heyform-answer-opacity-30-color: ${alpha(theme.answerTextColor!, 0.3)};
-    --heyform-answer-opacity-10-color: ${alpha(theme.answerTextColor!, 0.1)};
-    --heyform-answer-radius: ${theme.answerBorderRadius}px;
-    --heyform-logo-size: ${theme.logoSize}px;
-    --heyform-button-color: ${theme.buttonBackground};
-    --heyform-button-opacity-80-color: ${alpha(theme.buttonBackground!, 0.8)};
-    --heyform-button-text-color: ${theme.buttonTextColor};
-    --heyform-button-text-opacity-20-color: ${alpha(theme.buttonTextColor!, 0.2)};
-    --heyform-button-radius: ${theme.buttonBorderRadius}px;
-    --heyform-background-color: ${theme.backgroundColor};
-    --heyform-group-background-color: ${getAdaptedColor(theme.backgroundColor!)};
+    --heyform-font-family: ${normalizedTheme.fontFamily};
+    --heyform-question-color: ${normalizedTheme.questionTextColor};
+    --heyform-description-color: ${alpha(normalizedTheme.questionTextColor!, 0.8)};
+    --heyform-label-color: ${alpha(normalizedTheme.questionTextColor!, 0.5)};
+    --heyform-answer-color: ${normalizedTheme.answerTextColor};
+    --heyform-answer-opacity-80-color: ${alpha(normalizedTheme.answerTextColor!, 0.8)};
+    --heyform-answer-opacity-60-color: ${alpha(normalizedTheme.answerTextColor!, 0.6)};
+    --heyform-answer-opacity-30-color: ${alpha(normalizedTheme.answerTextColor!, 0.3)};
+    --heyform-answer-opacity-10-color: ${alpha(normalizedTheme.answerTextColor!, 0.1)};
+    --heyform-answer-radius: ${normalizedTheme.answerBorderRadius}px;
+    --heyform-answer-width-desktop: ${helper.isNumber(normalizedTheme.desktopAnswerWidth) ? `${normalizedTheme.desktopAnswerWidth}px` : '31rem'};
+    --heyform-answer-width-mobile: ${helper.isNumber(normalizedTheme.mobileAnswerWidth) ? `${normalizedTheme.mobileAnswerWidth}px` : '100%'};
+    --heyform-answer-gap-desktop: ${helper.isNumber(normalizedTheme.desktopAnswerGap) ? `${normalizedTheme.desktopAnswerGap}px` : '0.75rem'};
+    --heyform-answer-gap-mobile: ${helper.isNumber(normalizedTheme.mobileAnswerGap) ? `${normalizedTheme.mobileAnswerGap}px` : '0.625rem'};
+    --heyform-logo-size: ${normalizedTheme.logoSize}px;
+    --heyform-button-color: ${normalizedTheme.buttonBackground};
+    --heyform-button-opacity-80-color: ${alpha(normalizedTheme.buttonBackground!, 0.8)};
+    --heyform-button-text-color: ${normalizedTheme.buttonTextColor};
+    --heyform-button-text-opacity-20-color: ${alpha(normalizedTheme.buttonTextColor!, 0.2)};
+    --heyform-button-radius: ${normalizedTheme.buttonBorderRadius}px;
+    --heyform-background-color: ${normalizedTheme.backgroundColor};
+    --heyform-group-background-color: ${getAdaptedColor(normalizedTheme.backgroundColor!)};
     --heyform-progress-color: ${progressColor};
     --heyform-progress-track-color: ${progressTrackColor};
   }
@@ -253,7 +281,7 @@ export function getThemeStyle(theme: RendererFormTheme, query?: Record<string, a
   }
 
   ${
-    helper.isValid(theme.backgroundBrightness)
+    helper.isValid(normalizedTheme.backgroundBrightness)
       ? `
     .heyform-theme-background:before {
       pointer-events: none;
@@ -264,8 +292,8 @@ export function getThemeStyle(theme: RendererFormTheme, query?: Record<string, a
       left: 0;
       content: "";
       z-index: 2;
-      opacity: ${Math.abs(theme.backgroundBrightness! / 100)};
-      background: ${theme.backgroundBrightness! > 0 ? '#fff' : '#000'};
+      opacity: ${Math.abs(normalizedTheme.backgroundBrightness! / 100)};
+      background: ${normalizedTheme.backgroundBrightness! > 0 ? '#fff' : '#000'};
     }`
       : ''
   }

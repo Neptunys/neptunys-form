@@ -49,7 +49,7 @@ export const YesNo: FC<BlockProps> = ({ field, ...restProps }) => {
             }
           ]}
         >
-          <RadioGroup className="w-40" options={options} />
+          <RadioGroup className="w-full" options={options} />
         </FormField>
       </Form>
     </Block>

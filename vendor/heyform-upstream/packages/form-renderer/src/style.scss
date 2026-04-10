@@ -548,6 +548,10 @@ button.button-icon-only {
 .heyform-root {
   background-color: var(--heyform-background-color);
   --heyform-form-max-width: 1120px;
+  --heyform-answer-width-desktop: 31rem;
+  --heyform-answer-width-mobile: 100%;
+  --heyform-answer-gap-desktop: 0.75rem;
+  --heyform-answer-gap-mobile: 0.625rem;
   --heyform-question-transition-duration: 1000ms;
   --heyform-question-transition-easing: cubic-bezier(0.22, 1, 0.36, 1);
   --heyform-question-transition-distance: 100vh;
@@ -1025,21 +1029,39 @@ button.button-icon-only {
 // ----------------------------------------------------------------------------
 // Multiple choice
 .heyform-multiple-choice {
+  .heyform-block-main {
+    max-width: min(100%, var(--heyform-answer-width-desktop));
+
+    @media (max-width: 800px) {
+      max-width: min(100%, var(--heyform-answer-width-mobile));
+    }
+  }
+
   .heyform-radio-group {
     @apply flex w-full flex-col;
     flex-flow: column wrap;
     -webkit-box-align: stretch;
     align-items: stretch;
+    gap: var(--heyform-answer-gap-desktop);
+
+    @media (max-width: 800px) {
+      gap: var(--heyform-answer-gap-mobile);
+    }
 
     .heyform-radio-label {
       @apply break-words;
     }
 
     &.heyform-radio-group-horizontal {
-      @apply w-full gap-2 md:flex-row;
+      @apply w-full md:flex-row;
 
       .heyform-radio {
-        @apply md:mb-0 md:flex-1 md:max-w-[calc(50%-0.25rem)] md:self-stretch;
+        @apply md:mb-0 md:flex-1 md:self-stretch;
+        max-width: calc(50% - (var(--heyform-answer-gap-desktop) / 2));
+
+        @media (max-width: 800px) {
+          max-width: 100%;
+        }
       }
 
       .heyform-radio-container {
@@ -1057,13 +1079,36 @@ button.button-icon-only {
   }
 
   .heyform-radio {
-    @apply max-w-full;
+    @apply mb-0 max-w-full;
   }
 
   .heyform-radio-container {
     @apply flex w-full;
     min-width: 0;
     max-width: 100%;
+  }
+}
+
+.heyform-yes-no {
+  .heyform-block-main {
+    max-width: min(100%, var(--heyform-answer-width-desktop));
+
+    @media (max-width: 800px) {
+      max-width: min(100%, var(--heyform-answer-width-mobile));
+    }
+  }
+
+  .heyform-radio-group {
+    @apply flex w-full flex-col;
+    gap: var(--heyform-answer-gap-desktop);
+
+    @media (max-width: 800px) {
+      gap: var(--heyform-answer-gap-mobile);
+    }
+  }
+
+  .heyform-radio {
+    @apply mb-0 max-w-full;
   }
 }
 

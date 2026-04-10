@@ -219,6 +219,10 @@ export interface FormTheme {
   backgroundImage?: string
   desktopBackgroundImage?: string
   mobileBackgroundImage?: string
+  desktopAnswerWidth?: number
+  mobileAnswerWidth?: number
+  desktopAnswerGap?: number
+  mobileAnswerGap?: number
   backgroundBrightness?: number
   progressColor?: string
   progressTrackColor?: string

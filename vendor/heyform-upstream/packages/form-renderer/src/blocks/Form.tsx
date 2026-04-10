@@ -4,7 +4,7 @@ import Big from 'big.js'
 import clsx from 'clsx'
 import type { FormProps as RCFormProps } from 'rc-field-form'
 import RCForm, { Field, useForm } from 'rc-field-form'
-import { FC, ReactNode, useEffect, useMemo, useState } from 'react'
+import { FC, ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   getNavigateFieldId,
@@ -44,6 +44,7 @@ export const Form: FC<FormProps> = ({
   const { state, dispatch } = useStore()
   const [loading, setLoading] = useState(false)
   const [submitError, setSubmitError] = useState<string>()
+  const autoSubmitTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
 
   const autoSubmit = useMemo(
     () => (state.alwaysShowNextButton ? false : rawAutoSubmit),
@@ -222,21 +223,32 @@ export const Form: FC<FormProps> = ({
     restProps.onValuesChange?.(changes, values)
 
     if (autoSubmit) {
-      if (isLastBlock) {
-        const value = getValues ? getValues(changes) : changes
+      if (autoSubmitTimeoutRef.current) {
+        clearTimeout(autoSubmitTimeoutRef.current)
+        autoSubmitTimeoutRef.current = undefined
+      }
 
-        if (helper.isValid(value)) {
+      const nextFormValues = {
+        ...values,
+        ...changes
+      }
+      const nextValue = getValues ? getValues(nextFormValues) : nextFormValues
+
+      if (isLastBlock) {
+        if (helper.isValid(nextValue)) {
           dispatch({
             type: 'setValues',
             payload: {
               values: {
-                [field.id]: value
+                [field.id]: nextValue
               }
             }
           })
         }
-      } else {
-        setTimeout(() => form.submit(), 500)
+      } else if (helper.isValid(nextValue)) {
+        autoSubmitTimeoutRef.current = setTimeout(() => {
+          form.submit()
+        }, 80)
       }
 
       return
@@ -280,6 +292,14 @@ export const Form: FC<FormProps> = ({
       form.validateFields()
     }
   }, [state.errorFieldId])
+
+  useEffect(() => {
+    return () => {
+      if (autoSubmitTimeoutRef.current) {
+        clearTimeout(autoSubmitTimeoutRef.current)
+      }
+    }
+  }, [])
 
   return (
     <RCForm

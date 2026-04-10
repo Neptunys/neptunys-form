@@ -786,6 +786,30 @@ export class FormThemeInput {
   mobileBackgroundImage?: string
 
   @Field({ nullable: true })
+  @IsOptional()
+  @Min(240)
+  @Max(960)
+  desktopAnswerWidth?: number
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @Min(160)
+  @Max(640)
+  mobileAnswerWidth?: number
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @Min(0)
+  @Max(48)
+  desktopAnswerGap?: number
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @Min(0)
+  @Max(32)
+  mobileAnswerGap?: number
+
+  @Field({ nullable: true })
   @Min(-100)
   @Max(100)
   backgroundBrightness?: number
