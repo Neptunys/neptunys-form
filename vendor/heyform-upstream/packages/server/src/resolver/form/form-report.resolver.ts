@@ -24,6 +24,8 @@ const EXCLUDE_KINDS = [
   'custom_multiple'
 ]
 
+const PRIVATE_REPORT_VALUE_KINDS = [FieldKindEnum.EMAIL, FieldKindEnum.PHONE_NUMBER]
+
 @Resolver()
 @Auth()
 export class FormReportResolver {
@@ -39,7 +41,10 @@ export class FormReportResolver {
     @Args('input') input: FormDetailInput
   ): Promise<FormReportType> {
     const fieldIds = flattenFields(form.fields)
-      .filter(field => !EXCLUDE_KINDS.includes(field.kind))
+      .filter(
+        field =>
+          !EXCLUDE_KINDS.includes(field.kind) && !PRIVATE_REPORT_VALUE_KINDS.includes(field.kind)
+      )
       .map(field => field.id)
 
     const [result, submissions] = await Promise.all([

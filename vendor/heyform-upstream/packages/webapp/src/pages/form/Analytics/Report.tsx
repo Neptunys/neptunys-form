@@ -20,6 +20,8 @@ interface ReportListProps {
   isHideFieldEnabled?: boolean
 }
 
+const SENSITIVE_CONTACT_KINDS = [FieldKindEnum.EMAIL, FieldKindEnum.PHONE_NUMBER]
+
 export const ReportList: FC<ReportListProps> = ({ isHideFieldEnabled }) => {
   const { t } = useTranslation()
 
@@ -40,9 +42,12 @@ export const ReportList: FC<ReportListProps> = ({ isHideFieldEnabled }) => {
 
       const responses = fields!.map(field => {
         let row = result.responses.find((row: any) => row.id === field.id)
+        const isSensitiveContactField = SENSITIVE_CONTACT_KINDS.includes(field.kind)
 
         if (row) {
-          row.answers = result.submissions.find((row: any) => row._id === field.id)?.answers
+          row.answers = isSensitiveContactField
+            ? []
+            : result.submissions.find((row: any) => row._id === field.id)?.answers
 
           if (choiceKinds.includes(field.kind)) {
             row.chooses = field.properties?.choices?.map(choice => {

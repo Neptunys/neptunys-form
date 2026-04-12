@@ -1,4 +1,4 @@
-import { CHOICE_FIELD_KINDS, RATING_FIELD_KINDS } from '@heyform-inc/shared-types-enums'
+import { CHOICE_FIELD_KINDS, FieldKindEnum, RATING_FIELD_KINDS } from '@heyform-inc/shared-types-enums'
 import { FC, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -20,6 +20,11 @@ interface ChoicesProps {
 
 interface RatingsProps extends ChoicesProps {
   length: number
+}
+
+interface CompletionCoverageProps {
+  count: number
+  total: number
 }
 
 const Choices: FC<ChoicesProps> = ({ chooses }) => {
@@ -88,6 +93,32 @@ const Ratings: FC<RatingsProps> = ({ length, chooses }) => {
   )
 }
 
+const CompletionCoverage: FC<CompletionCoverageProps> = ({ count, total }) => {
+  const { t } = useTranslation()
+  const percent = total > 0 ? `${toFixed((count * 100) / total)}%` : '0%'
+
+  return (
+    <div className="heyform-report-chart">
+      <div className="heyform-report-chart-item">
+        <div
+          className="heyform-report-chart-background"
+          style={{
+            width: percent
+          }}
+        />
+        <div className="heyform-report-chart-content">
+          <span className="heyform-report-chart-percent">
+            {t('form.analytics.completeRate')} · {percent}
+          </span>
+          <span className="heyform-report-chart-count">
+            {count}/{total}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const FormReportItem: FC<FormReportItemProps> = ({ index, response, isHideFieldEnabled }) => {
   const { t } = useTranslation()
 
@@ -95,6 +126,10 @@ const FormReportItem: FC<FormReportItemProps> = ({ index, response, isHideFieldE
 
   const isChoices = useMemo(() => CHOICE_FIELD_KINDS.includes(response.kind), [response.kind])
   const isRating = useMemo(() => RATING_FIELD_KINDS.includes(response.kind), [response.kind])
+  const isSensitiveContactField = useMemo(
+    () => [FieldKindEnum.EMAIL, FieldKindEnum.PHONE_NUMBER].includes(response.kind),
+    [response.kind]
+  )
 
   const isHided = useMemo(
     () => isHideFieldEnabled && form?.customReport?.hiddenFields?.includes(response.id),
@@ -106,10 +141,12 @@ const FormReportItem: FC<FormReportItemProps> = ({ index, response, isHideFieldE
       return <Choices chooses={response.chooses} />
     } else if (isRating) {
       return <Ratings length={response.properties?.total} chooses={response.chooses} />
+    } else if (isSensitiveContactField) {
+      return <CompletionCoverage count={response.count || 0} total={response.total || 0} />
     } else {
       return <FormReportSubmissions response={response} />
     }
-  }, [isChoices, isRating, response])
+  }, [isChoices, isRating, isSensitiveContactField, response])
 
   return (
     <li className="heyform-report-item">

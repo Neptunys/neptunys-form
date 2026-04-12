@@ -82,7 +82,7 @@ function Tr<T, K>({ index, record, columns, isSelected, onSelect, onClick }: TrP
 
   return (
     <tr
-      className="border-accent-light cursor-pointer border-b hover:bg-[#f8fafc] data-[selected]:bg-[#f8fafc] [&:hover_[data-slot=expand]]:opacity-100"
+      className="border-accent-light cursor-pointer border-b transition-colors hover:bg-accent-light/60 data-[selected]:bg-accent-light [&:hover_[data-slot=expand]]:opacity-100"
       data-selected={isSelected ? '' : undefined}
       onClick={handleClick}
     >

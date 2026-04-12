@@ -126,7 +126,7 @@ export default function LinkSettings() {
             </p>
           </div>
 
-          <div className="flex items-start justify-between gap-4 rounded-2xl border border-black/5 bg-white/70 px-4 py-3">
+          <div className="hf-card flex items-start justify-between gap-4 rounded-2xl px-4 py-3">
             <div>
               <div className="text-base/6 font-medium sm:text-sm/6">Use this form as the domain homepage</div>
               <p className="text-secondary mt-1 text-sm/6">
@@ -141,7 +141,7 @@ export default function LinkSettings() {
             />
           </div>
 
-          <div className="rounded-2xl border border-black/5 bg-white/70 px-4 py-3">
+          <div className="hf-card rounded-2xl px-4 py-3">
             <div className="text-secondary text-xs uppercase tracking-[0.16em]">Live URL preview</div>
             <div className="text-primary mt-2 break-all text-sm font-medium">{publicUrl}</div>
             <div className="mt-3">
