@@ -1,12 +1,11 @@
 import { useTranslation } from 'react-i18next'
 
-import { AnchorNavigation } from '@/components'
-
 import BrandKitModal from './BrandKitModal'
 import WorkspaceBranding from './Branding'
 import WorkspaceDeletion from './Deletion'
 import WorkspaceDeletionModal from './DeletionModal'
 import WorkspaceGeneral from './General'
+import WorkspaceLeadFlow from './LeadFlow'
 
 export default function WorkspaceSettings() {
   const { t } = useTranslation()
@@ -22,6 +21,7 @@ export default function WorkspaceSettings() {
           <div className="flex flex-col gap-8 lg:flex-row lg:gap-12">
             <div className="flex-1 p-6">
               <WorkspaceGeneral />
+              <WorkspaceLeadFlow />
               <WorkspaceBranding />
               <WorkspaceDeletion />
             </div>

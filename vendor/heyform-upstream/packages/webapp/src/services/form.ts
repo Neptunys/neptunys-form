@@ -27,12 +27,14 @@ import {
   FORM_ANALYTIC_GQL,
   FORM_DETAIL_GQL,
   FORM_INTEGRATIONS_GQL,
+  FORM_QUESTION_ANALYTIC_GQL,
   FORM_REPORT_GQL,
   FORM_SUMMARY_GQL,
   IMPORT_FORM_GQL,
   MOVE_FORM_TO_PROJECT_GQL,
   MOVE_FORM_TO_TRASH_GQL,
   OPEN_FORM_GQL,
+  PUBLIC_EXPERIMENT_GQL,
   PUBLIC_FORM_GQL,
   PUBLISH_FORM_SQL,
   RESTORE_FORM_GQL,
@@ -128,13 +130,14 @@ export class FormService {
     })
   }
 
-  static createFieldsWithAI(formId: string, prompt: string) {
+  static createFieldsWithAI(formId: string, prompt: string, reference?: string) {
     return apollo.mutate({
       mutation: CREATE_FIELDS_WITH_AI_GQL,
       variables: {
         input: {
           formId,
-          prompt
+          prompt,
+          reference
         }
       }
     })
@@ -186,7 +189,20 @@ export class FormService {
           range
         }
       },
-      fetchPolicy: 'cache-first'
+      fetchPolicy: 'network-only'
+    })
+  }
+
+  static async questionAnalytics(formId: string, range: string) {
+    return apollo.query({
+      query: FORM_QUESTION_ANALYTIC_GQL,
+      variables: {
+        input: {
+          formId,
+          range
+        }
+      },
+      fetchPolicy: 'network-only'
     })
   }
 
@@ -484,6 +500,18 @@ export class FormService {
       variables: {
         input: {
           formId
+        }
+      },
+      fetchPolicy: 'network-only'
+    })
+  }
+
+  static async publicExperiment(experimentId: string) {
+    return apollo.query({
+      query: PUBLIC_EXPERIMENT_GQL,
+      variables: {
+        input: {
+          experimentId
         }
       },
       fetchPolicy: 'network-only'

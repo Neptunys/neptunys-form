@@ -1,11 +1,12 @@
+import { useRequest } from 'ahooks'
 import { IconDots, IconLink } from '@tabler/icons-react'
-import { FC, useState } from 'react'
+import { FC, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { IntegrationService } from '@/services'
 import { useParam } from '@/utils'
 
-import { Form, Image, Modal } from '@/components'
+import { Button, Form, Image, Modal, useToast } from '@/components'
 import { useAppStore, useFormStore, useModal } from '@/store'
 import { IntegratedAppType } from '@/types'
 
@@ -16,12 +17,42 @@ export interface IntegrationSettingsProps {
   onValuesChange?: (changedValues: Any, values: Any) => void
 }
 
+function getInitialValues(app: IntegratedAppType) {
+  const defaults = (app.settings || []).reduce((values, setting) => {
+    if (setting.defaultValue !== undefined) {
+      values[setting.name] = setting.defaultValue
+    }
+
+    return values
+  }, {} as AnyMap)
+
+  return {
+    ...defaults,
+    ...app.integration?.config,
+    fields: app.integration?.config?.fields || [[]]
+  }
+}
+
 const SettingsForm: FC<IntegrationSettingsProps> = ({ app, onValuesChange }) => {
   const { t } = useTranslation()
+  const toast = useToast()
 
   const { formId } = useParam()
   const { closeModal } = useAppStore()
   const { updateIntegration } = useFormStore()
+  const initialValues = useMemo(() => getInitialValues(app), [app])
+  const [draftValues, setDraftValues] = useState<AnyMap>(initialValues)
+
+  const { loading: testLoading, runAsync: runTestAsync } = useRequest(
+    (values: AnyMap) => IntegrationService.testSettings(formId, app.id, values),
+    {
+      manual: true
+    }
+  )
+
+  useEffect(() => {
+    setDraftValues(initialValues)
+  }, [initialValues])
 
   async function fetch(values: AnyMap) {
     await IntegrationService.updateSettings(formId, app.id, values)
@@ -32,13 +63,31 @@ const SettingsForm: FC<IntegrationSettingsProps> = ({ app, onValuesChange }) => 
     closeModal('IntegrationSettingsModal')
   }
 
+  function handleValuesChange(changedValues: Any, values: Any) {
+    setDraftValues(values)
+    onValuesChange?.(changedValues, values)
+  }
+
+  async function handleTest() {
+    try {
+      await runTestAsync(draftValues)
+      toast({
+        title: 'Test row sent',
+        message: 'A sample lead row was written to Google Sheets.'
+      })
+    } catch (error: any) {
+      toast({
+        title: 'Test row failed',
+        message: error.message,
+        duration: 7000
+      })
+    }
+  }
+
   return (
     <Form.Simple
       className="space-y-4"
-      initialValues={{
-        ...app.integration?.config,
-        fields: app.integration?.config?.fields || [[]]
-      }}
+      initialValues={initialValues}
       fetch={fetch}
       refreshDeps={[formId, app.id]}
       submitProps={{
@@ -46,11 +95,19 @@ const SettingsForm: FC<IntegrationSettingsProps> = ({ app, onValuesChange }) => 
         label: t('form.integrations.connectWith', { name: app.name })
       }}
       submitOnChangedOnly
-      onValuesChange={onValuesChange}
+      onValuesChange={handleValuesChange}
     >
       {app.settings?.map(setting => (
         <IntegrationSettingsItem key={setting.name} setting={setting} />
       ))}
+
+      {app.id === 'googlesheets' && (
+        <div className="flex justify-end">
+          <Button.Ghost className="w-full sm:w-auto" loading={testLoading} onClick={handleTest}>
+            Send test row
+          </Button.Ghost>
+        </div>
+      )}
     </Form.Simple>
   )
 }

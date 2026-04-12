@@ -4,10 +4,13 @@ import {
   IsBoolean,
   IsEmail,
   IsEnum,
+  IsNumber,
   IsObject,
   IsOptional,
   IsUrl,
-  Length
+  Length,
+  Max,
+  Min
 } from 'class-validator'
 
 import { FormType, ProjectType } from '@graphql'
@@ -123,6 +126,41 @@ export class UpdateTeamInput extends TeamDetailInput {
   @IsBoolean()
   @IsOptional()
   removeBranding?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
+  clientName?: string
+
+  @Field(type => [String], { nullable: true })
+  @IsArray()
+  @IsOptional()
+  leadNotificationEmails?: string[]
+
+  @Field({ nullable: true })
+  @IsBoolean()
+  @IsOptional()
+  enableLeadReport?: boolean
+
+  @Field({ nullable: true })
+  @IsNumber()
+  @Min(1)
+  @Max(365)
+  @IsOptional()
+  leadReportRangeDays?: number
+
+  @Field({ nullable: true })
+  @IsOptional()
+  reportingTimezone?: string
+
+  @Field({ nullable: true })
+  @IsBoolean()
+  @IsOptional()
+  enableGoogleSheetsLeadSync?: boolean
+
+  @Field(type => GraphQLJSONObject, { nullable: true })
+  @IsObject()
+  @IsOptional()
+  googleSheetsLeadConfig?: Record<string, any>
 }
 
 @InputType()
@@ -256,10 +294,64 @@ export class TeamType extends PublicTeamType {
   removeBranding?: boolean
 
   @Field({ nullable: true })
+  clientName?: string
+
+  @Field(type => [String], { nullable: true })
+  leadNotificationEmails?: string[]
+
+  @Field({ nullable: true })
+  enableLeadReport?: boolean
+
+  @Field({ nullable: true })
+  leadReportRangeDays?: number
+
+  @Field({ nullable: true })
+  leadReportLastSentAt?: number
+
+  @Field({ nullable: true })
+  reportingTimezone?: string
+
+  @Field({ nullable: true })
   customDomain?: string
 
   @Field()
   createdAt: Date
+}
+
+@ObjectType()
+export class TeamLeadFlowType {
+  @Field({ nullable: true })
+  clientName?: string
+
+  @Field(type => [String], { nullable: true })
+  leadNotificationEmails?: string[]
+
+  @Field({ nullable: true })
+  enableLeadReport?: boolean
+
+  @Field({ nullable: true })
+  leadReportRangeDays?: number
+
+  @Field({ nullable: true })
+  leadReportLastSentAt?: number
+
+  @Field({ nullable: true })
+  reportingTimezone?: string
+
+  @Field({ nullable: true })
+  enableGoogleSheetsLeadSync?: boolean
+
+  @Field(type => GraphQLJSONObject, { nullable: true })
+  googleSheetsLeadConfig?: Record<string, any>
+
+  @Field({ nullable: true })
+  googleSheetsLeadLastDeliveryAt?: number
+
+  @Field({ nullable: true })
+  googleSheetsLeadLastDeliveryStatus?: string
+
+  @Field({ nullable: true })
+  googleSheetsLeadLastDeliveryMessage?: string
 }
 
 @ObjectType()

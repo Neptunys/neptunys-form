@@ -8,7 +8,7 @@ $stateRoot = Join-Path $repoRoot '.heyform-local'
 $logRoot = Join-Path $stateRoot 'logs'
 
 if (-not (Test-Path $heyformRoot)) {
-  throw "HeyForm upstream clone not found at $heyformRoot"
+  throw "NeptunysForm upstream clone not found at $heyformRoot"
 }
 
 New-Item -ItemType Directory -Force -Path $stateRoot | Out-Null
@@ -27,7 +27,7 @@ MONGO_URI=mongodb://127.0.0.1:27017/heyform
 MONGO_USER=
 MONGO_PASSWORD=
 UPLOAD_FILE_TYPES=.jpg,.jpeg,.png,.bmp,.gif,.webp,.svg,.txt,.md,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.pdf,.mp4,.wmv,.zip,.rar,.7z
-SMTP_FROM=HeyForm <noreply@localhost>
+SMTP_FROM=NeptunysForm <noreply@localhost>
 SMTP_HOST=127.0.0.1
 SMTP_PORT=1025
 SMTP_USER=
@@ -79,10 +79,10 @@ VITE_ENABLE_GOOGLE_FONTS=false
 Set-Content -Path $serverEnvPath -Value $serverEnv -Encoding UTF8
 Set-Content -Path $webappEnvPath -Value $webappEnv -Encoding UTF8
 
-$mailpitCandidates = @(
+$mailpitCandidates = @(@(
   (Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Packages\axllent.mailpit_Microsoft.Winget.Source_8wekyb3d8bbwe\mailpit.exe'),
   (Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Links\mailpit.exe')
-) | Where-Object { Test-Path $_ }
+) | Where-Object { Test-Path $_ })
 
 if ($mailpitCandidates.Count -eq 0) {
   throw 'Mailpit executable not found. Install it first with winget install axllent.mailpit'
@@ -110,7 +110,7 @@ $processSpecs = @(
   @{
     Name = 'server'
     FilePath = 'powershell.exe'
-    Arguments = '-NoLogo -NoProfile -ExecutionPolicy Bypass -Command "Set-Location ''' + $heyformRoot + '''; corepack pnpm --filter ./packages/server dev"'
+    Arguments = '-NoLogo -NoProfile -ExecutionPolicy Bypass -Command "Set-Location ''' + $heyformRoot + '''; corepack pnpm --filter ./packages/server build; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; corepack pnpm --filter ./packages/server start"'
     WorkingDirectory = $heyformRoot
   },
   @{
@@ -145,7 +145,7 @@ $statePath = Join-Path $stateRoot 'processes.json'
 $state | ConvertTo-Json -Depth 4 | Set-Content -Path $statePath -Encoding UTF8
 
 Write-Host ''
-Write-Host 'HeyForm native local stack started:'
+Write-Host 'NeptunysForm native local stack started:'
 Write-Host '  App:     http://127.0.0.1:3000'
 Write-Host '  API:     http://127.0.0.1:9157/graphql'
 Write-Host '  Mailpit: http://127.0.0.1:8025'

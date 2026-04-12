@@ -2,11 +2,14 @@ import { apollo } from '@/utils'
 
 import {
   ADD_PROJECT_MEMBER_GQL,
+  CREATE_EXPERIMENT_GQL,
   CREATE_PROJECT_GQL,
+  DELETE_EXPERIMENT_GQL,
   DELETE_PROJECT_CODE_GQL,
   DELETE_PROJECT_GQL,
   DELETE_PROJECT_MEMBER_GQL,
   EMPTY_TRASH_GQL,
+  EXPERIMENTS_GQL,
   LEAVE_PROJECT_GQL,
   RENAME_PROJECT_GQL
 } from '@/consts'
@@ -103,6 +106,46 @@ export class ProjectService {
       variables: {
         input: {
           projectId
+        }
+      }
+    })
+  }
+
+  static experiments(projectId: string) {
+    return apollo.query({
+      query: EXPERIMENTS_GQL,
+      variables: {
+        input: {
+          projectId
+        }
+      },
+      fetchPolicy: 'network-only'
+    })
+  }
+
+  static createExperiment(input: {
+    projectId: string
+    name: string
+    variants: Array<{ formId: string; weight?: number }>
+    autoPromote?: boolean
+    durationHours?: number
+    minimumSampleSize?: number
+  }) {
+    return apollo.mutate({
+      mutation: CREATE_EXPERIMENT_GQL,
+      variables: {
+        input
+      }
+    })
+  }
+
+  static deleteExperiment(projectId: string, experimentId: string) {
+    return apollo.mutate({
+      mutation: DELETE_EXPERIMENT_GQL,
+      variables: {
+        input: {
+          projectId,
+          experimentId
         }
       }
     })

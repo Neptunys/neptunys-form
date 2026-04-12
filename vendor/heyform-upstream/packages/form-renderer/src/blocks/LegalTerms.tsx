@@ -1,8 +1,9 @@
 import type { FC } from 'react'
 
 import { useTranslation } from '../utils'
+import { helper } from '@heyform-inc/utils'
 
-import { FormField, RadioGroup } from '../components'
+import { ConsentCheckbox, FormField } from '../components'
 import { useStore } from '../store'
 import type { BlockProps } from './Block'
 import { Block } from './Block'
@@ -11,32 +12,20 @@ import { Form } from './Form'
 export const LegalTerms: FC<BlockProps> = ({ field, ...restProps }) => {
   const { state } = useStore()
   const { t } = useTranslation()
-
-  const options = [
-    {
-      keyName: 'Y',
-      label: t('I accept'),
-      value: true
-    },
-    {
-      keyName: 'N',
-      label: t("I don't accept"),
-      value: false
-    }
-  ]
+  const consentText =
+    field.properties?.consentText || 'I agree to the terms and privacy policy.'
 
   function getValues(values: any) {
-    return values.input ? values.input[0] : undefined
+    return helper.isTrue(values.input) ? true : undefined
   }
 
   return (
     <Block className="heyform-legal-terms" field={field} {...restProps}>
       <Form
         initialValues={{
-          input: [state.values[field.id]]
+          input: helper.isTrue(state.values[field.id])
         }}
-        autoSubmit={true}
-        isSubmitShow={false}
+        isSubmitShow={true}
         field={field}
         getValues={getValues}
       >
@@ -44,12 +33,17 @@ export const LegalTerms: FC<BlockProps> = ({ field, ...restProps }) => {
           name="input"
           rules={[
             {
-              required: field.validations?.required,
-              message: t('This field is required')
+              validator: (_, value) => {
+                if (field.validations?.required && !helper.isTrue(value)) {
+                  return Promise.reject(t('This field is required'))
+                }
+
+                return Promise.resolve()
+              }
             }
           ]}
         >
-          <RadioGroup className="w-56" options={options} />
+          <ConsentCheckbox label={consentText} />
         </FormField>
       </Form>
     </Block>

@@ -11,11 +11,13 @@ import { helper } from '@heyform-inc/utils'
 
 import { COUNTRIES } from '../consts'
 import { CountrySelect } from './CountrySelect'
+import { FlagIcon } from './FlagIcon'
 import { Input } from './Input'
 
 interface PhoneNumberInputProps {
   value?: string
   defaultCountryCode?: string
+  hideCountrySelect?: boolean
   onDropdownVisibleChange?: (visible: boolean) => void
   onChange?: (value: string) => void
 }
@@ -32,17 +34,22 @@ function parse(input: string, countryCode: string): PhoneNumber | undefined {
 
 export const PhoneNumberInput: FC<PhoneNumberInputProps> = ({
   defaultCountryCode = 'US',
+  hideCountrySelect = false,
   value: rawValue = '',
   onDropdownVisibleChange,
   onChange
 }) => {
   const [value, setValue] = useState<string>()
   const [countryCode, setCountryCode] = useState(defaultCountryCode)
-
-  const placeholder = useMemo(
-    () => COUNTRIES.find(c => c.value === countryCode)?.example,
-    [countryCode]
+  const selectedCountry = useMemo(
+    () =>
+      COUNTRIES.find(c => c.value === countryCode) ||
+      COUNTRIES.find(c => c.value === defaultCountryCode) ||
+      COUNTRIES.find(c => c.value === 'US'),
+    [countryCode, defaultCountryCode]
   )
+
+  const placeholder = useMemo(() => selectedCountry?.example, [selectedCountry])
 
   function handleCodeChange(newCountryCode: any) {
     setCountryCode(newCountryCode)
@@ -57,10 +64,14 @@ export const PhoneNumberInput: FC<PhoneNumberInputProps> = ({
   }
 
   function handleInputChange(inputValue: string) {
-    let newCountryCode = countryCode
-    const parsed = parse(inputValue, countryCode)
+    let newCountryCode = hideCountrySelect ? defaultCountryCode : countryCode
+    const parsed = parse(inputValue, newCountryCode)
 
-    if (helper.isValid(parsed?.country) && parsed!.country! !== countryCode) {
+    if (
+      !hideCountrySelect &&
+      helper.isValid(parsed?.country) &&
+      parsed!.country! !== countryCode
+    ) {
       newCountryCode = parsed!.country!
       setCountryCode(newCountryCode)
     }
@@ -91,34 +102,52 @@ export const PhoneNumberInput: FC<PhoneNumberInputProps> = ({
     })
   }
 
-  const handleCodeChangeCallback = useCallback(handleCodeChange, [value])
-  const handleInputChangeCallback = useCallback(handleInputChange, [countryCode, value])
+  const handleCodeChangeCallback = useCallback(handleCodeChange, [onChange, value])
+  const handleInputChangeCallback = useCallback(handleInputChange, [
+    countryCode,
+    defaultCountryCode,
+    hideCountrySelect,
+    onChange,
+    value
+  ])
 
   useEffect(() => {
+    if (hideCountrySelect) {
+      setCountryCode(defaultCountryCode)
+    }
+
     if (isValidPhoneNumber(rawValue)) {
-      const parsed = parsePhoneNumber(rawValue, countryCode as any)
+      const parsed = parsePhoneNumber(rawValue, defaultCountryCode as any)
 
       if (parsed) {
         const { country, nationalNumber } = parsed
-        const newValue = format(nationalNumber! as string, country!)
+        const nextCountryCode = hideCountrySelect ? defaultCountryCode : country || defaultCountryCode
+        const newValue = format(nationalNumber! as string, nextCountryCode)
 
         setValue(newValue)
-        setCountryCode(country!)
+        setCountryCode(nextCountryCode)
       }
     }
   }, [])
 
   return (
     <div className="flex items-center">
-      <CountrySelect
-        popupClassName="heyform-phone-number-popup"
-        enableLabel={false}
-        enableCallingCode={true}
-        allowClear={false}
-        value={countryCode}
-        onDropdownVisibleChange={onDropdownVisibleChange}
-        onChange={handleCodeChangeCallback}
-      />
+      {hideCountrySelect ? (
+        <div className="heyform-calling-code">
+          <FlagIcon countryCode={selectedCountry?.value} />
+          <span className="heyform-phone-static-code">+{selectedCountry?.callingCode}</span>
+        </div>
+      ) : (
+        <CountrySelect
+          popupClassName="heyform-phone-number-popup"
+          enableLabel={false}
+          enableCallingCode={true}
+          allowClear={false}
+          value={countryCode}
+          onDropdownVisibleChange={onDropdownVisibleChange}
+          onChange={handleCodeChangeCallback}
+        />
+      )}
       <Input
         type="tel"
         value={value}

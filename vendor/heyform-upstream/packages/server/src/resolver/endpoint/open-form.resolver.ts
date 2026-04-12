@@ -4,8 +4,8 @@ import { FORM_ENCRYPTION_KEY } from '@environments'
 import { OpenFormInput } from '@graphql'
 import { EndpointAnonymousIdGuard } from '@guard'
 import { timestamp } from '@heyform-inc/utils'
-import { Args, Query, Resolver } from '@nestjs/graphql'
-import { FormAnalyticService, FormService } from '@service'
+import { Args, Context, Query, Resolver } from '@nestjs/graphql'
+import { FormAnalyticService, FormService, FormSessionService } from '@service'
 import { aesEncryptObject } from '@utils'
 
 @Resolver()
@@ -13,11 +13,12 @@ import { aesEncryptObject } from '@utils'
 export class OpenFormResolver {
   constructor(
     private readonly formService: FormService,
-    private readonly formAnalyticService: FormAnalyticService
+    private readonly formAnalyticService: FormAnalyticService,
+    private readonly formSessionService: FormSessionService
   ) {}
 
   @Query(returns => String)
-  async openForm(@Args('input') input: OpenFormInput): Promise<string> {
+  async openForm(@Context() context: any, @Args('input') input: OpenFormInput): Promise<string> {
     const form = await this.formService.findById(input.formId)
 
     if (!form) {
@@ -32,12 +33,35 @@ export class OpenFormResolver {
       throw new BadRequestException('The form does not active')
     }
 
-    // Update form visit number
-    await this.formAnalyticService.updateTotalVisits(form.id)
+    const anonymousId = context?.req?.get('x-anonymous-id')
+    const { sessionId, isNewSession } = await this.formSessionService.create({
+      formId: form.id,
+      projectId: form.projectId,
+      teamId: form.teamId,
+      anonymousId,
+      experimentId: input.experimentId,
+      variantFormId: input.variantFormId || form.id,
+      source: {
+        landingUrl: input.landingUrl,
+        referrer: input.referrer,
+        utmSource: input.utmSource,
+        utmMedium: input.utmMedium,
+        utmCampaign: input.utmCampaign,
+        utmTerm: input.utmTerm,
+        utmContent: input.utmContent
+      }
+    })
+
+    if (isNewSession) {
+      await this.formAnalyticService.updateTotalVisits(form.id)
+    }
 
     return aesEncryptObject(
       {
-        timestamp: timestamp()
+        timestamp: timestamp(),
+        sessionId,
+        experimentId: input.experimentId,
+        variantFormId: input.variantFormId || form.id
       },
       FORM_ENCRYPTION_KEY
     )

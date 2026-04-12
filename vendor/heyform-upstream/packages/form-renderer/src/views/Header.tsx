@@ -6,11 +6,13 @@ import { helper } from '@heyform-inc/utils'
 
 import { Countdown } from '../components/Countdown'
 import { useStore } from '../store'
-import { Progress } from './Progress'
+import { Progress, TopProgressBar } from './Progress'
 
 export const Header: FC = () => {
   const { state, dispatch } = useStore()
-  const progressStyle = state.settings?.progressStyle === 'top-bar' ? 'top-bar' : 'circular'
+  const progressStyle = (state.settings as Record<string, any> | undefined)?.progressStyle
+  const showTopProgress = !!state.settings?.enableProgress && progressStyle === 'top-bar'
+  const showCircularProgress = !!state.settings?.enableProgress && progressStyle !== 'top-bar'
 
   async function handleCountdownEnd() {
     // Submit form
@@ -32,7 +34,7 @@ export const Header: FC = () => {
 
   return (
     <div className="heyform-header">
-      {state.settings?.enableProgress && progressStyle === 'top-bar' && <Progress />}
+      {showTopProgress && <TopProgressBar />}
 
       <div className="heyform-header-wrapper">
         <div className="heyform-header-left">
@@ -47,7 +49,7 @@ export const Header: FC = () => {
           {state.settings?.enableTimeLimit && state.settings.timeLimit && (
             <Countdown settings={state.settings!} onEnd={handleCountdownEndCallback} />
           )}
-          {state.settings?.enableProgress && progressStyle !== 'top-bar' && <Progress />}
+          {showCircularProgress && <Progress />}
         </div>
       </div>
     </div>

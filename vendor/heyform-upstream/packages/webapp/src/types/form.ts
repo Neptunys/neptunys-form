@@ -2,12 +2,20 @@ import { FormField, FormModel, Property } from '@heyform-inc/shared-types-enums'
 
 import { APP_STATUS_ENUM } from '@/consts'
 
+export interface AppSettingOptionType {
+  label: string
+  value: string
+  disabled?: boolean
+}
+
 export interface AppSettingType {
   type: string
   name: string
   label: string
   description?: string
   placeholder?: string
+  options?: AppSettingOptionType[]
+  defaultValue?: any
   required: boolean
 }
 
@@ -29,6 +37,64 @@ export interface IntegrationType {
   appId: string
   config?: AnyMap
   status: number
+  lastDeliveryAt?: number
+  lastDeliveryStatus?: string
+  lastDeliveryMessage?: string
+}
+
+export interface FormQuestionAnalyticType {
+  questionId: string
+  order: number
+  title?: string
+  reachCount: number
+  reachRate: number
+  averageDuration: number
+  completedCount: number
+  dropOffCount: number
+  dropOffRate: number
+  frictionScore: number
+  frictionLevel: string
+}
+
+export interface ExperimentVariantType {
+  formId: string
+  weight: number
+}
+
+export interface ExperimentVariantMetricType extends ExperimentVariantType {
+  visits: number
+  submissions: number
+  conversionRate: number
+  averageTime: number
+  isWinner: boolean
+}
+
+export interface ExperimentType {
+  id: string
+  teamId: string
+  projectId: string
+  name: string
+  status: string
+  primaryMetric: string
+  autoPromote: boolean
+  durationHours: number
+  minimumSampleSize: number
+  startAt: number
+  endAt: number
+  winnerFormId?: string
+  promotedAt?: number
+  variants: ExperimentVariantType[]
+  metrics?: ExperimentVariantMetricType[]
+}
+
+export interface PublicExperimentType {
+  experimentId: string
+  formId: string
+  winnerFormId?: string
+}
+
+export interface PublicFormType extends FormModel {
+  integrations?: Record<string, string>
 }
 
 export interface FormFieldType extends FormField {

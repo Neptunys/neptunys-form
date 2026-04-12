@@ -1,8 +1,8 @@
-import { FieldLayoutAlignEnum } from '@heyform-inc/shared-types-enums'
+import { FieldLayoutAlignEnum, QUESTION_FIELD_KINDS } from '@heyform-inc/shared-types-enums'
 import clsx from 'clsx'
 import { FC, WheelEvent, useEffect, useMemo, useRef, useState } from 'react'
 
-import { removeHeading, replaceHTML } from '../utils'
+import { questionNumber, removeHeading, replaceHTML } from '../utils'
 import { htmlUtils } from '@heyform-inc/answer-utils'
 import { helper } from '@heyform-inc/utils'
 
@@ -49,6 +49,7 @@ export const Block: FC<BlockProps> = ({
 
   const isInlineLayout = field.layout?.align === FieldLayoutAlignEnum.INLINE
   const isSplitLayout = SPLIT_LAYOUTS.includes(field.layout?.align as FieldLayoutAlignEnum)
+  const inlineMediaPosition = field.layout?.inlineMediaPosition === 'top' ? 'top' : 'bottom'
 
   const [isReducedMotion, setIsReducedMotion] = useState(false)
   const [isTransitionReady, setIsTransitionReady] = useState(false)
@@ -60,6 +61,22 @@ export const Block: FC<BlockProps> = ({
   const isLeaving = transitionState === 'leaving'
   const isActiveBlock = !isLeaving && (isStandaloneActive || field.id === activeFieldId)
   const transitionDirection = state.scrollTo === 'previous' ? 'previous' : 'next'
+  const stepLabel = useMemo(() => {
+    const numberedLabel = questionNumber(field.number, field.parent?.number)
+
+    if (numberedLabel) {
+      return numberedLabel
+    }
+
+    if (!QUESTION_FIELD_KINDS.includes(field.kind)) {
+      return ''
+    }
+
+    const questionFields = state.fields.filter(candidate => QUESTION_FIELD_KINDS.includes(candidate.kind))
+    const questionIndex = questionFields.findIndex(candidate => candidate.id === field.id)
+
+    return questionIndex > -1 ? String(questionIndex + 1) : ''
+  }, [field.id, field.kind, field.number, field.parent?.number, state.fields])
 
   function handleScroll(event: WheelEvent<HTMLDivElement>) {
     const container = event.target as HTMLElement
@@ -243,12 +260,17 @@ export const Block: FC<BlockProps> = ({
               <div className="heyform-scroll-container">
                 <div className="heyform-block-main">
                   <div className="heyform-block-wrapper">
+                    {isInlineLayout && inlineMediaPosition === 'top' && <Layout {...field.layout} />}
+
                     <div className="heyform-block-header">
                       {field.title && (
-                        <h1
-                          className="heyform-block-title"
-                          dangerouslySetInnerHTML={{ __html: removeHeading(field.title as string) }}
-                        />
+                        <div className="heyform-block-title-row">
+                          {stepLabel && <span className="heyform-question-step-chip">{stepLabel}</span>}
+                          <h1
+                            className="heyform-block-title"
+                            dangerouslySetInnerHTML={{ __html: removeHeading(field.title as string) }}
+                          />
+                        </div>
                       )}
                       {field.description && (
                         <div
@@ -258,7 +280,7 @@ export const Block: FC<BlockProps> = ({
                       )}
                     </div>
 
-                    {isInlineLayout && <Layout {...field.layout} />}
+                    {isInlineLayout && inlineMediaPosition === 'bottom' && <Layout {...field.layout} />}
 
                     {children}
                   </div>

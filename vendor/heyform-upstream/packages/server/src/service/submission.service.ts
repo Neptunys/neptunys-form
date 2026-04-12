@@ -368,6 +368,33 @@ export class SubmissionService {
     return submissions
   }
 
+  async findAllInFormsByDateRange(
+    formIds: string[],
+    startAt: number,
+    endAt: number
+  ): Promise<SubmissionModel[]> {
+    if (!helper.isValidArray(formIds)) {
+      return []
+    }
+
+    return this.submissionModel
+      .find({
+        formId: {
+          $in: formIds
+        },
+        endAt: {
+          $gte: startAt,
+          $lte: endAt
+        },
+        status: {
+          $ne: SubmissionStatusEnum.DELETED
+        }
+      })
+      .sort({
+        endAt: -1
+      })
+  }
+
   async createAnswer(submissionId: string, answer: Answer): Promise<boolean> {
     const result = await this.submissionModel.updateOne(
       {

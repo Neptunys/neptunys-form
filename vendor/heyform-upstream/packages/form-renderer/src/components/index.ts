@@ -1,5 +1,6 @@
 export * from './Button'
 export * from './ChoiceRadioGroup'
+export * from './ConsentCheckbox'
 export * from './CountrySelect'
 export * from './DateInput'
 export * from './DateRangeInput'

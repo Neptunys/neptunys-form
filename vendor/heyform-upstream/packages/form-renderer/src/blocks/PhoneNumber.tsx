@@ -61,6 +61,7 @@ export const PhoneNumber: FC<BlockProps> = ({ field, ...restProps }) => {
         >
           <PhoneNumberInput
             defaultCountryCode={field.properties?.defaultCountryCode}
+            hideCountrySelect={field.properties?.hideCountrySelect}
             onDropdownVisibleChange={setIsDropdownShown}
           />
         </FormField>

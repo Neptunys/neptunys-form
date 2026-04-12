@@ -21,10 +21,18 @@ interface AIQuestionPlan {
   correctOption?: string
 }
 
+interface AIScreenPlan {
+  title?: string
+  description?: string
+  buttonText?: string
+}
+
 interface AIFormPlan {
   name?: string
   kind?: string
+  welcome?: AIScreenPlan
   questions?: AIQuestionPlan[]
+  thankYou?: AIScreenPlan
 }
 
 interface GeneratedFormDraft {
@@ -56,14 +64,15 @@ export class AIFormService {
     const plan = await this.generatePlan(topic.trim(), reference?.trim())
     const name = this.resolveName(plan.name, topic)
     const kind = this.resolveFormKind(plan.kind)
-    const questions = this.normalizeQuestions(plan.questions)
+    const questions = this.ensureQuestionFlow(this.normalizeQuestions(plan.questions), kind)
 
     return {
       name,
       kind,
       fields: [
+        this.createWelcomeField(plan.welcome, name, kind),
         ...questions.map((question, index) => this.createQuestionField(question, kind, index)),
-        this.createThankYouField(kind)
+        this.createThankYouField(kind, plan.thankYou)
       ]
     }
   }
@@ -81,7 +90,7 @@ export class AIFormService {
         {
           role: 'system',
           content:
-            'You create valid JSON blueprints for HeyForm. Return exactly one JSON object with keys name, kind, and questions. kind must be one of survey, contact, quiz. questions must be an array of 3 to 8 items. Each question must contain type and title. type must be one of short_text, long_text, email, phone_number, number, multiple_choice, yes_no. Only multiple_choice questions may include options, and they must have 2 to 6 distinct options. yes_no questions should not include options. If kind is quiz and a question is multiple_choice or yes_no, include correctOption with the exact correct option label. Do not return markdown, comments, or prose.'
+            'You create valid JSON blueprints for NeptunysForm. Return exactly one JSON object with keys name, kind, welcome, questions, and thankYou. kind must be one of survey, contact, quiz. welcome and thankYou must be objects with title and description, and welcome may include buttonText. questions must be an array of 3 to 8 items. Each question must contain type and title. type must be one of short_text, long_text, email, phone_number, number, multiple_choice, yes_no. Only multiple_choice questions may include options, and they must have 2 to 6 distinct options. yes_no questions should not include options. If kind is quiz and a question is multiple_choice or yes_no, include correctOption with the exact correct option label. Match the language used in the topic or reference. Do not return markdown, comments, or prose.'
         },
         {
           role: 'user',
@@ -89,7 +98,9 @@ export class AIFormService {
             topic,
             reference: reference || null,
             goals: [
+              'Create a complete respondent flow with a short welcome, cohesive questions, and a clear thank-you ending.',
               'Keep question titles concise and natural.',
+              'If kind is contact, include at least one contact method question near the end.',
               'Prefer practical answer formats over decorative screens.',
               'Use email or phone questions only when they are actually useful.',
               'Return clean JSON only.'
@@ -161,6 +172,53 @@ export class AIFormService {
     return normalized
   }
 
+  private ensureQuestionFlow(questions: AIQuestionPlan[], formKind: FormKindEnum) {
+    const normalized = [...questions]
+
+    if (
+      formKind === FormKindEnum.CONTACT &&
+      !normalized.some(question => question.type === 'email' || question.type === 'phone_number')
+    ) {
+      const contactQuestion: AIQuestionPlan = {
+        type: 'email',
+        title: 'What is your email address?',
+        description: 'We will use this to follow up with you.',
+        required: true
+      }
+
+      if (normalized.length >= MAX_QUESTION_COUNT) {
+        normalized[normalized.length - 1] = contactQuestion
+      } else {
+        normalized.push(contactQuestion)
+      }
+    }
+
+    return normalized
+  }
+
+  private createWelcomeField(
+    screen: AIScreenPlan | undefined,
+    formName: string,
+    formKind: FormKindEnum
+  ): FormField {
+    const defaults = this.getWelcomeContent(formName, formKind)
+    const buttonText = screen?.buttonText?.trim()
+
+    return {
+      id: nanoid(12),
+      kind: FieldKindEnum.WELCOME,
+      title: htmlUtils.parse(this.resolveScreenText(screen?.title, defaults.title, 120)),
+      description: htmlUtils.parse(
+        this.resolveScreenText(screen?.description, defaults.description, 240)
+      ),
+      properties: helper.isValid(buttonText)
+        ? {
+            buttonText: buttonText.slice(0, 24)
+          }
+        : {}
+    }
+  }
+
   private createQuestionField(question: AIQuestionPlan, formKind: FormKindEnum, index: number): FormField {
     const kind = this.resolveQuestionKind(question.type)
     const field: FormField = {
@@ -229,21 +287,63 @@ export class AIFormService {
     return field
   }
 
-  private createThankYouField(formKind: FormKindEnum): FormField {
-    const description =
-      formKind === FormKindEnum.CONTACT
-        ? 'Thanks for reaching out. We will get back to you soon.'
-        : formKind === FormKindEnum.QUIZ
-          ? 'Thanks for completing the quiz.'
-          : 'Thanks for completing this form.'
+  private createThankYouField(formKind: FormKindEnum, screen?: AIScreenPlan): FormField {
+    const defaults = this.getThankYouContent(formKind)
 
     return {
       id: nanoid(12),
       kind: FieldKindEnum.THANK_YOU,
-      title: htmlUtils.parse('Thank you!'),
-      description: htmlUtils.parse(description),
+      title: htmlUtils.parse(this.resolveScreenText(screen?.title, defaults.title, 120)),
+      description: htmlUtils.parse(
+        this.resolveScreenText(screen?.description, defaults.description, 240)
+      ),
       properties: {}
     }
+  }
+
+  private getWelcomeContent(formName: string, formKind: FormKindEnum) {
+    switch (formKind) {
+      case FormKindEnum.CONTACT:
+        return {
+          title: formName,
+          description:
+            'Share a few details and the best way to reach you. We will follow up with the next step.'
+        }
+      case FormKindEnum.QUIZ:
+        return {
+          title: formName,
+          description: 'Answer a few quick questions and see how you do.'
+        }
+      default:
+        return {
+          title: formName,
+          description: 'Answer a few quick questions. It should only take a minute.'
+        }
+    }
+  }
+
+  private getThankYouContent(formKind: FormKindEnum) {
+    switch (formKind) {
+      case FormKindEnum.CONTACT:
+        return {
+          title: 'Thanks, you are all set.',
+          description: 'We have your details and will get back to you soon.'
+        }
+      case FormKindEnum.QUIZ:
+        return {
+          title: 'Thanks for taking the quiz.',
+          description: 'Your responses have been recorded.'
+        }
+      default:
+        return {
+          title: 'Thank you!',
+          description: 'Your responses have been recorded.'
+        }
+    }
+  }
+
+  private resolveScreenText(value: string | undefined, fallback: string, maxLength: number) {
+    return helper.isValid(value?.trim()) ? value!.trim().slice(0, maxLength) : fallback
   }
 
   private resolveQuestionKind(type?: string) {

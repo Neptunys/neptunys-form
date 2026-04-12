@@ -2,9 +2,14 @@ import { Injectable } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
 
+import { FormSessionService } from './form-session.service'
 import { SubmissionService } from './submission.service'
 import { date, helper } from '@heyform-inc/utils'
 import { FormAnalyticModel } from '@model'
+
+function toUnixSeconds(value: Date) {
+  return Math.floor(value.getTime() / 1000)
+}
 
 interface FormAnalyticOptions {
   formId: string
@@ -24,10 +29,25 @@ export class FormAnalyticService {
   constructor(
     @InjectModel(FormAnalyticModel.name)
     private readonly formAnalyticModel: Model<FormAnalyticModel>,
+    private readonly formSessionService: FormSessionService,
     private readonly submissionService: SubmissionService
   ) {}
 
   public async summary({ formId, startAt, endAt, isNext }: FormAnalyticOptions) {
+    const sessionSummary = await this.formSessionService.getSummary(
+      formId,
+      toUnixSeconds(startAt),
+      toUnixSeconds(endAt)
+    )
+
+    if (sessionSummary.totalVisits > 0) {
+      return {
+        avgTotalVisits: sessionSummary.totalVisits,
+        avgSubmissionCount: sessionSummary.submissionCount,
+        avgAverageTime: sessionSummary.averageTime
+      }
+    }
+
     const [avgTotalVisits, result] = await Promise.all([
       this.getAverageTotalVisits(formId, startAt, endAt),
       this.submissionService.analytic(
@@ -57,6 +77,14 @@ export class FormAnalyticService {
     } else {
       return {} as FormAnalyticResult
     }
+  }
+
+  public async questionAnalytics(formId: string, startAt: Date, endAt: Date) {
+    return this.formSessionService.getQuestionAnalytics(
+      formId,
+      toUnixSeconds(startAt),
+      toUnixSeconds(endAt)
+    )
   }
 
   public async getAverageTotalVisits(formId: string, startAt: Date, endAt: Date): Promise<number> {

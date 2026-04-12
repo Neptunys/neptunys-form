@@ -3,7 +3,7 @@ import { FC, useEffect, useState } from 'react'
 import { useTranslation } from '../utils'
 import { helper } from '@heyform-inc/utils'
 
-import { ChoiceRadioGroup, FormField, SelectHelper } from '../components'
+import { ChoiceRadioGroup, FormField, RadioGroup, SelectHelper } from '../components'
 import { useStore } from '../store'
 import type { BlockProps } from './Block'
 import { Block } from './Block'
@@ -27,13 +27,81 @@ export const MultipleChoice: FC<BlockProps> = ({ field, ...restProps }) => {
     field.validations?.min,
     field.validations?.max
   )
+  const allowOther = helper.isTrue(field.properties?.allowOther)
+  const singleSelectAutoSubmit = !allowMultiple
+  const usePlainSingleSelect = !allowMultiple && !allowOther
 
-  function getValues({ value }: any) {
-    return helper.isValidArray(value?.value) || helper.isValid(value?.other) ? value : undefined
+  function getFieldValue(formValues: any) {
+    return formValues?.value ?? formValues?.input
   }
 
-  function handleValuesChange(_: any, { value }: any) {
-    setIsOtherFilled(helper.isValid(value?.other))
+  function getSelectedValues(value: any) {
+    if (helper.isValidArray(value?.value)) {
+      return value.value
+    }
+
+    if (helper.isValidArray(value)) {
+      return value
+    }
+
+    return []
+  }
+
+  function getOtherValue(value: any) {
+    return helper.isObject(value) ? value.other : undefined
+  }
+
+  function getValues(formValues: any) {
+    const fieldValue = getFieldValue(formValues)
+    const selectedValues = getSelectedValues(fieldValue)
+    const otherValue = getOtherValue(fieldValue)
+
+    return helper.isValidArray(selectedValues) || helper.isValid(otherValue)
+      ? {
+          value: selectedValues,
+          other: otherValue
+        }
+      : undefined
+  }
+
+  function getChoiceCount(value: any) {
+    let count = getSelectedValues(value).length
+
+    if (allowOther && helper.isValid(getOtherValue(value))) {
+      count += 1
+    }
+
+    return count
+  }
+
+  function validateChoiceValue(_: any, value: any) {
+    const count = getChoiceCount(value)
+
+    if (field.validations?.required && count < 1) {
+      return Promise.reject(t('This field is required'))
+    }
+
+    if (!field.validations?.required && count < 1) {
+      return Promise.resolve()
+    }
+
+    if (count < min) {
+      return Promise.reject(
+        t('Choose at least {{min}} choices', { min: field.validations?.min })
+      )
+    }
+
+    if (max > 0 && count > max) {
+      return Promise.reject(
+        t('Choose up to {{max}} choices', { max: field.validations?.max })
+      )
+    }
+
+    return Promise.resolve()
+  }
+
+  function handleValuesChange(_: any, values: any) {
+    setIsOtherFilled(helper.isValid(getOtherValue(getFieldValue(values))))
   }
 
   useEffect(() => {
@@ -48,60 +116,62 @@ export const MultipleChoice: FC<BlockProps> = ({ field, ...restProps }) => {
 
       <Form
         initialValues={{
-          value: state.values[field.id]
+          ...(usePlainSingleSelect
+            ? {
+                input: getSelectedValues(state.values[field.id])
+              }
+            : {
+                value: state.values[field.id]
+              })
         }}
-        autoSubmit={!allowMultiple}
-        isSubmitShow={allowMultiple}
+        autoSubmit={singleSelectAutoSubmit}
+        autoSubmitDelayMs={singleSelectAutoSubmit ? 420 : 80}
+        allowAutoSubmitWithNextButton={singleSelectAutoSubmit}
+        isSubmitShow={true}
         field={field}
         getValues={getValues}
         onValuesChange={handleValuesChange}
       >
-        <FormField
-          name="value"
-          rules={[
-            {
-              validator: (_, value) => {
-                if (field.validations?.required) {
-                  if (helper.isEmpty(value)) {
-                    return Promise.reject(t('This field is required'))
-                  }
-                } else if (helper.isNil(value)) {
-                  return Promise.resolve()
-                }
-
-                let count = value.value.length
-
-                if (field.properties?.allowOther && helper.isValid(value.other)) {
-                  count += 1
-                }
-
-                if (count < min) {
-                  return Promise.reject(
-                    t('Choose at least {{min}} choices', { min: field.validations?.min })
-                  )
-                }
-
-                if (max > 0 && count > max) {
-                  return Promise.reject(
-                    t('Choose up to {{max}} choices', { max: field.validations?.max })
-                  )
-                }
-
-                return Promise.resolve()
+        {usePlainSingleSelect ? (
+          <FormField
+            name="input"
+            rules={[
+              {
+                validator: validateChoiceValue
               }
-            }
-          ]}
-        >
-          <ChoiceRadioGroup
-            options={options}
-            allowMultiple={field.properties?.allowMultiple}
-            allowOther={field.properties?.allowOther}
-            badge={field.properties?.badge}
-            verticalAlignment={field.properties?.verticalAlignment}
-            isOtherFilled={isOtherFilled}
-            max={field.validations?.max ?? 0}
-          />
-        </FormField>
+            ]}
+          >
+            <RadioGroup
+              className={
+                helper.isFalse(field.properties?.verticalAlignment)
+                  ? 'w-full heyform-radio-group-horizontal'
+                  : 'w-full'
+              }
+              options={options}
+              selectionFeedback={singleSelectAutoSubmit}
+            />
+          </FormField>
+        ) : (
+          <FormField
+            name="value"
+            rules={[
+              {
+                validator: validateChoiceValue
+              }
+            ]}
+          >
+            <ChoiceRadioGroup
+              options={options}
+              allowMultiple={field.properties?.allowMultiple}
+              allowOther={field.properties?.allowOther}
+              badge={field.properties?.badge}
+              verticalAlignment={field.properties?.verticalAlignment}
+              isOtherFilled={isOtherFilled}
+              selectionFeedback={singleSelectAutoSubmit}
+              max={field.validations?.max ?? 0}
+            />
+          </FormField>
+        )}
       </Form>
     </Block>
   )

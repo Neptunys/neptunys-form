@@ -53,7 +53,7 @@ export function useSelectionRange(
   max?: number
 ): SelectionRange {
   return useMemo(() => {
-    const isMulti = !!allowMultiple
+    const isMulti = helper.isTrue(allowMultiple)
 
     const range: SelectionRange = {
       allowMultiple: isMulti ?? false,

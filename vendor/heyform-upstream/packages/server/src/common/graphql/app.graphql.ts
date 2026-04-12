@@ -1,4 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql'
+import GraphQLJSON from 'graphql-type-json'
 
 @ObjectType()
 export class AppSettingType {
@@ -16,6 +17,12 @@ export class AppSettingType {
 
   @Field({ nullable: true })
   placeholder?: string
+
+  @Field(type => GraphQLJSON, { nullable: true })
+  options?: Array<Record<string, any>>
+
+  @Field(type => GraphQLJSON, { nullable: true })
+  defaultValue?: any
 
   @Field()
   required: boolean

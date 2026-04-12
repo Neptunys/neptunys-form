@@ -9,6 +9,7 @@ import {
   IconSettings,
   IconShare
 } from '@tabler/icons-react'
+import { getTheme } from '@heyform-inc/form-renderer/src'
 import { useRequest } from 'ahooks'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -16,7 +17,8 @@ import { Link } from 'react-router-dom'
 import { getFilteredFields } from './utils'
 import { FormService } from '@/services'
 import { useParam, useRouter } from '@/utils'
-import { helper } from '@heyform-inc/utils'
+import IconAI from '@/assets/ai.svg?react'
+import { deepEqual, helper } from '@heyform-inc/utils'
 
 import { Button, Loader, Tooltip, usePrompt, useToast } from '@/components'
 import { useAppStore, useFormStore, useWorkspaceStore } from '@/store'
@@ -34,8 +36,9 @@ export default function BuilderNavBar() {
   const { workspaceId, projectId, formId } = useParam()
   const { openModal } = useAppStore()
   const { state } = useStoreContext()
-  const { workspace, project } = useWorkspaceStore()
-  const { form, updateForm } = useFormStore()
+  const { workspace, project, sharingURLPrefix } = useWorkspaceStore()
+  const { form, themeSettings, updateForm } = useFormStore()
+  const shareLink = `${sharingURLPrefix}/form/${formId}`
 
   const { loading, run } = useRequest(
     async () => {
@@ -44,6 +47,26 @@ export default function BuilderNavBar() {
         (form!.version === 0 && !form?.fieldsUpdatedAt)
       ) {
         const { fields } = getFilteredFields(state.fields!)
+        const currentThemeSettings = {
+          logo: themeSettings?.logo,
+          theme: getTheme(themeSettings?.theme || form?.themeSettings?.theme)
+        }
+        const savedThemeSettings = {
+          logo: form?.themeSettings?.logo,
+          theme: getTheme(form?.themeSettings?.theme)
+        }
+
+        if (!deepEqual(currentThemeSettings, savedThemeSettings)) {
+          await FormService.updateTheme({
+            formId,
+            logo: currentThemeSettings.logo,
+            theme: currentThemeSettings.theme
+          })
+
+          updateForm({
+            themeSettings: currentThemeSettings as any
+          })
+        }
 
         await FormService.publishForm({
           formId,
@@ -52,7 +75,8 @@ export default function BuilderNavBar() {
         })
 
         updateForm({
-          canPublish: false
+          canPublish: false,
+          themeSettings: currentThemeSettings as any
         })
 
         toast({
@@ -77,12 +101,20 @@ export default function BuilderNavBar() {
     openModal('PreviewModal')
   }
 
+  function handleOpenAIGenerator() {
+    openModal('GenerateWithAIModal')
+  }
+
   function handleNavigateTo(route: string) {
     router.push(`/workspace/${workspaceId}/project/${projectId}/form/${formId}/${route}`)
   }
 
   function handlePublish() {
     run()
+  }
+
+  function handleViewLive() {
+    window.open(shareLink, '_blank', 'noopener,noreferrer')
   }
 
   function handleRename() {
@@ -181,6 +213,12 @@ export default function BuilderNavBar() {
             </Tooltip>
           )}
 
+          <Tooltip label="AI form builder">
+            <Button.Link size="md" iconOnly onClick={handleOpenAIGenerator} disabled={state.isSyncing}>
+              <IconAI className="h-5 w-5" />
+            </Button.Link>
+          </Tooltip>
+
           <Tooltip label={t('form.builder.preview.title')}>
             <Button.Link size="md" iconOnly onClick={handlePreview}>
               <IconPlayerPlay className="h-5 w-5" />
@@ -241,15 +279,22 @@ export default function BuilderNavBar() {
           </Tooltip>
         </div>
 
-        <Button
-          size="md"
-          disabled={!form?.canPublish || state.isSyncing}
-          loading={loading}
-          onClick={handlePublish}
-        >
-          <IconSend2 className="h-5 w-5" />
-          {t('components.publish')}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button.Ghost size="md" onClick={handleViewLive}>
+            <IconPlayerPlay className="h-4 w-4" />
+            View live
+          </Button.Ghost>
+
+          <Button
+            size="md"
+            disabled={!form?.canPublish || state.isSyncing}
+            loading={loading}
+            onClick={handlePublish}
+          >
+            <IconSend2 className="h-5 w-5" />
+            {t('components.publish')}
+          </Button>
+        </div>
 
         <div className="hidden items-center gap-4 sm:flex">
           <div className="bg-accent-light h-6 w-px"></div>

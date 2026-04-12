@@ -5,7 +5,10 @@ import { Queue } from 'bull'
 import { Model } from 'mongoose'
 import * as apps from 'src/apps'
 
+import { helper } from '@heyform-inc/utils'
 import { FormModel, IntegrationModel, IntegrationStatusEnum } from '@model'
+
+import { TeamService } from './team.service'
 
 @Injectable()
 export class IntegrationService {
@@ -13,7 +16,8 @@ export class IntegrationService {
     @InjectModel(IntegrationModel.name)
     private readonly integrationModel: Model<IntegrationModel>,
     @InjectQueue('IntegrationQueue') private readonly integrationQueue: Queue,
-    @InjectQueue('SubmissionNotificationQueue') private readonly submissionNotificationQueue: Queue
+    @InjectQueue('SubmissionNotificationQueue') private readonly submissionNotificationQueue: Queue,
+    private readonly teamService: TeamService
   ) {}
 
   async findById(id: string): Promise<IntegrationModel | null> {
@@ -89,27 +93,53 @@ export class IntegrationService {
 
   public async addQueue(form: FormModel, submissionId: string): Promise<void> {
     // Email notification Queue
-    if ((form.settings as any)?.enableEmailNotification) {
+    if (
+      (form.settings as any)?.enableEmailNotification ||
+      (form.settings as any)?.enableRespondentNotification ||
+      (form.settings as any)?.enableOperatorNotification
+    ) {
       this.submissionNotificationQueue.add({
         formId: form.id,
         submissionId
       })
     }
 
-    const integrations = await this.integrationModel.find({
-      formId: form.id,
-      status: IntegrationStatusEnum.ACTIVE
-    })
+    const [integrations, team] = await Promise.all([
+      this.integrationModel.find({
+        formId: form.id,
+        status: IntegrationStatusEnum.ACTIVE
+      }),
+      this.teamService.findById(form.teamId)
+    ])
 
     for (const integration of integrations) {
       const app = apps[integration.appId]
 
-      if (app) {
+      if (app && typeof app.run === 'function') {
         this.integrationQueue.add({
           appId: integration.appId,
           formId: form.id,
           integrationId: integration.id,
           submissionId
+        })
+      }
+    }
+
+    if (
+      team?.enableGoogleSheetsLeadSync &&
+      helper.isObject(team.googleSheetsLeadConfig) &&
+      !helper.isEmpty(team.googleSheetsLeadConfig)
+    ) {
+      const app = apps.googlesheets
+
+      if (app && typeof app.run === 'function') {
+        this.integrationQueue.add({
+          appId: app.id,
+          formId: form.id,
+          submissionId,
+          teamId: team.id,
+          config: team.googleSheetsLeadConfig,
+          deliveryTarget: 'workspace-google-sheets'
         })
       }
     }

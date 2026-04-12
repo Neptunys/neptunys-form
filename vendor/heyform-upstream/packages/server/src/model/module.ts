@@ -52,9 +52,11 @@ import {
   UserSocialAccountModel,
   UserSocialAccountSchema
 } from './index'
+import { ExperimentModel, ExperimentSchema } from './experiment.model'
 
 export const ModelModule = MongooseModule.forFeature([
   { name: EmailTemplateModel.name, schema: EmailTemplateSchema },
+  { name: ExperimentModel.name, schema: ExperimentSchema },
   { name: FormModel.name, schema: FormSchema },
   { name: FormAnalyticModel.name, schema: FormAnalyticSchema },
   { name: FormOpenHistoryModel.name, schema: FormOpenHistorySchema },

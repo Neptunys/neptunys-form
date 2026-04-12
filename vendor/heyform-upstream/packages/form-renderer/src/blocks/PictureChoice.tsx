@@ -27,6 +27,8 @@ export const PictureChoice: FC<BlockProps> = ({ field, ...restProps }) => {
     field.validations?.min,
     field.validations?.max
   )
+  const autoAdvanceSingleChoice = helper.isTrue(state.settings?.autoAdvanceSingleChoice)
+  const singleSelectAutoSubmit = autoAdvanceSingleChoice && !allowMultiple
 
   function getValues({ value }: any) {
     return helper.isValidArray(value?.value) || helper.isValid(value?.other) ? value : undefined
@@ -50,8 +52,10 @@ export const PictureChoice: FC<BlockProps> = ({ field, ...restProps }) => {
         initialValues={{
           value: state.values[field.id]
         }}
-        autoSubmit={!allowMultiple}
-        isSubmitShow={allowMultiple}
+        autoSubmit={singleSelectAutoSubmit}
+        autoSubmitDelayMs={singleSelectAutoSubmit ? 420 : 80}
+        allowAutoSubmitWithNextButton={singleSelectAutoSubmit}
+        isSubmitShow={true}
         field={field}
         getValues={getValues}
         onValuesChange={handleValuesChange}
@@ -97,7 +101,9 @@ export const PictureChoice: FC<BlockProps> = ({ field, ...restProps }) => {
             allowMultiple={field.properties?.allowMultiple}
             allowOther={field.properties?.allowOther}
             badge={field.properties?.badge}
+            verticalAlignment={field.properties?.verticalAlignment}
             isOtherFilled={isOtherFilled}
+            selectionFeedback={singleSelectAutoSubmit}
             max={field.validations?.max}
             enableImage={true}
           />

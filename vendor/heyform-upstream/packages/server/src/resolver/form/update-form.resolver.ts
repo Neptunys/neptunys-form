@@ -18,6 +18,7 @@ export class UpdateFormResolver {
   ): Promise<boolean> {
     let updates: Record<string, any> = pickValidValues(input as any, [
       'name',
+      'kind',
       ['active', 'settings.active'],
       ['enableExpirationDate', 'settings.enableExpirationDate'],
       ['expirationTimeZone', 'settings.expirationTimeZone'],
@@ -45,7 +46,26 @@ export class UpdateFormResolver {
       ['allowArchive', 'settings.allowArchive'],
       ['password', 'settings.password'],
       ['requirePassword', 'settings.requirePassword'],
-      ['enableEmailNotification', 'settings.enableEmailNotification']
+      ['enableEmailNotification', 'settings.enableEmailNotification'],
+      ['enableLeadScoring', 'settings.enableLeadScoring'],
+      ['leadScoreVariableId', 'settings.leadScoreVariableId'],
+      ['leadMediumThreshold', 'settings.leadMediumThreshold'],
+      ['leadHighThreshold', 'settings.leadHighThreshold'],
+      ['leadQualityLowLabel', 'settings.leadQualityLowLabel'],
+      ['leadQualityMediumLabel', 'settings.leadQualityMediumLabel'],
+      ['leadQualityHighLabel', 'settings.leadQualityHighLabel'],
+      ['leadPriorityLowLabel', 'settings.leadPriorityLowLabel'],
+      ['leadPriorityMediumLabel', 'settings.leadPriorityMediumLabel'],
+      ['leadPriorityHighLabel', 'settings.leadPriorityHighLabel'],
+      ['respondentNameFieldId', 'settings.respondentNameFieldId'],
+      ['respondentEmailFieldId', 'settings.respondentEmailFieldId'],
+      ['respondentPhoneFieldId', 'settings.respondentPhoneFieldId'],
+      ['enableRespondentNotification', 'settings.enableRespondentNotification'],
+      ['respondentNotificationSubject', 'settings.respondentNotificationSubject'],
+      ['respondentNotificationMessage', 'settings.respondentNotificationMessage'],
+      ['enableOperatorNotification', 'settings.enableOperatorNotification'],
+      ['operatorNotificationSubject', 'settings.operatorNotificationSubject'],
+      ['operatorNotificationMessage', 'settings.operatorNotificationMessage']
     ])
 
     if (helper.isTrue(input.redirectOnCompletion)) {
@@ -68,6 +88,14 @@ export class UpdateFormResolver {
 
     if (hasLanguagesInput) {
       updates['settings.languages'] = helper.isArray(input.languages) ? input.languages : []
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, 'operatorNotificationEmails')) {
+      updates['settings.operatorNotificationEmails'] = helper.isArray(
+        input.operatorNotificationEmails
+      )
+        ? input.operatorNotificationEmails
+        : []
     }
 
     if (

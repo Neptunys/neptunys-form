@@ -71,7 +71,13 @@ export const WORKSPACES_GQL = gql`
       name
       ownerId
       avatar
+      clientName
       customDomain
+      enableLeadReport
+      leadNotificationEmails
+      leadReportRangeDays
+      leadReportLastSentAt
+      reportingTimezone
       storageQuota
       memberCount
       additionalSeats
@@ -106,6 +112,24 @@ export const WORKSPACE_OVERVIEW_GQL = gql`
       formCount
       submissionQuota
       storageQuota
+    }
+  }
+`
+
+export const WORKSPACE_LEAD_FLOW_GQL = gql`
+  query teamLeadFlow($input: TeamDetailInput!) {
+    teamLeadFlow(input: $input) {
+      clientName
+      leadNotificationEmails
+      enableLeadReport
+      leadReportRangeDays
+      leadReportLastSentAt
+      reportingTimezone
+      enableGoogleSheetsLeadSync
+      googleSheetsLeadConfig
+      googleSheetsLeadLastDeliveryAt
+      googleSheetsLeadLastDeliveryStatus
+      googleSheetsLeadLastDeliveryMessage
     }
   }
 `
@@ -334,6 +358,57 @@ export const CREATE_PROJECT_GQL = gql`
   }
 `
 
+export const EXPERIMENTS_GQL = gql`
+  query experiments($input: ProjectDetailInput!) {
+    experiments(input: $input) {
+      id
+      teamId
+      projectId
+      name
+      status
+      primaryMetric
+      autoPromote
+      durationHours
+      minimumSampleSize
+      startAt
+      endAt
+      winnerFormId
+      promotedAt
+      variants {
+        formId
+        weight
+      }
+      metrics {
+        formId
+        weight
+        visits
+        submissions
+        conversionRate
+        averageTime
+        isWinner
+      }
+    }
+  }
+`
+
+export const CREATE_EXPERIMENT_GQL = gql`
+  mutation createExperiment($input: CreateExperimentInput!) {
+    createExperiment(input: $input)
+  }
+`
+
+export const UPDATE_EXPERIMENT_GQL = gql`
+  mutation updateExperiment($input: UpdateExperimentInput!) {
+    updateExperiment(input: $input)
+  }
+`
+
+export const DELETE_EXPERIMENT_GQL = gql`
+  mutation deleteExperiment($input: ProjectExperimentInput!) {
+    deleteExperiment(input: $input)
+  }
+`
+
 export const CREATE_FORM_CUSTOM_REPORT_GQL = gql`
   mutation createFormCustomReport($input: FormDetailInput!) {
     createFormCustomReport(input: $input)
@@ -469,6 +544,24 @@ export const FORM_ANALYTIC_GQL = gql`
   }
 `
 
+export const FORM_QUESTION_ANALYTIC_GQL = gql`
+  query formQuestionAnalytics($input: FormAnalyticInput!) {
+    formQuestionAnalytics(input: $input) {
+      questionId
+      order
+      title
+      reachCount
+      reachRate
+      averageDuration
+      completedCount
+      dropOffCount
+      dropOffRate
+      frictionScore
+      frictionLevel
+    }
+  }
+`
+
 export const FORM_REPORT_GQL = gql`
   query formReport($input: FormDetailInput!) {
     formReport(input: $input) {
@@ -567,6 +660,20 @@ export const FORM_DETAIL_GQL = gql`
         enableQuestionList
         enableNavigationArrows
         enableEmailNotification
+        enableLeadScoring
+        leadScoreVariableId
+        leadMediumThreshold
+        leadHighThreshold
+        respondentNameFieldId
+        respondentEmailFieldId
+        respondentPhoneFieldId
+        enableRespondentNotification
+        respondentNotificationSubject
+        respondentNotificationMessage
+        enableOperatorNotification
+        operatorNotificationEmails
+        operatorNotificationSubject
+        operatorNotificationMessage
         locale
         languages
         enableClosedMessage
@@ -620,6 +727,16 @@ export const FORM_DETAIL_GQL = gql`
 export const OPEN_FORM_GQL = gql`
   query openForm($input: OpenFormInput!) {
     openForm(input: $input)
+  }
+`
+
+export const PUBLIC_EXPERIMENT_GQL = gql`
+  query publicExperiment($input: PublicExperimentInput!) {
+    publicExperiment(input: $input) {
+      experimentId
+      formId
+      winnerFormId
+    }
   }
 `
 
@@ -755,6 +872,9 @@ export const FORM_INTEGRATIONS_GQL = gql`
       appId
       config
       status
+      lastDeliveryAt
+      lastDeliveryStatus
+      lastDeliveryMessage
     }
   }
 `
@@ -819,7 +939,10 @@ export const APPS_GQL = gql`
         type
         name
         label
+        description
         placeholder
+        options
+        defaultValue
         required
       }
     }
@@ -1065,6 +1188,12 @@ export const GOOGLE_SHEETS_FIELDS_GQL = gql`
 export const UPDATE_INTEGRATION_SETTINGS_GQL = gql`
   mutation updateIntegrationSettings($input: UpdateIntegrationInput!) {
     updateIntegrationSettings(input: $input)
+  }
+`
+
+export const TEST_INTEGRATION_GQL = gql`
+  mutation testIntegration($input: TestIntegrationInput!) {
+    testIntegration(input: $input)
   }
 `
 

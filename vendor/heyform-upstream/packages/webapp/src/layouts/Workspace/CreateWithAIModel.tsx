@@ -82,7 +82,7 @@ export default function CreateWithAIModel({ onBack }: TemplatesModelProps) {
               }
             ]}
           >
-            <Input.TextArea autoComplete="off" maxLength={200} />
+              <Input.TextArea autoComplete="off" />
           </Form.Item>
 
           <div>

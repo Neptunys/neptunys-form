@@ -22,10 +22,33 @@ export class UpdateTeamResolver {
       throw new BadRequestException("You don't have permission to change the workspace settings")
     }
 
-    const updates: Record<string, any> = pickValidValues(input as any, ['name', 'avatar'])
+    const updates: Record<string, any> = pickValidValues(input as any, [
+      'name',
+      'avatar',
+      'clientName',
+      'enableLeadReport',
+      'leadReportRangeDays',
+      'reportingTimezone'
+    ])
 
     if (!helper.isNil(input.removeBranding)) {
       updates.removeBranding = input.removeBranding
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, 'leadNotificationEmails')) {
+      updates.leadNotificationEmails = helper.isArray(input.leadNotificationEmails)
+        ? input.leadNotificationEmails
+        : []
+    }
+
+    if (!helper.isNil(input.enableGoogleSheetsLeadSync)) {
+      updates.enableGoogleSheetsLeadSync = input.enableGoogleSheetsLeadSync
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, 'googleSheetsLeadConfig')) {
+      updates.googleSheetsLeadConfig = helper.isObject(input.googleSheetsLeadConfig)
+        ? input.googleSheetsLeadConfig
+        : {}
     }
 
     return await this.teamService.update(input.teamId, updates)

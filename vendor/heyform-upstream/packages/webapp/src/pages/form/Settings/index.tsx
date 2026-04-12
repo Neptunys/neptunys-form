@@ -16,6 +16,21 @@ import FormSettingsGeneral from './General'
 import FormSettingsProtection from './Protection'
 import FormSettingsTranslations from './Translations'
 
+function parseEmailList(rawValue?: string) {
+  if (!helper.isValid(rawValue)) {
+    return []
+  }
+
+  return Array.from(
+    new Set(
+      rawValue
+        .split(/[\n,;]+/)
+        .map(value => value.trim())
+        .filter(Boolean)
+    )
+  )
+}
+
 export default function FormSettings() {
   const { t } = useTranslation()
 
@@ -26,6 +41,19 @@ export default function FormSettings() {
 
   const { loading, error, run } = useRequest(
     async (settings: AnyMap) => {
+      if (Object.prototype.hasOwnProperty.call(settings, 'operatorNotificationEmailsText')) {
+        settings.operatorNotificationEmails = parseEmailList(settings.operatorNotificationEmailsText)
+        delete settings.operatorNotificationEmailsText
+      }
+
+      if (helper.isEmpty(settings.leadMediumThreshold)) {
+        delete settings.leadMediumThreshold
+      }
+
+      if (helper.isEmpty(settings.leadHighThreshold)) {
+        delete settings.leadHighThreshold
+      }
+
       if (settings.startDate) {
         settings.enabledAt = settings.startDate.tz(settings.expirationTimeZone, true).unix()
         delete settings.startDate

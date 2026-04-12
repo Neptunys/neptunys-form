@@ -1,3 +1,4 @@
+import { IconChevronLeft } from '@tabler/icons-react'
 import type { FormField } from '@heyform-inc/shared-types-enums'
 import { FieldKindEnum, NumberPrice } from '@heyform-inc/shared-types-enums'
 import Big from 'big.js'
@@ -23,6 +24,9 @@ import { removeStorage, useStore } from '../store'
 interface FormProps extends RCFormProps {
   field: FormField
   autoSubmit?: boolean
+  autoSubmitDelayMs?: number
+  allowAutoSubmitWithNextButton?: boolean
+  submitOnChangeWhen?: (value: any) => boolean
   isSubmitShow?: boolean
   hideSubmitIfErrorOccurred?: boolean
   getValues?: (values: any) => any
@@ -32,6 +36,9 @@ interface FormProps extends RCFormProps {
 export const Form: FC<FormProps> = ({
   field,
   autoSubmit: rawAutoSubmit = false,
+  autoSubmitDelayMs = 80,
+  allowAutoSubmitWithNextButton = false,
+  submitOnChangeWhen,
   isSubmitShow: rawSubmitShow = true,
   validateTrigger: trigger,
   hideSubmitIfErrorOccurred = false,
@@ -39,6 +46,7 @@ export const Form: FC<FormProps> = ({
   children,
   ...restProps
 }) => {
+  const { onValuesChange: externalOnValuesChange, ...formProps } = restProps
   const [form] = useForm<any>()
   const { t } = useTranslation()
   const { state, dispatch } = useStore()
@@ -47,8 +55,8 @@ export const Form: FC<FormProps> = ({
   const autoSubmitTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
 
   const autoSubmit = useMemo(
-    () => (state.alwaysShowNextButton ? false : rawAutoSubmit),
-    [rawAutoSubmit, state.alwaysShowNextButton]
+    () => rawAutoSubmit && (allowAutoSubmitWithNextButton || !state.alwaysShowNextButton),
+    [allowAutoSubmitWithNextButton, rawAutoSubmit, state.alwaysShowNextButton]
   )
 
   const validateTrigger = trigger ? trigger : autoSubmit ? 'onChange' : 'onSubmit'
@@ -56,7 +64,6 @@ export const Form: FC<FormProps> = ({
     () => state.scrollIndex! >= state.fields.length - 1,
     [state.fields.length, state.scrollIndex]
   )
-  const hasPreviousBlock = useMemo(() => state.scrollIndex! > 0, [state.scrollIndex])
   const actionText = useMemo(() => field.properties?.buttonText || 'OK', [field.properties?.buttonText])
 
   const initialValues = getValues ? getValues(restProps.initialValues) : restProps.initialValues
@@ -71,6 +78,7 @@ export const Form: FC<FormProps> = ({
         : helper.isValid(initialValues) || isSubmitShow,
     [initialValues, isSubmitShow, hideSubmitIfErrorOccurred]
   )
+  const showBackButton = useMemo(() => state.scrollIndex! > 0, [state.scrollIndex])
 
   const isSkippable = useMemo(() => {
     return !field.validations?.required && field.kind !== 'statement' && field.kind !== 'group'
@@ -220,36 +228,38 @@ export const Form: FC<FormProps> = ({
   }
 
   function handleValuesChange(changes: any, values: any) {
-    restProps.onValuesChange?.(changes, values)
+    externalOnValuesChange?.(changes, values)
 
-    if (autoSubmit) {
+    const nextFormValues = {
+      ...values,
+      ...changes
+    }
+    const nextValue = getValues ? getValues(nextFormValues) : nextFormValues
+    const shouldSubmitOnChange =
+      helper.isValid(nextValue) && (autoSubmit || submitOnChangeWhen?.(nextValue) === true)
+
+    if (shouldSubmitOnChange) {
       if (autoSubmitTimeoutRef.current) {
         clearTimeout(autoSubmitTimeoutRef.current)
         autoSubmitTimeoutRef.current = undefined
       }
 
-      const nextFormValues = {
-        ...values,
-        ...changes
-      }
-      const nextValue = getValues ? getValues(nextFormValues) : nextFormValues
+      form.setFieldsValue(nextFormValues)
 
       if (isLastBlock) {
-        if (helper.isValid(nextValue)) {
-          dispatch({
-            type: 'setValues',
-            payload: {
-              values: {
-                [field.id]: nextValue
-              }
+        dispatch({
+          type: 'setValues',
+          payload: {
+            values: {
+              [field.id]: nextValue
             }
-          })
-        }
-      } else if (helper.isValid(nextValue)) {
-        autoSubmitTimeoutRef.current = setTimeout(() => {
-          form.submit()
-        }, 80)
+          }
+        })
       }
+
+      autoSubmitTimeoutRef.current = setTimeout(() => {
+        form.submit()
+      }, autoSubmitDelayMs)
 
       return
     }
@@ -311,9 +321,9 @@ export const Form: FC<FormProps> = ({
       validateTrigger={validateTrigger}
       onValuesChange={handleValuesChange}
       onFinish={handleFinish}
-      {...restProps}
+      {...formProps}
     >
-      {children}
+      <div className="heyform-form-content">{children}</div>
 
       {/* Submit */}
       {isLastBlock || state.isScrollNextDisabled ? (
@@ -324,23 +334,35 @@ export const Form: FC<FormProps> = ({
             </div>
           )}
           <div className="heyform-form-actions">
-            <Field shouldUpdate={true}>
-              <Submit className="!mt-0" text={actionText} loading={loading} />
-            </Field>
-            {hasPreviousBlock && (
+            {showBackButton && (
               <button
                 className="heyform-back-button"
                 type="button"
-                disabled={loading}
+                aria-label={t('paginationPrevious')}
                 onClick={handlePrevious}
               >
-                {t('paginationPrevious')}
+                <IconChevronLeft className="heyform-back-button-icon" />
+                <span className="heyform-back-button-text">{t('paginationPrevious')}</span>
               </button>
             )}
+            <Field shouldUpdate={true}>
+              <Submit className="!mt-0" text={actionText} loading={loading} />
+            </Field>
           </div>
         </>
       ) : (
         <div className="heyform-form-actions">
+          {showBackButton && (
+            <button
+              className="heyform-back-button"
+              type="button"
+              aria-label={t('paginationPrevious')}
+              onClick={handlePrevious}
+            >
+              <IconChevronLeft className="heyform-back-button-icon" />
+              <span className="heyform-back-button-text">{t('paginationPrevious')}</span>
+            </button>
+          )}
           {submitVisible && (
             <Field shouldUpdate={true}>
               {state.alwaysShowNextButton ? (
@@ -355,11 +377,6 @@ export const Form: FC<FormProps> = ({
                 }
               )}
             </Field>
-          )}
-          {hasPreviousBlock && (
-            <button className="heyform-back-button" type="button" onClick={handlePrevious}>
-              {t('paginationPrevious')}
-            </button>
           )}
           {isSkippable && (
             <button className="heyform-skip-button" type="button" onClick={handleSkip}>

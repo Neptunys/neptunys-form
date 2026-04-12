@@ -1,4 +1,4 @@
-import { getTheme } from '@heyform-inc/form-renderer'
+import { getTheme } from '@heyform-inc/form-renderer/src'
 import { FormTheme } from '@heyform-inc/shared-types-enums'
 import { useBoolean } from 'ahooks'
 import { FC } from 'react'

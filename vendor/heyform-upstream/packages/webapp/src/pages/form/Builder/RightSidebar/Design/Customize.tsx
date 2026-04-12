@@ -1,4 +1,4 @@
-import { GOOGLE_FONTS, SYSTEM_FONTS, insertWebFont } from '@heyform-inc/form-renderer'
+import { GOOGLE_FONTS, SYSTEM_FONTS, insertWebFont } from '@heyform-inc/form-renderer/src'
 import { FormTheme } from '@heyform-inc/shared-types-enums'
 import { useRequest } from 'ahooks'
 import { useForm as useRCForm } from 'rc-field-form'
@@ -18,16 +18,34 @@ import {
   Input,
   Select,
   Slider,
+  Switch,
   useToast
 } from '@/components'
 import { useFormStore } from '@/store'
 
 import ImageBrightness, { ImageBrightnessProps } from '../Question/ImageBrightness'
 
-function normalizeThemeValues(theme?: FormTheme): FormTheme {
+type BuilderFormTheme = FormTheme & {
+  titleFontSize?: 'small' | 'normal' | 'large'
+  titleFontSizePx?: number
+  mobileTitleFontSizePx?: number
+  descriptionFontSizePx?: number
+  mobileDescriptionFontSizePx?: number
+  answerFontSizePx?: number
+  mobileAnswerFontSizePx?: number
+  desktopContentWidth?: number
+  mobileContentWidth?: number
+}
+
+function normalizeThemeValues(theme?: BuilderFormTheme): BuilderFormTheme {
   const nextTheme = {
     ...theme
   }
+
+  nextTheme.titleFontSize = nextTheme.titleFontSize || nextTheme.screenFontSize || 'normal'
+  nextTheme.screenFontSize = nextTheme.screenFontSize || 'normal'
+  nextTheme.fieldFontSize = nextTheme.fieldFontSize || 'normal'
+
   const hasResponsiveBackgrounds =
     helper.isValid(nextTheme.desktopBackgroundImage) || helper.isValid(nextTheme.mobileBackgroundImage)
 
@@ -36,17 +54,112 @@ function normalizeThemeValues(theme?: FormTheme): FormTheme {
     nextTheme.mobileBackgroundImage = nextTheme.backgroundImage
   }
 
+  if (
+    !helper.isNumber(nextTheme.desktopBackgroundBrightness) &&
+    helper.isNumber(nextTheme.backgroundBrightness)
+  ) {
+    nextTheme.desktopBackgroundBrightness = nextTheme.backgroundBrightness
+  }
+
+  if (
+    !helper.isNumber(nextTheme.mobileBackgroundBrightness) &&
+    helper.isNumber(nextTheme.backgroundBrightness)
+  ) {
+    nextTheme.mobileBackgroundBrightness = nextTheme.backgroundBrightness
+  }
+
   nextTheme.backgroundImage = undefined
 
   return nextTheme
 }
 
-function getBackgroundPreviewImage(theme?: FormTheme) {
+function getPresetTextSize(
+  size: 'small' | 'normal' | 'large' | undefined,
+  values: { small: number; normal: number; large: number }
+) {
+  switch (size) {
+    case 'small':
+      return values.small
+    case 'large':
+      return values.large
+    default:
+      return values.normal
+  }
+}
+
+function getTitleTextSizeFallback(theme?: BuilderFormTheme) {
+  return getPresetTextSize(theme?.titleFontSize || theme?.screenFontSize, {
+    small: 26,
+    normal: 30,
+    large: 36
+  })
+}
+
+function getDescriptionTextSizeFallback(theme?: BuilderFormTheme) {
+  return getPresetTextSize(theme?.screenFontSize, {
+    small: 16,
+    normal: 18,
+    large: 20
+  })
+}
+
+function getAnswerTextSizeFallback(theme?: BuilderFormTheme) {
+  return getPresetTextSize(theme?.fieldFontSize, {
+    small: 16,
+    normal: 18,
+    large: 20
+  })
+}
+
+function getMobileTitleTextSizeFallback(theme?: BuilderFormTheme) {
+  if (helper.isNumber(theme?.mobileTitleFontSizePx)) {
+    return theme.mobileTitleFontSizePx
+  }
+
+  if (helper.isNumber(theme?.titleFontSizePx)) {
+    return theme.titleFontSizePx
+  }
+
+  return getTitleTextSizeFallback(theme)
+}
+
+function getMobileDescriptionTextSizeFallback(theme?: BuilderFormTheme) {
+  if (helper.isNumber(theme?.mobileDescriptionFontSizePx)) {
+    return theme.mobileDescriptionFontSizePx
+  }
+
+  if (helper.isNumber(theme?.descriptionFontSizePx)) {
+    return theme.descriptionFontSizePx
+  }
+
+  return getDescriptionTextSizeFallback(theme)
+}
+
+function getMobileAnswerTextSizeFallback(theme?: BuilderFormTheme) {
+  if (helper.isNumber(theme?.mobileAnswerFontSizePx)) {
+    return theme.mobileAnswerFontSizePx
+  }
+
+  if (helper.isNumber(theme?.answerFontSizePx)) {
+    return theme.answerFontSizePx
+  }
+
+  return getAnswerTextSizeFallback(theme)
+}
+
+const DEFAULT_DESKTOP_CONTENT_WIDTH = 832
+
+function getBackgroundPreviewImage(
+  theme?: BuilderFormTheme,
+  platform: 'desktop' | 'mobile' = 'desktop'
+) {
   if (!theme) {
     return undefined
   }
 
-  return theme.desktopBackgroundImage || theme.mobileBackgroundImage
+  return platform === 'desktop'
+    ? theme.desktopBackgroundImage || theme.mobileBackgroundImage
+    : theme.mobileBackgroundImage || theme.desktopBackgroundImage
 }
 
 export const BackgroundImage: FC<Pick<ImageBrightnessProps, 'value' | 'onChange'>> = ({
@@ -153,7 +266,7 @@ export default function Customize() {
       refreshDeps: [formId],
       manual: true,
       onSuccess: (_data, values) => {
-        const { logo, ...rawTheme } = values as FormTheme & { logo?: string }
+        const { logo, ...rawTheme } = values as BuilderFormTheme & { logo?: string }
         const theme = normalizeThemeValues(rawTheme)
 
         updateForm({
@@ -220,18 +333,31 @@ export default function Customize() {
     })
   }
 
-  function handleValuesChange(_: AnyMap, values: FormTheme & { logo?: string }) {
+  function handleValuesChange(_: AnyMap, values: BuilderFormTheme & { logo?: string }) {
     const { logo, ...rawTheme } = values
     const theme = normalizeThemeValues(rawTheme)
+    const resetFields: Record<string, number> = {}
 
-    if (
-      helper.isEmpty(theme.desktopBackgroundImage) &&
-      helper.isEmpty(theme.mobileBackgroundImage)
-    ) {
+    if (helper.isEmpty(theme.desktopBackgroundImage)) {
+      theme.desktopBackgroundBrightness = 0
+      resetFields.desktopBackgroundBrightness = 0
+    }
+
+    if (helper.isEmpty(theme.mobileBackgroundImage)) {
+      theme.mobileBackgroundBrightness = 0
+      resetFields.mobileBackgroundBrightness = 0
+    }
+
+    if (helper.isEmpty(theme.desktopBackgroundImage) && helper.isEmpty(theme.mobileBackgroundImage)) {
       theme.backgroundBrightness = 0
+      resetFields.backgroundBrightness = 0
+    }
 
+    if (Object.keys(resetFields).length > 0) {
       nextTick(() => {
-        rcForm.setFieldValue('backgroundBrightness', 0)
+        Object.entries(resetFields).forEach(([fieldName, fieldValue]) => {
+          rcForm.setFieldValue(fieldName, fieldValue)
+        })
       })
     }
 
@@ -301,6 +427,86 @@ export default function Customize() {
           />
         </Form.Item>
 
+        <Form.Item
+          name="titleFontSizePx"
+          className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:block"
+          label="Title text size"
+        >
+          <SliderControl
+            min={20}
+            max={96}
+            fallbackValue={getTitleTextSizeFallback(normalizedTheme)}
+            allowReset
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="descriptionFontSizePx"
+          className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:block"
+          label="Description text size"
+        >
+          <SliderControl
+            min={12}
+            max={48}
+            fallbackValue={getDescriptionTextSizeFallback(normalizedTheme)}
+            allowReset
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="answerFontSizePx"
+          className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:block"
+          label="Answer text size"
+        >
+          <SliderControl
+            min={12}
+            max={56}
+            fallbackValue={getAnswerTextSizeFallback(normalizedTheme)}
+            allowReset
+          />
+        </Form.Item>
+
+        <div className="border-accent-light border-t pt-4 space-y-4">
+          <Form.Item
+            name="mobileTitleFontSizePx"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:block"
+            label="Mobile title text size"
+          >
+            <SliderControl
+              min={20}
+              max={96}
+              fallbackValue={getMobileTitleTextSizeFallback(normalizedTheme)}
+              allowReset
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="mobileDescriptionFontSizePx"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:block"
+            label="Mobile description text size"
+          >
+            <SliderControl
+              min={12}
+              max={48}
+              fallbackValue={getMobileDescriptionTextSizeFallback(normalizedTheme)}
+              allowReset
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="mobileAnswerFontSizePx"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:block"
+            label="Mobile answer text size"
+          >
+            <SliderControl
+              min={12}
+              max={56}
+              fallbackValue={getMobileAnswerTextSizeFallback(normalizedTheme)}
+              allowReset
+            />
+          </Form.Item>
+        </div>
+
         <div className="space-y-4">
           <Form.Item
             name="questionTextColor"
@@ -326,6 +532,54 @@ export default function Customize() {
                 align: 'end'
               }}
             />
+          </Form.Item>
+
+          <Form.Item
+            name="answerKeyBackground"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:flex [&_[data-slot=control]]:items-center [&_[data-slot=control]]:justify-between"
+            label="Answer key background"
+          >
+            <ColorPicker
+              contentProps={{
+                side: 'bottom',
+                align: 'end'
+              }}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="answerKeyActiveColor"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:flex [&_[data-slot=control]]:items-center [&_[data-slot=control]]:justify-between"
+            label="Active answer key text"
+          >
+            <ColorPicker
+              contentProps={{
+                side: 'bottom',
+                align: 'end'
+              }}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="answerKeyActiveBackground"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:flex [&_[data-slot=control]]:items-center [&_[data-slot=control]]:justify-between"
+            label="Active answer key background"
+          >
+            <ColorPicker
+              contentProps={{
+                side: 'bottom',
+                align: 'end'
+              }}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="showChoiceCheckIcon"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:flex [&_[data-slot=control]]:items-center [&_[data-slot=control]]:justify-between"
+            label="Show answer checkmark"
+            description="Toggle the trailing check icon on selected answers."
+          >
+            <Switch />
           </Form.Item>
 
           <Form.Item
@@ -357,7 +611,7 @@ export default function Customize() {
           <Form.Item
             name="progressColor"
             className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:flex [&_[data-slot=control]]:items-center [&_[data-slot=control]]:justify-between"
-            label="Progress color"
+            label="Circular progress color"
           >
             <ColorPicker
               contentProps={{
@@ -370,7 +624,33 @@ export default function Customize() {
           <Form.Item
             name="progressTrackColor"
             className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:flex [&_[data-slot=control]]:items-center [&_[data-slot=control]]:justify-between"
-            label="Progress track"
+            label="Circular progress track"
+          >
+            <ColorPicker
+              contentProps={{
+                side: 'bottom',
+                align: 'end'
+              }}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="topProgressColor"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:flex [&_[data-slot=control]]:items-center [&_[data-slot=control]]:justify-between"
+            label="Top progress color"
+          >
+            <ColorPicker
+              contentProps={{
+                side: 'bottom',
+                align: 'end'
+              }}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="topProgressTrackColor"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:flex [&_[data-slot=control]]:items-center [&_[data-slot=control]]:justify-between"
+            label="Top progress track"
           >
             <ColorPicker
               contentProps={{
@@ -410,11 +690,24 @@ export default function Customize() {
           </Form.Item>
 
           <Form.Item
+            name="desktopContentWidth"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:block"
+            label="Content width"
+          >
+            <SliderControl
+              min={360}
+              max={1440}
+              fallbackValue={DEFAULT_DESKTOP_CONTENT_WIDTH}
+              allowReset
+            />
+          </Form.Item>
+
+          <Form.Item
             name="desktopAnswerWidth"
             className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:block"
             label="Desktop answer width"
           >
-            <SliderControl min={240} max={960} fallbackValue={496} allowReset />
+            <SliderControl min={240} max={960} fallbackValue={432} allowReset />
           </Form.Item>
 
           <Form.Item
@@ -430,7 +723,7 @@ export default function Customize() {
             className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:block"
             label="Desktop answer gap"
           >
-            <SliderControl min={0} max={48} fallbackValue={12} allowReset />
+            <SliderControl min={0} max={48} fallbackValue={8} allowReset />
           </Form.Item>
 
           <Form.Item
@@ -438,7 +731,15 @@ export default function Customize() {
             className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:block"
             label="Mobile answer gap"
           >
-            <SliderControl min={0} max={32} fallbackValue={10} allowReset />
+            <SliderControl min={0} max={32} fallbackValue={8} allowReset />
+          </Form.Item>
+
+          <Form.Item
+            name="desktopContentOffset"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:block"
+            label="Desktop content offset"
+          >
+            <SliderControl min={-320} max={320} fallbackValue={0} allowReset />
           </Form.Item>
         </div>
 
@@ -460,11 +761,26 @@ export default function Customize() {
           </Form.Item>
         </div>
 
-        {helper.isValid(getBackgroundPreviewImage(normalizedTheme)) && (
-          <div className="border-accent-light border-t pt-4">
-            <Form.Item name="backgroundBrightness">
-              <ImageBrightness imageURL={getBackgroundPreviewImage(normalizedTheme)} />
-            </Form.Item>
+        {(helper.isValid(getBackgroundPreviewImage(normalizedTheme, 'desktop')) ||
+          helper.isValid(getBackgroundPreviewImage(normalizedTheme, 'mobile'))) && (
+          <div className="border-accent-light border-t pt-4 space-y-4">
+            {helper.isValid(getBackgroundPreviewImage(normalizedTheme, 'desktop')) && (
+              <Form.Item name="desktopBackgroundBrightness">
+                <ImageBrightness
+                  imageURL={getBackgroundPreviewImage(normalizedTheme, 'desktop')}
+                  label="Desktop brightness"
+                />
+              </Form.Item>
+            )}
+
+            {helper.isValid(getBackgroundPreviewImage(normalizedTheme, 'mobile')) && (
+              <Form.Item name="mobileBackgroundBrightness">
+                <ImageBrightness
+                  imageURL={getBackgroundPreviewImage(normalizedTheme, 'mobile')}
+                  label="Mobile brightness"
+                />
+              </Form.Item>
+            )}
           </div>
         )}
 

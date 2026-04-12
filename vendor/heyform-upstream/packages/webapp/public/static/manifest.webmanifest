@@ -1,7 +1,7 @@
 {
-  "name": "HeyForm",
-  "short_name": "HeyForm",
-  "description": "Use HeyForm to create beautiful, interactive free online forms.",
+  "name": "NeptunysForm",
+  "short_name": "NeptunysForm",
+  "description": "Use NeptunysForm to create beautiful, interactive free online forms.",
   "icons": [
     {
       "purpose": "maskable",

@@ -52,6 +52,29 @@ export interface FormSettings {
   metaDescription?: string
   metaOGImageUrl?: string
 
+  // Lead flow
+  enableEmailNotification?: boolean
+  enableLeadScoring?: boolean
+  leadScoreVariableId?: string
+  leadMediumThreshold?: number
+  leadHighThreshold?: number
+  leadQualityLowLabel?: string
+  leadQualityMediumLabel?: string
+  leadQualityHighLabel?: string
+  leadPriorityLowLabel?: string
+  leadPriorityMediumLabel?: string
+  leadPriorityHighLabel?: string
+  respondentNameFieldId?: string
+  respondentEmailFieldId?: string
+  respondentPhoneFieldId?: string
+  enableRespondentNotification?: boolean
+  respondentNotificationSubject?: string
+  respondentNotificationMessage?: string
+  enableOperatorNotification?: boolean
+  operatorNotificationEmails?: string[]
+  operatorNotificationSubject?: string
+  operatorNotificationMessage?: string
+
   // Custom closed form message
   enableClosedMessage?: boolean
   closedFormTitle?: string
@@ -90,6 +113,8 @@ export interface Layout {
   backgroundColor?: string
   brightness?: number
   align?: FieldLayoutAlignEnum
+  inlineMediaPosition?: 'top' | 'bottom'
+  inlineMediaWidth?: number
 }
 
 export interface NumberPrice {
@@ -130,8 +155,12 @@ export interface Property {
   centerLabel?: string
   rightLabel?: string
 
+  // Full Name
+  fullNameMode?: 'both' | 'first' | 'last'
+
   // PhoneNumber
   defaultCountryCode?: string
+  hideCountrySelect?: boolean
 
   // Payment
   currency?: string
@@ -158,8 +187,10 @@ export interface Property {
   // Screen
   enableShareIcon?: boolean
   enableCompleteTime?: boolean
+  consentText?: string
 
   // Thank You
+  showResponsePanel?: boolean
   buttonLinkUrl?: string
   redirectUrl?: string
   redirectOnCompletion?: boolean
@@ -206,10 +237,21 @@ export interface HiddenField {
 
 export interface FormTheme {
   fontFamily?: string
+  titleFontSize?: 'small' | 'normal' | 'large'
+  titleFontSizePx?: number
+  mobileTitleFontSizePx?: number
   screenFontSize?: 'small' | 'normal' | 'large'
+  descriptionFontSizePx?: number
+  mobileDescriptionFontSizePx?: number
   fieldFontSize?: 'small' | 'normal' | 'large'
+  answerFontSizePx?: number
+  mobileAnswerFontSizePx?: number
   questionTextColor?: string
   answerTextColor?: string
+  answerKeyBackground?: string
+  answerKeyActiveColor?: string
+  answerKeyActiveBackground?: string
+  showChoiceCheckIcon?: boolean
   answerBorderRadius?: number
   logoSize?: number
   buttonBackground?: string
@@ -219,13 +261,20 @@ export interface FormTheme {
   backgroundImage?: string
   desktopBackgroundImage?: string
   mobileBackgroundImage?: string
+  desktopBackgroundBrightness?: number
+  mobileBackgroundBrightness?: number
+  desktopContentWidth?: number
+  mobileContentWidth?: number
   desktopAnswerWidth?: number
   mobileAnswerWidth?: number
   desktopAnswerGap?: number
   mobileAnswerGap?: number
+  desktopContentOffset?: number
   backgroundBrightness?: number
   progressColor?: string
   progressTrackColor?: string
+  topProgressColor?: string
+  topProgressTrackColor?: string
   logo?: string
 
   // Custom CSS
@@ -295,8 +344,8 @@ export interface AddressValue {
 }
 
 export interface FullNameValue {
-  firstName: string
-  lastName: string
+  firstName?: string
+  lastName?: string
 }
 
 export interface DateRangeValue {

@@ -1,5 +1,5 @@
 export default {
-  'Made with HeyForm': 'Feito com <icon></icon> <span>HeyForm</span>',
+  'Made with NeptunysForm': 'Feito com <icon></icon> <span>NeptunysForm</span>',
   'This field is required': 'Este campo é obrigatório',
   'File type is not supported': 'Tipo de arquivo não suportado',
   "File size can't exceed {{size}}": 'O tamanho do arquivo não pode exceder {{size}}',
@@ -50,7 +50,7 @@ export default {
   'Thanks for completing this form. Now create your own form.':
     'Obrigado por completar este formulário. Agora crie o seu próprio formulário.',
   'Form unavailable': 'Formulário indisponível',
-  'Create a heyform': 'Crie um heyform',
+  'Create a NeptunysForm': 'Crie um NeptunysForm',
   "The form can't receive new submissions now.":
     'O formulário não pode receber novas submissões agora.',
   "This page doesn't exist": 'Esta página não existe',

@@ -14,6 +14,7 @@
     "debug": "nest start --debug --watch",
     "build": "nest build",
     "start": "node ./scripts/start.js",
+    "test:analytics-e2e": "node -r ts-node/register -r tsconfig-paths/register ./test/form-analytics.e2e.test.ts",
     "type-check": "tsc --pretty --noEmit",
     "lint": "eslint \"src/**/*.ts\" --quiet --fix",
     "migrate:seed": "node ./scripts/migrate-seed.js",

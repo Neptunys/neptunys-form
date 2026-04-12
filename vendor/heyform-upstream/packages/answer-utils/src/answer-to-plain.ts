@@ -38,7 +38,7 @@ export function parsePlainAnswer(answer: Answer, livePreview = false): string {
 
     case FieldKindEnum.FULL_NAME:
       const name = parser.fullName(answer)
-      value = `${name.firstName} ${name.lastName}`
+      value = [name.firstName, name.lastName].filter(Boolean).join(' ')
       break
 
     case FieldKindEnum.ADDRESS:

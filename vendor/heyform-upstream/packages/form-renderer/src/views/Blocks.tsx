@@ -1,8 +1,9 @@
-import { FieldKindEnum, FormField } from '@heyform-inc/shared-types-enums'
+import { FieldKindEnum, FormField, QUESTION_FIELD_KINDS } from '@heyform-inc/shared-types-enums'
 import type { FC } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useTranslation } from '../utils'
+import { htmlUtils } from '@heyform-inc/answer-utils'
 
 import { Address } from '../blocks/Address'
 import { Country } from '../blocks/Country'
@@ -136,6 +137,25 @@ const Main: FC = () => {
     () => state.fields[state.scrollIndex!],
     [state.fields, state.scrollIndex]
   )
+
+  useEffect(() => {
+    if (!state.onQuestionChange) {
+      return
+    }
+
+    if (!activeField || !QUESTION_FIELD_KINDS.includes(activeField.kind)) {
+      state.onQuestionChange(undefined)
+      return
+    }
+
+    state.onQuestionChange({
+      questionId: activeField.id,
+      order: (state.scrollIndex || 0) + 1,
+      title: Array.isArray(activeField.title)
+        ? htmlUtils.plain(htmlUtils.serialize(activeField.title as any))
+        : (activeField.title as string | undefined)
+    })
+  }, [activeField, state.onQuestionChange, state.scrollIndex])
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {

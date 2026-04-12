@@ -16,7 +16,7 @@ import { helper, nanoid } from '@heyform-inc/utils'
 
 import { ClosedMessage } from './blocks/ClosedMessage'
 import { SuspendedMessage } from './blocks/SuspendedMessage'
-import type { IState, IStripe } from './store'
+import type { IState, IStripe, QuestionChangePayload } from './store'
 import { StoreContext, StoreReducer, getStorage } from './store'
 import { getTheme } from './theme'
 import type { IFormModel } from './typings'
@@ -37,6 +37,7 @@ export interface FormRendererProps {
   enableQuestionList?: boolean
   enableNavigationArrows?: boolean
   ssr?: boolean
+  onQuestionChange?: (question?: QuestionChangePayload) => void
   onSubmit?: (values: Record<string, any>, isPartial?: boolean, stripe?: IStripe) => Promise<void>
 }
 
@@ -72,6 +73,7 @@ function initStore(
 
   const questionCount = fields.filter(f => QUESTION_FIELD_KINDS.includes(f.kind)).length
   const percentage = progressPercentage(Object.keys(values).length, questionCount)
+  const isStarted = !welcomeField
 
   return {
     // Preventing hydration mismatch errors
@@ -90,6 +92,8 @@ function initStore(
     values,
     percentage,
     questionCount,
+    isStarted,
+    startedAt: isStarted ? Date.now() : undefined,
     formId: form.id,
     scrollIndex: 0,
     scrollTo: 'next',
@@ -115,6 +119,7 @@ export const FormRenderer: FC<FormRendererProps> = ({
   enableQuestionList,
   enableNavigationArrows,
   ssr = false,
+  onQuestionChange,
   onSubmit
 }) => {
   const [isAndroid, setAndroid] = useState(false)
@@ -150,6 +155,7 @@ export const FormRenderer: FC<FormRendererProps> = ({
       alwaysShowNextButton,
       enableQuestionList: isQuestionListEnabled,
       enableNavigationArrows: isNavigationArrowsEnabled,
+      onQuestionChange,
       onSubmit,
       ...initStore(form, locale, autoSave, allowPayment, ssr),
       query
@@ -160,6 +166,7 @@ export const FormRenderer: FC<FormRendererProps> = ({
       alwaysShowNextButton,
       isQuestionListEnabled,
       isNavigationArrowsEnabled,
+      onQuestionChange,
       onSubmit,
       form,
       locale,
@@ -170,6 +177,37 @@ export const FormRenderer: FC<FormRendererProps> = ({
     ]
   )
   const [state, dispatch] = useReducer(StoreReducer, memoState)
+
+  useEffect(() => {
+    dispatch({
+      type: 'syncRuntimeOptions',
+      payload: {
+        reportAbuseURL,
+        customUrlRedirects,
+        alwaysShowNextButton,
+        enableQuestionList: isQuestionListEnabled,
+        enableNavigationArrows: isNavigationArrowsEnabled,
+        onQuestionChange,
+        onSubmit,
+        settings: form.settings,
+        theme: getTheme(form.themeSettings?.theme),
+        logo: form.themeSettings?.logo,
+        query
+      }
+    })
+  }, [
+    alwaysShowNextButton,
+    customUrlRedirects,
+    form.settings,
+    form.themeSettings?.logo,
+    form.themeSettings?.theme,
+    isNavigationArrowsEnabled,
+    isQuestionListEnabled,
+    onQuestionChange,
+    onSubmit,
+    query,
+    reportAbuseURL
+  ])
 
   // Form suspended
   if (form.suspended) {
@@ -225,7 +263,7 @@ export const FormRenderer: FC<FormRendererProps> = ({
           >
             <Blocks />
           </div>
-          {enableQuestionList && <Sidebar />}
+          {state.enableQuestionList && <Sidebar />}
         </div>
       </Tooltip.Provider>
     </StoreContext.Provider>

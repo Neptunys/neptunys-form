@@ -23,6 +23,10 @@ export class UpdateIntegrationSettingsResolver {
   ): Promise<boolean> {
     const app = this.appService.findById(input.appId)
 
+    if (!app) {
+      throw new BadRequestException('Invalid app')
+    }
+
     if (helper.isEmpty(input.config)) {
       throw new BadRequestException('Invalid attributes arguments')
     }

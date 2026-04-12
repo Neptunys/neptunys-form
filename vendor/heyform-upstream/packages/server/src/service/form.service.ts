@@ -396,6 +396,8 @@ export class FormService {
       'captchaKind',
       'requirePassword',
       'enableProgress',
+      'progressStyle',
+      'autoAdvanceSingleChoice',
       'enableQuestionList',
       'enableNavigationArrows',
       'locale',

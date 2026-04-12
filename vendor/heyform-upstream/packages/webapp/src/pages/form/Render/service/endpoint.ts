@@ -1,9 +1,13 @@
 import { HiddenFieldAnswer } from '@heyform-inc/shared-types-enums'
 
-import { axios } from '../utils/axios'
+import { axios, getAnonymousId } from '../utils/axios'
 
 const OPEN_FORM_GQL = `query openForm($input: OpenFormInput!) {
   openForm(input: $input)
+}`
+
+const UPDATE_FORM_SESSION_GQL = `mutation updateFormSession($input: UpdateFormSessionInput!) {
+  updateFormSession(input: $input)
 }`
 
 const VERIFY_FORM_PASSWORD_GQL = `query verifyFormPassword($input: VerifyPasswordInput!) {
@@ -25,16 +29,79 @@ const COMPLETE_SUBMISSION_GQL = `mutation completeSubmission($input: CompleteSub
 }`
 
 export class EndpointService {
-  static async openForm(formId: string): Promise<string> {
+  static async openForm(input: {
+    formId: string
+    experimentId?: string
+    variantFormId?: string
+    landingUrl?: string
+    referrer?: string
+    utmSource?: string
+    utmMedium?: string
+    utmCampaign?: string
+    utmTerm?: string
+    utmContent?: string
+  }): Promise<string> {
     const result = await axios({
       query: OPEN_FORM_GQL,
       variables: {
-        input: {
-          formId
-        }
+        input
       }
     })
     return result.openForm
+  }
+
+  static async updateFormSession(input: {
+    formId: string
+    openToken: string
+    metrics: Array<{
+      questionId: string
+      order: number
+      title?: string
+      views: number
+      totalDurationMs: number
+      completed: boolean
+    }>
+    lastQuestionId?: string
+    lastQuestionOrder?: number
+  }, options?: { keepalive?: boolean }): Promise<boolean> {
+    if (options?.keepalive && typeof fetch === 'function') {
+      const response = await fetch('/graphql', {
+        method: 'POST',
+        keepalive: true,
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Anonymous-ID': getAnonymousId()
+        },
+        body: JSON.stringify({
+          query: UPDATE_FORM_SESSION_GQL,
+          variables: {
+            input
+          }
+        })
+      }).catch(() => undefined)
+
+      if (!response?.ok) {
+        return false
+      }
+
+      const payload = await response.json().catch(() => undefined)
+
+      if (Array.isArray(payload?.errors)) {
+        return false
+      }
+
+      return payload?.data?.updateFormSession === true
+    }
+
+    const result = await axios({
+      query: UPDATE_FORM_SESSION_GQL,
+      variables: {
+        input
+      }
+    })
+
+    return result.updateFormSession
   }
 
   static async verifyFormPassword(formId: string, password: string): Promise<string> {

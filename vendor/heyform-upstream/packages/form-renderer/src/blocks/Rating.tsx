@@ -44,6 +44,7 @@ export const Rating: FC<BlockProps> = ({ field, ...restProps }) => {
           input: state.values[field.id]
         }}
         autoSubmit={true}
+        autoSubmitDelayMs={420}
         isSubmitShow={false}
         field={field}
         getValues={getValues}

@@ -4,14 +4,34 @@ import { alpha, helper, hexToRgb, isDarkColor } from '@heyform-inc/utils'
 
 type RendererFormTheme = FormTheme & {
   logoSize?: number
+  titleFontSize?: 'small' | 'normal' | 'large'
+  titleFontSizePx?: number
+  mobileTitleFontSizePx?: number
+  screenFontSize?: 'small' | 'normal' | 'large'
+  descriptionFontSizePx?: number
+  mobileDescriptionFontSizePx?: number
+  fieldFontSize?: 'small' | 'normal' | 'large'
+  answerFontSizePx?: number
+  mobileAnswerFontSizePx?: number
+  answerKeyBackground?: string
+  answerKeyActiveColor?: string
+  answerKeyActiveBackground?: string
+  showChoiceCheckIcon?: boolean
   desktopBackgroundImage?: string
   mobileBackgroundImage?: string
+  desktopBackgroundBrightness?: number
+  mobileBackgroundBrightness?: number
+  desktopContentWidth?: number
+  mobileContentWidth?: number
   desktopAnswerWidth?: number
   mobileAnswerWidth?: number
   desktopAnswerGap?: number
   mobileAnswerGap?: number
+  desktopContentOffset?: number
   progressColor?: string
   progressTrackColor?: string
+  topProgressColor?: string
+  topProgressTrackColor?: string
 }
 
 export const SYSTEM_FONTS =
@@ -71,8 +91,14 @@ const FONT_FAMILY_ALIASES: Record<string, string> = {
 
 export const DEFAULT_THEME: RendererFormTheme = {
   fontFamily: GOOGLE_FONTS[0],
+  screenFontSize: 'normal',
+  fieldFontSize: 'normal',
   questionTextColor: '#000',
   answerTextColor: '#0445AF',
+  answerKeyBackground: '#fff',
+  answerKeyActiveColor: '#fff',
+  answerKeyActiveBackground: '#0445AF',
+  showChoiceCheckIcon: true,
   answerBorderRadius: 6,
   logoSize: 40,
   buttonBackground: '#0445AF',
@@ -80,7 +106,9 @@ export const DEFAULT_THEME: RendererFormTheme = {
   buttonBorderRadius: 6,
   backgroundColor: '#fff',
   progressColor: '#0445AF',
-  progressTrackColor: 'rgba(4, 69, 175, 0.15)'
+  progressTrackColor: 'rgba(4, 69, 175, 0.15)',
+  topProgressColor: '#0445AF',
+  topProgressTrackColor: 'rgba(4, 69, 175, 0.12)'
 }
 
 function normalizeBackgroundImages(theme: RendererFormTheme): RendererFormTheme {
@@ -218,6 +246,131 @@ function getAdaptedColor(color: string, alphaNum = 0.5, step = 20): string {
   return `rgba(${red}, ${green}, ${blue}, ${alphaNum})`
 }
 
+function getBackgroundBrightnessValue(
+  theme: RendererFormTheme,
+  platform: 'desktop' | 'mobile'
+): number {
+  const platformValue =
+    platform === 'desktop' ? theme.desktopBackgroundBrightness : theme.mobileBackgroundBrightness
+
+  if (typeof platformValue === 'number') {
+    return platformValue
+  }
+
+  return typeof theme.backgroundBrightness === 'number' ? theme.backgroundBrightness : 0
+}
+
+function getBackgroundOverlayRule(brightness: number): string {
+  return `
+      opacity: ${Math.abs(brightness / 100)};
+      background: ${brightness > 0 ? '#fff' : '#000'};
+  `
+}
+
+function getComputedLineHeight(fontSize: number, multiplier: number, minOffset: number) {
+  return `${Math.max(fontSize + minOffset, Math.round(fontSize * multiplier))}px`
+}
+
+function getTitleFontScale(
+  size?: 'small' | 'normal' | 'large',
+  overridePx?: number
+) {
+  if (typeof overridePx === 'number') {
+    return {
+      titleSize: `${overridePx}px`,
+      titleLineHeight: getComputedLineHeight(overridePx, 1.15, 4)
+    }
+  }
+
+  switch (size) {
+    case 'small':
+      return {
+        titleSize: '1.625rem',
+        titleLineHeight: '2rem'
+      }
+    case 'large':
+      return {
+        titleSize: '2.25rem',
+        titleLineHeight: '2.5rem'
+      }
+    default:
+      return {
+        titleSize: '1.875rem',
+        titleLineHeight: '2.25rem'
+      }
+  }
+}
+
+function getDescriptionFontScale(
+  size?: 'small' | 'normal' | 'large',
+  overridePx?: number
+) {
+  if (typeof overridePx === 'number') {
+    return {
+      descriptionSize: `${overridePx}px`,
+      descriptionLineHeight: getComputedLineHeight(overridePx, 1.55, 6)
+    }
+  }
+
+  switch (size) {
+    case 'small':
+      return {
+        descriptionSize: '1rem',
+        descriptionLineHeight: '1.5rem'
+      }
+    case 'large':
+      return {
+        descriptionSize: '1.25rem',
+        descriptionLineHeight: '1.875rem'
+      }
+    default:
+      return {
+        descriptionSize: '1.125rem',
+        descriptionLineHeight: '1.75rem'
+      }
+  }
+}
+
+function getFieldFontScale(
+  size?: 'small' | 'normal' | 'large',
+  overridePx?: number
+) {
+  if (typeof overridePx === 'number') {
+    const inputSize = Math.max(overridePx + 4, Math.round(overridePx * 1.33))
+
+    return {
+      answerSize: `${overridePx}px`,
+      answerLineHeight: getComputedLineHeight(overridePx, 1.3, 4),
+      inputSize: `${inputSize}px`,
+      inputLineHeight: getComputedLineHeight(inputSize, 1.35, 6)
+    }
+  }
+
+  switch (size) {
+    case 'small':
+      return {
+        answerSize: '1rem',
+        answerLineHeight: '1.375rem',
+        inputSize: '1.25rem',
+        inputLineHeight: '1.75rem'
+      }
+    case 'large':
+      return {
+        answerSize: '1.25rem',
+        answerLineHeight: '1.625rem',
+        inputSize: '1.75rem',
+        inputLineHeight: '2.25rem'
+      }
+    default:
+      return {
+        answerSize: '1.125rem',
+        answerLineHeight: '1.375rem',
+        inputSize: '1.5rem',
+        inputLineHeight: '2rem'
+      }
+  }
+}
+
 export function getThemeStyle(theme: RendererFormTheme, query?: Record<string, any>): string {
   const normalizedTheme = normalizeBackgroundImages({ ...theme })
 
@@ -230,10 +383,60 @@ export function getThemeStyle(theme: RendererFormTheme, query?: Record<string, a
 
   const desktopBackgroundImage = normalizedTheme.desktopBackgroundImage
   const mobileBackgroundImage = normalizedTheme.mobileBackgroundImage
+  const desktopBackgroundBrightness = getBackgroundBrightnessValue(normalizedTheme, 'desktop')
+  const mobileBackgroundBrightness = getBackgroundBrightnessValue(normalizedTheme, 'mobile')
   const progressColor = normalizedTheme.progressColor || normalizedTheme.buttonBackground
   const progressTrackColor =
     normalizedTheme.progressTrackColor ||
     alpha(progressColor || normalizedTheme.buttonBackground!, 0.18)
+  const topProgressColor =
+    normalizedTheme.topProgressColor || progressColor || normalizedTheme.buttonBackground
+  const topProgressTrackColor =
+    normalizedTheme.topProgressTrackColor || alpha(topProgressColor || progressColor!, 0.18)
+  const answerKeyBackground = normalizedTheme.answerKeyBackground || normalizedTheme.backgroundColor
+  const answerKeyActiveColor =
+    normalizedTheme.answerKeyActiveColor || normalizedTheme.backgroundColor
+  const answerKeyActiveBackground =
+    normalizedTheme.answerKeyActiveBackground || alpha(normalizedTheme.answerTextColor!, 0.8)
+  const answerSelectionIndicatorDisplay = helper.isFalse(normalizedTheme.showChoiceCheckIcon)
+    ? 'none'
+    : 'block'
+  const answerSelectionIndicatorOpacity = helper.isFalse(normalizedTheme.showChoiceCheckIcon)
+    ? '0'
+    : '1'
+  const answerSelectionPaddingMobile = helper.isFalse(normalizedTheme.showChoiceCheckIcon)
+    ? '0.9rem'
+    : '2.6rem'
+  const titleFontScale = getTitleFontScale(
+    normalizedTheme.titleFontSize || normalizedTheme.screenFontSize,
+    normalizedTheme.titleFontSizePx
+  )
+  const mobileTitleFontScale = getTitleFontScale(
+    normalizedTheme.titleFontSize || normalizedTheme.screenFontSize,
+    helper.isNumber(normalizedTheme.mobileTitleFontSizePx)
+      ? normalizedTheme.mobileTitleFontSizePx
+      : normalizedTheme.titleFontSizePx
+  )
+  const descriptionFontScale = getDescriptionFontScale(
+    normalizedTheme.screenFontSize,
+    normalizedTheme.descriptionFontSizePx
+  )
+  const mobileDescriptionFontScale = getDescriptionFontScale(
+    normalizedTheme.screenFontSize,
+    helper.isNumber(normalizedTheme.mobileDescriptionFontSizePx)
+      ? normalizedTheme.mobileDescriptionFontSizePx
+      : normalizedTheme.descriptionFontSizePx
+  )
+  const fieldFontScale = getFieldFontScale(
+    normalizedTheme.fieldFontSize,
+    normalizedTheme.answerFontSizePx
+  )
+  const mobileFieldFontScale = getFieldFontScale(
+    normalizedTheme.fieldFontSize,
+    helper.isNumber(normalizedTheme.mobileAnswerFontSizePx)
+      ? normalizedTheme.mobileAnswerFontSizePx
+      : normalizedTheme.answerFontSizePx
+  )
 
   const backgroundImageRule = (value?: string) => {
     if (!value) {
@@ -248,7 +451,7 @@ export function getThemeStyle(theme: RendererFormTheme, query?: Record<string, a
   }
 
   return `
-  html {
+  html, .heyform-root {
     --heyform-font-family: ${normalizedTheme.fontFamily};
     --heyform-question-color: ${normalizedTheme.questionTextColor};
     --heyform-description-color: ${alpha(normalizedTheme.questionTextColor!, 0.8)};
@@ -258,12 +461,37 @@ export function getThemeStyle(theme: RendererFormTheme, query?: Record<string, a
     --heyform-answer-opacity-60-color: ${alpha(normalizedTheme.answerTextColor!, 0.6)};
     --heyform-answer-opacity-30-color: ${alpha(normalizedTheme.answerTextColor!, 0.3)};
     --heyform-answer-opacity-10-color: ${alpha(normalizedTheme.answerTextColor!, 0.1)};
+    --heyform-answer-key-background: ${answerKeyBackground};
+    --heyform-answer-key-active-color: ${answerKeyActiveColor};
+    --heyform-answer-key-active-background: ${answerKeyActiveBackground};
+    --heyform-answer-selection-indicator-display: ${answerSelectionIndicatorDisplay};
+    --heyform-answer-selection-indicator-opacity: ${answerSelectionIndicatorOpacity};
+    --heyform-answer-selection-padding-right-mobile: ${answerSelectionPaddingMobile};
+    --heyform-content-width-desktop: ${helper.isNumber(normalizedTheme.desktopContentWidth) ? `${normalizedTheme.desktopContentWidth}px` : '52rem'};
+    --heyform-content-width-mobile: 100%;
     --heyform-answer-radius: ${normalizedTheme.answerBorderRadius}px;
-    --heyform-answer-width-desktop: ${helper.isNumber(normalizedTheme.desktopAnswerWidth) ? `${normalizedTheme.desktopAnswerWidth}px` : '31rem'};
+    --heyform-answer-width-desktop: ${helper.isNumber(normalizedTheme.desktopAnswerWidth) ? `${normalizedTheme.desktopAnswerWidth}px` : '27rem'};
     --heyform-answer-width-mobile: ${helper.isNumber(normalizedTheme.mobileAnswerWidth) ? `${normalizedTheme.mobileAnswerWidth}px` : '100%'};
-    --heyform-answer-gap-desktop: ${helper.isNumber(normalizedTheme.desktopAnswerGap) ? `${normalizedTheme.desktopAnswerGap}px` : '0.75rem'};
-    --heyform-answer-gap-mobile: ${helper.isNumber(normalizedTheme.mobileAnswerGap) ? `${normalizedTheme.mobileAnswerGap}px` : '0.625rem'};
+    --heyform-answer-gap-desktop: ${helper.isNumber(normalizedTheme.desktopAnswerGap) ? `${normalizedTheme.desktopAnswerGap}px` : '0.5rem'};
+    --heyform-answer-gap-mobile: ${helper.isNumber(normalizedTheme.mobileAnswerGap) ? `${normalizedTheme.mobileAnswerGap}px` : '0.5rem'};
+    --heyform-content-offset-desktop: ${helper.isNumber(normalizedTheme.desktopContentOffset) ? `${normalizedTheme.desktopContentOffset}px` : '0px'};
     --heyform-logo-size: ${normalizedTheme.logoSize}px;
+    --heyform-screen-title-size: ${titleFontScale.titleSize};
+    --heyform-screen-title-line-height: ${titleFontScale.titleLineHeight};
+    --heyform-screen-title-size-mobile: ${mobileTitleFontScale.titleSize};
+    --heyform-screen-title-line-height-mobile: ${mobileTitleFontScale.titleLineHeight};
+    --heyform-screen-description-size: ${descriptionFontScale.descriptionSize};
+    --heyform-screen-description-line-height: ${descriptionFontScale.descriptionLineHeight};
+    --heyform-screen-description-size-mobile: ${mobileDescriptionFontScale.descriptionSize};
+    --heyform-screen-description-line-height-mobile: ${mobileDescriptionFontScale.descriptionLineHeight};
+    --heyform-field-text-size: ${fieldFontScale.answerSize};
+    --heyform-field-text-line-height: ${fieldFontScale.answerLineHeight};
+    --heyform-field-text-size-mobile: ${mobileFieldFontScale.answerSize};
+    --heyform-field-text-line-height-mobile: ${mobileFieldFontScale.answerLineHeight};
+    --heyform-input-text-size: ${fieldFontScale.inputSize};
+    --heyform-input-text-line-height: ${fieldFontScale.inputLineHeight};
+    --heyform-input-text-size-mobile: ${mobileFieldFontScale.inputSize};
+    --heyform-input-text-line-height-mobile: ${mobileFieldFontScale.inputLineHeight};
     --heyform-button-color: ${normalizedTheme.buttonBackground};
     --heyform-button-opacity-80-color: ${alpha(normalizedTheme.buttonBackground!, 0.8)};
     --heyform-button-text-color: ${normalizedTheme.buttonTextColor};
@@ -273,6 +501,8 @@ export function getThemeStyle(theme: RendererFormTheme, query?: Record<string, a
     --heyform-group-background-color: ${getAdaptedColor(normalizedTheme.backgroundColor!)};
     --heyform-progress-color: ${progressColor};
     --heyform-progress-track-color: ${progressTrackColor};
+    --heyform-top-progress-color: ${topProgressColor};
+    --heyform-top-progress-track-color: ${topProgressTrackColor};
   }
   
   .heyform-theme-background {
@@ -289,9 +519,36 @@ export function getThemeStyle(theme: RendererFormTheme, query?: Record<string, a
     ${backgroundImageRule(desktopBackgroundImage)}
   }
 
+  .heyform-theme-background::before {
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    content: "";
+    z-index: 2;
+    ${getBackgroundOverlayRule(desktopBackgroundBrightness)}
+  }
+
   @media (max-width: 800px) {
+    html, .heyform-root {
+      --heyform-screen-title-size: var(--heyform-screen-title-size-mobile);
+      --heyform-screen-title-line-height: var(--heyform-screen-title-line-height-mobile);
+      --heyform-screen-description-size: var(--heyform-screen-description-size-mobile);
+      --heyform-screen-description-line-height: var(--heyform-screen-description-line-height-mobile);
+      --heyform-field-text-size: var(--heyform-field-text-size-mobile);
+      --heyform-field-text-line-height: var(--heyform-field-text-line-height-mobile);
+      --heyform-input-text-size: var(--heyform-input-text-size-mobile);
+      --heyform-input-text-line-height: var(--heyform-input-text-line-height-mobile);
+    }
+
     .heyform-theme-background {
       ${backgroundImageRule(mobileBackgroundImage)}
+    }
+
+    .heyform-theme-background::before {
+      ${getBackgroundOverlayRule(mobileBackgroundBrightness)}
     }
   }
 
@@ -319,24 +576,6 @@ export function getThemeStyle(theme: RendererFormTheme, query?: Record<string, a
     .heyform-block-group {
       position: fixed;
     }
-  }
-
-  ${
-    helper.isValid(normalizedTheme.backgroundBrightness)
-      ? `
-    .heyform-theme-background:before {
-      pointer-events: none;
-      position: absolute;
-      top: 0;
-      right: 0;
-      bottom: 0;
-      left: 0;
-      content: "";
-      z-index: 2;
-      opacity: ${Math.abs(normalizedTheme.backgroundBrightness! / 100)};
-      background: ${normalizedTheme.backgroundBrightness! > 0 ? '#fff' : '#000'};
-    }`
-      : ''
   }
   `
 }

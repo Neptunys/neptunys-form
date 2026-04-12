@@ -18,7 +18,7 @@ export const ClosedMessage: FC<ClosedMessageProps> = ({ form }) => {
     title: t('Form unavailable'),
     description: t("The form can't receive new submissions now."),
     properties: {
-      buttonText: t('Create a heyform')
+      buttonText: t('Create a NeptunysForm')
     }
   }
 

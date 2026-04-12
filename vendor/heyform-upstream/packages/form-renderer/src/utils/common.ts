@@ -68,3 +68,40 @@ export const isURL = (arg: any) => {
 
   return /^https?:\/\//i.test(arg) || arg.startsWith('/static/upload/') || arg.startsWith('data:image/')
 }
+
+function isCssImageValue(value: string) {
+  const normalizedValue = value.trim().toLowerCase()
+
+  return (
+    normalizedValue.startsWith('url(') ||
+    normalizedValue.startsWith('linear-gradient(') ||
+    normalizedValue.startsWith('radial-gradient(') ||
+    normalizedValue.startsWith('conic-gradient(') ||
+    normalizedValue.startsWith('repeating-linear-gradient(') ||
+    normalizedValue.startsWith('repeating-radial-gradient(') ||
+    normalizedValue.startsWith('repeating-conic-gradient(') ||
+    normalizedValue.startsWith('image-set(') ||
+    normalizedValue.startsWith('var(')
+  )
+}
+
+export function isRenderableImageSource(value?: string | null) {
+  if (typeof value !== 'string') {
+    return false
+  }
+
+  const normalizedValue = value.trim()
+
+  if (!normalizedValue || isCssImageValue(normalizedValue)) {
+    return false
+  }
+
+  return (
+    isURL(normalizedValue) ||
+    normalizedValue.startsWith('/') ||
+    normalizedValue.startsWith('./') ||
+    normalizedValue.startsWith('../') ||
+    normalizedValue.startsWith('blob:') ||
+    normalizedValue.startsWith('data:image/')
+  )
+}

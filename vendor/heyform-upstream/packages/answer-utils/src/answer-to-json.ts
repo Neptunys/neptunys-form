@@ -47,7 +47,7 @@ function parseJsonAnswer(answer: Answer, plain = false): any {
     case FieldKindEnum.FULL_NAME:
       value = parser.fullName(answer)
       if (plain) {
-        value = `${value.firstName} ${value.lastName}`
+        value = [value.firstName, value.lastName].filter(Boolean).join(' ')
       }
       break
 

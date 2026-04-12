@@ -2,7 +2,7 @@ import { IconPhoto } from '@tabler/icons-react'
 import clsx from 'clsx'
 import { FC, ReactNode, useCallback, useMemo } from 'react'
 
-import { isURL, stopEvent, useKey, useTranslation } from '../utils'
+import { isRenderableImageSource, stopEvent, useKey, useTranslation } from '../utils'
 import { helper } from '@heyform-inc/utils'
 
 import { IComponentProps } from '../typings'
@@ -22,6 +22,7 @@ interface ChoiceRadioProps extends ChoiceRadioOption, Omit<IComponentProps, 'onC
   isChecked?: boolean
   isOther?: boolean
   isHotkeyShow?: boolean
+  autoAdvanceFeedback?: boolean
   onBlur?: () => void
   onClick?: (value: any) => void
   onChange?: (value: any) => void
@@ -39,6 +40,7 @@ export const ChoiceRadio: FC<ChoiceRadioProps> = ({
   disabled,
   isChecked,
   isOther,
+  autoAdvanceFeedback,
   onBlur,
   onClick,
   onChange,
@@ -91,7 +93,8 @@ export const ChoiceRadio: FC<ChoiceRadioProps> = ({
       className={clsx(
         'heyform-radio',
         {
-          'heyform-radio-selected': isChecked
+          'heyform-radio-selected': isChecked,
+          'heyform-radio-auto-advance-feedback': autoAdvanceFeedback
         },
         className
       )}
@@ -101,7 +104,7 @@ export const ChoiceRadio: FC<ChoiceRadioProps> = ({
       <div className="heyform-radio-container">
         {enableImage && (
           <div className="heyform-radio-image">
-            {isURL(image) ? (
+            {isRenderableImageSource(image) ? (
               <img
                 src={image}
                 alt={helper.isValid(label) ? label : t('Choice {{index}}', { index: keyName })}

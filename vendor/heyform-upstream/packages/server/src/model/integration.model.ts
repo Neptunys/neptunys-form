@@ -30,6 +30,15 @@ export class IntegrationModel extends Document {
     default: IntegrationStatusEnum.ACTIVE
   })
   status: IntegrationStatusEnum
+
+  @Prop()
+  lastDeliveryAt?: number
+
+  @Prop()
+  lastDeliveryStatus?: string
+
+  @Prop()
+  lastDeliveryMessage?: string
 }
 
 export const IntegrationSchema = SchemaFactory.createForClass(IntegrationModel)

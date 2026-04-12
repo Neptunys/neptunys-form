@@ -80,7 +80,44 @@ const Fallback = ({ error }: { error?: Error }) => {
   )
 }
 
-const RedirectScreen = ({ to, replace = false }: { to: string; replace?: boolean }) => {
+const RedirectNotice = ({
+  title,
+  message,
+  href,
+  label
+}: {
+  title: string
+  message: string
+  href: string
+  label: string
+}) => (
+  <AuthLayout>
+    <h1 className="text-center text-2xl font-semibold">{title}</h1>
+    <p className="text-secondary text-center text-sm/6">{message}</p>
+    <div className="mt-6 flex flex-wrap justify-center gap-3">
+      <a
+        href={href}
+        className="inline-flex min-w-40 items-center justify-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white"
+      >
+        {label}
+      </a>
+    </div>
+  </AuthLayout>
+)
+
+const RedirectScreen = ({
+  to,
+  replace = false,
+  title,
+  message,
+  label
+}: {
+  to: string
+  replace?: boolean
+  title: string
+  message: string
+  label: string
+}) => {
   useEffect(() => {
     if (replace) {
       window.location.replace(to)
@@ -89,7 +126,7 @@ const RedirectScreen = ({ to, replace = false }: { to: string; replace?: boolean
     }
   }, [replace, to])
 
-  return <Fallback />
+  return <RedirectNotice title={title} message={message} href={to} label={label} />
 }
 
 const App = ({ routes }: { routes: Route[] }) => {
@@ -101,11 +138,27 @@ const App = ({ routes }: { routes: Route[] }) => {
         const redirectUri = window.location.pathname + window.location.search
 
         setCookie(REDIRECT_COOKIE_NAME, redirectUri, {})
-        return <RedirectScreen to="/login" replace />
+        return (
+          <RedirectScreen
+            to="/login"
+            replace
+            title="Redirecting to login"
+            message="Sign in first to open the workspace dashboard."
+            label="Open login"
+          />
+        )
       }
     } else {
       if (isLoggedIn && options?.redirectIfLogged) {
-        return <RedirectScreen to="/" replace />
+        return (
+          <RedirectScreen
+            to="/"
+            replace
+            title="Redirecting to workspace"
+            message="Your session is active. Opening the workspace home page."
+            label="Open workspace"
+          />
+        )
       } else {
         return children
       }

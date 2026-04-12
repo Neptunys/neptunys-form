@@ -1,7 +1,9 @@
-import { FormRenderer } from '@heyform-inc/form-renderer'
+import { FormRenderer } from '@heyform-inc/form-renderer/src'
 import { FC, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { getFilteredFields } from '../utils'
+import { useStoreContext } from '../store'
 import { cn } from '@/utils'
 
 import { Modal, Tabs } from '@/components'
@@ -14,8 +16,10 @@ interface PreviewComponentProps {
 const PreviewComponent: FC<PreviewComponentProps> = () => {
   const { t } = useTranslation()
 
-  const { form: rawForm, themeSettings } = useFormStore()
+  const { form: rawForm, tempSettings, themeSettings } = useFormStore()
+  const { state } = useStoreContext()
   const [platform, setPlatform] = useState('mobile')
+  const previewFields = useMemo(() => getFilteredFields(state.fields || []).fields, [state.fields])
 
   const form: any = useMemo(
     () => ({
@@ -25,13 +29,28 @@ const PreviewComponent: FC<PreviewComponentProps> = () => {
         ...themeSettings,
         theme: themeSettings?.theme || rawForm?.themeSettings?.theme
       },
-      fields: rawForm?.drafts || [],
+      drafts: previewFields,
+      fields: previewFields,
+      hiddenFields: state.hiddenFields || rawForm?.hiddenFields || [],
+      logics: state.logics || rawForm?.logics || [],
+      variables: state.variables || rawForm?.variables || [],
       settings: {
         ...rawForm?.settings,
+        ...tempSettings,
+        locale: state.locale || rawForm?.settings?.locale,
         whitelabelBranding: true
       }
     }),
-    [rawForm, themeSettings]
+    [
+      previewFields,
+      rawForm,
+      state.hiddenFields,
+      state.locale,
+      state.logics,
+      state.variables,
+      tempSettings,
+      themeSettings
+    ]
   )
 
   const tabs = useMemo(

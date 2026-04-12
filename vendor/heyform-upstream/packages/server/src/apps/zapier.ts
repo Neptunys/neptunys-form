@@ -1,5 +1,7 @@
 import got from 'got'
 
+import { buildLeadCapturePayload } from '../utils'
+
 export default {
   id: 'zapier',
   name: 'Zapier',
@@ -16,6 +18,8 @@ export default {
     }
   ],
   run: async ({ config, submission, form }) => {
+    const lead = buildLeadCapturePayload(form, submission)
+
     return got
       .post(config.endpointUrl, {
         json: {
@@ -25,7 +29,8 @@ export default {
           fields: form.fields,
           answers: submission.answers,
           hiddenFields: submission.hiddenFields,
-          variables: submission.variables
+          variables: submission.variables,
+          lead
         }
       })
       .text()

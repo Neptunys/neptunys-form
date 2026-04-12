@@ -1,10 +1,10 @@
-import { FieldLayoutAlignEnum } from '@heyform-inc/shared-types-enums'
+import { FieldKindEnum, FieldLayoutAlignEnum } from '@heyform-inc/shared-types-enums'
 import { startTransition, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { cn, isRenderableImageSource } from '@/utils'
 
-import { Button, ImagePicker } from '@/components'
+import { Button, ImagePicker, Select, Slider } from '@/components'
 import { LAYOUT_OPTIONS } from '@/consts'
 
 import { useStoreContext } from '../../store'
@@ -14,6 +14,10 @@ export default function CoverAndLayout() {
   const { t } = useTranslation()
   const { state, dispatch } = useStoreContext()
   const field = state.currentField!
+  const showInlineMediaControls =
+    isRenderableImageSource(field.layout?.mediaUrl) &&
+    field.layout?.align === FieldLayoutAlignEnum.INLINE &&
+    [FieldKindEnum.STATEMENT, FieldKindEnum.WELCOME, FieldKindEnum.THANK_YOU].includes(field.kind)
 
   const handleChange = useCallback(
     (key: string, value: any) => {
@@ -25,7 +29,9 @@ export default function CoverAndLayout() {
             ...layout,
             mediaType: 'image',
             brightness: field.layout?.brightness ?? 0,
-            align: field.layout?.align || FieldLayoutAlignEnum.INLINE
+            align: field.layout?.align || FieldLayoutAlignEnum.INLINE,
+            inlineMediaPosition: field.layout?.inlineMediaPosition || 'bottom',
+            inlineMediaWidth: field.layout?.inlineMediaWidth || 75
           }
         }
 
@@ -118,6 +124,51 @@ export default function CoverAndLayout() {
             </div>
           </div>
         </>
+      )}
+
+      {showInlineMediaControls && (
+        <div className="border-accent-light mt-4 space-y-3 border-t pt-4">
+          <div className="space-y-1">
+            <label className="text-sm/6" htmlFor="#">
+              {t('form.builder.settings.inlineImage.position')}
+            </label>
+
+            <Select
+              className="w-full"
+              options={[
+                {
+                  label: t('form.builder.settings.inlineImage.belowText'),
+                  value: 'bottom'
+                },
+                {
+                  label: t('form.builder.settings.inlineImage.aboveText'),
+                  value: 'top'
+                }
+              ]}
+              value={field.layout?.inlineMediaPosition || 'bottom'}
+              onChange={value => handleChange('inlineMediaPosition', value)}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-sm/6" htmlFor="#">
+                {t('form.builder.settings.inlineImage.size')}
+              </label>
+
+              <span className="text-secondary text-xs/6">
+                {field.layout?.inlineMediaWidth || 75}%
+              </span>
+            </div>
+
+            <Slider
+              min={20}
+              max={100}
+              value={field.layout?.inlineMediaWidth || 75}
+              onChange={value => handleChange('inlineMediaWidth', value)}
+            />
+          </div>
+        </div>
       )}
     </>
   )

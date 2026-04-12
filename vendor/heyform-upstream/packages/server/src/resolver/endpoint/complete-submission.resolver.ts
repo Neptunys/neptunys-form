@@ -16,6 +16,7 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql'
 import {
   EndpointService,
   FormReportService,
+  FormSessionService,
   FormService,
   IntegrationService,
   PaymentService,
@@ -33,6 +34,7 @@ export class CompleteSubmissionResolver {
     private readonly submissionService: SubmissionService,
     private readonly submissionIpLimitService: SubmissionIpLimitService,
     private readonly formReportService: FormReportService,
+    private readonly formSessionService: FormSessionService,
     private readonly integrationService: IntegrationService,
     private readonly paymentService: PaymentService
   ) {}
@@ -187,6 +189,16 @@ export class CompleteSubmissionResolver {
 
     // Integration Queue
     this.integrationService.addQueue(form, submissionId)
+
+    const { sessionId } = this.endpointService.decryptToken(input.openToken)
+
+    if (helper.isValid(sessionId)) {
+      await this.formSessionService.update({
+        sessionId,
+        formId: input.formId,
+        submitted: true
+      })
+    }
 
     return result
   }

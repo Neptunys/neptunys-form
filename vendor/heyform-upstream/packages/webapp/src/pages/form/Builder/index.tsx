@@ -11,6 +11,7 @@ import '@/styles/builder.scss'
 import { FormType } from '@/types'
 
 import BuilderCompose from './Compose'
+import GenerateWithAIModal from './GenerateWithAIModal'
 import HiddenFieldsModal from './HiddenFieldsModal'
 import BuilderLeftSidebar, { BuilderLeftSidebarModal } from './LeftSidebar'
 import QuestionTypesModal from './LeftSidebar/QuestionTypesModal'
@@ -78,6 +79,7 @@ const Builder: FC<IBuilderProps> = ({ form }) => {
       <BuilderLeftSidebarModal />
       <QuestionTypesModal />
       <PreviewModal />
+      <GenerateWithAIModal />
       <HiddenFieldsModal />
       <VariableModal />
       <LogicModal />

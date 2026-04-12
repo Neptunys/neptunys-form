@@ -18,7 +18,7 @@ foreach ($name in @('webapp', 'server', 'mailpit')) {
   }
 
   try {
-    Stop-Process -Id $entry.pid -Force -ErrorAction Stop
+    taskkill /PID $entry.pid /T /F | Out-Null
     Write-Host "Stopped $name (PID $($entry.pid))"
   }
   catch {

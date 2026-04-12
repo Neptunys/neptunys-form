@@ -1,5 +1,6 @@
 export * from './auth.graphql'
 export * from './endpoint.graphql'
+export * from './experiment.graphql'
 export * from './form.graphql'
 export * from './integration.graphql'
 export * from './submission.graphql'

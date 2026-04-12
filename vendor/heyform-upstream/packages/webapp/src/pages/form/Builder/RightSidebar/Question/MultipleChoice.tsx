@@ -218,6 +218,31 @@ export default function MultipleChoiceSettings({ field }: RequiredSettingsProps)
     [dispatch, field.id, field.validations]
   )
 
+  const handleAllowMultipleChange = useCallback(
+    (value: boolean) => {
+      dispatch({
+        type: 'updateField',
+        payload: {
+          id: field.id,
+          updates: {
+            properties: {
+              ...field.properties,
+              allowMultiple: value
+            },
+            validations: value
+              ? field.validations
+              : {
+                  ...field.validations,
+                  min: undefined,
+                  max: undefined
+                }
+          }
+        }
+      })
+    },
+    [dispatch, field.id, field.properties, field.validations]
+  )
+
   return (
     <>
       <div className="space-y-1">
@@ -225,10 +250,7 @@ export default function MultipleChoiceSettings({ field }: RequiredSettingsProps)
           <label className="text-sm/6" htmlFor="#">
             {t('form.builder.settings.multipleSelection')}
           </label>
-          <Switch
-            value={field.properties?.allowMultiple}
-            onChange={value => handleChange('allowMultiple', value)}
-          />
+          <Switch value={field.properties?.allowMultiple} onChange={handleAllowMultipleChange} />
         </div>
 
         {field.properties?.allowMultiple && (

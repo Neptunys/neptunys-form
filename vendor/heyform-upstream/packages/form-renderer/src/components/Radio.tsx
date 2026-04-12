@@ -2,7 +2,7 @@ import { IconCheck, IconPhoto } from '@tabler/icons-react'
 import clsx from 'clsx'
 import type { FC, ReactNode } from 'react'
 
-import { isURL, useKey } from '../utils'
+import { isRenderableImageSource, useKey } from '../utils'
 
 import { IComponentProps } from '../typings'
 
@@ -19,6 +19,7 @@ export interface RadioOption {
 interface RadioProps extends RadioOption, Omit<IComponentProps, 'onClick'> {
   isChecked?: boolean
   isHotkeyShow?: boolean
+  autoAdvanceFeedback?: boolean
   onClick?: (value: any) => void
 }
 
@@ -33,6 +34,7 @@ export const Radio: FC<RadioProps> = ({
   isHotkeyShow,
   disabled,
   isChecked,
+  autoAdvanceFeedback,
   onClick,
   ...restProps
 }) => {
@@ -49,7 +51,8 @@ export const Radio: FC<RadioProps> = ({
       className={clsx(
         'heyform-radio',
         {
-          'heyform-radio-selected': isChecked
+          'heyform-radio-selected': isChecked,
+          'heyform-radio-auto-advance-feedback': autoAdvanceFeedback
         },
         className
       )}
@@ -59,7 +62,7 @@ export const Radio: FC<RadioProps> = ({
       <div className="heyform-radio-container">
         {enableImage && (
           <div className="heyform-radio-image">
-            {isURL(image) ? (
+            {isRenderableImageSource(image) ? (
               <img src={image} alt={label} />
             ) : icon ? (
               icon

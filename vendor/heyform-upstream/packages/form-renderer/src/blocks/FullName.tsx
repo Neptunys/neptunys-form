@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import type { FC } from 'react'
 
 import { initialValue, useTranslation } from '../utils'
@@ -12,6 +13,10 @@ import { Form } from './Form'
 export const FullName: FC<BlockProps> = ({ field, ...restProps }) => {
   const { state } = useStore()
   const { t } = useTranslation()
+  const fullNameMode = field.properties?.fullNameMode || 'both'
+  const showFirstName = fullNameMode !== 'last'
+  const showLastName = fullNameMode !== 'first'
+  const showBothFields = showFirstName && showLastName
 
   function getValues(values: any) {
     return helper.isValid(values?.firstName) || helper.isValid(values?.lastName)
@@ -26,32 +31,40 @@ export const FullName: FC<BlockProps> = ({ field, ...restProps }) => {
         field={field}
         getValues={getValues}
       >
-        <div className="flex w-full items-start justify-items-stretch space-x-4">
-          <FormField
-            className="flex-1"
-            name="firstName"
-            rules={[
-              {
-                required: field.validations?.required,
-                message: t('This field is required')
-              }
-            ]}
-          >
-            <Input placeholder={t('First Name')} />
-          </FormField>
+        <div
+          className={clsx('flex w-full items-start justify-items-stretch', {
+            'space-x-4': showBothFields
+          })}
+        >
+          {showFirstName && (
+            <FormField
+              className={showBothFields ? 'flex-1' : 'w-full'}
+              name="firstName"
+              rules={[
+                {
+                  required: field.validations?.required && showFirstName,
+                  message: t('This field is required')
+                }
+              ]}
+            >
+              <Input placeholder={t('First Name')} />
+            </FormField>
+          )}
 
-          <FormField
-            className="flex-1"
-            name="lastName"
-            rules={[
-              {
-                required: field.validations?.required,
-                message: t('This field is required')
-              }
-            ]}
-          >
-            <Input placeholder={t('Last Name')} />
-          </FormField>
+          {showLastName && (
+            <FormField
+              className={showBothFields ? 'flex-1' : 'w-full'}
+              name="lastName"
+              rules={[
+                {
+                  required: field.validations?.required && showLastName,
+                  message: t('This field is required')
+                }
+              ]}
+            >
+              <Input placeholder={t('Last Name')} />
+            </FormField>
+          )}
         </div>
       </Form>
     </Block>

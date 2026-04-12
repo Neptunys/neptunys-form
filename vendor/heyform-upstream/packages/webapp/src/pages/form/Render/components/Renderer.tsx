@@ -24,18 +24,261 @@ import { GOOGLE_RECAPTCHA_KEY } from '@/consts/env'
 import { PasswordCheck } from './PasswordCheck'
 
 interface RendererProps {
-  form: FormModel
+  form: FormModel & { integrations?: Record<string, string> }
   query: Record<string, Any>
   locale: string
   contactId?: string
+  experimentId?: string
 }
 
 let captchaRef: Any = null
 
-export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId }) => {
+function getTrackingRegistry() {
+  const win = window as Any
+
+  if (!win.__HEYFORM_TRACKING__) {
+    win.__HEYFORM_TRACKING__ = {
+      ga4: new Set<string>(),
+      gtm: new Set<string>(),
+      meta: new Set<string>()
+    }
+  }
+
+  return win.__HEYFORM_TRACKING__ as {
+    ga4: Set<string>
+    gtm: Set<string>
+    meta: Set<string>
+  }
+}
+
+function ensureGa4(measurementId?: string) {
+  if (!measurementId) {
+    return
+  }
+
+  const win = window as Any
+  const registry = getTrackingRegistry()
+
+  win.dataLayer = win.dataLayer || []
+  win.gtag =
+    win.gtag ||
+    function () {
+      win.dataLayer.push(arguments)
+    }
+
+  if (!document.getElementById('heyform-ga4-sdk')) {
+    const script = document.createElement('script')
+    script.id = 'heyform-ga4-sdk'
+    script.async = true
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`
+    document.head.appendChild(script)
+    win.gtag('js', new Date())
+  }
+
+  if (!registry.ga4.has(measurementId)) {
+    win.gtag('config', measurementId)
+    registry.ga4.add(measurementId)
+  }
+}
+
+function ensureGtm(containerId?: string) {
+  if (!containerId) {
+    return
+  }
+
+  const registry = getTrackingRegistry()
+  const win = window as Any
+  win.dataLayer = win.dataLayer || []
+
+  if (registry.gtm.has(containerId)) {
+    return
+  }
+
+  win.dataLayer.push({
+    'gtm.start': Date.now(),
+    event: 'gtm.js'
+  })
+
+  const script = document.createElement('script')
+  script.async = true
+  script.src = `https://www.googletagmanager.com/gtm.js?id=${containerId}`
+  document.head.appendChild(script)
+  registry.gtm.add(containerId)
+}
+
+function ensureMetaPixel(pixelId?: string) {
+  if (!pixelId) {
+    return
+  }
+
+  const registry = getTrackingRegistry()
+  const win = window as Any
+
+  if (!win.fbq) {
+    const fbq = function (...args: Any[]) {
+      ;(fbq as Any).callMethod ? (fbq as Any).callMethod.apply(fbq, args) : (fbq as Any).queue.push(args)
+    }
+
+    ;(fbq as Any).queue = []
+    ;(fbq as Any).loaded = true
+    ;(fbq as Any).version = '2.0'
+    win.fbq = fbq
+
+    const script = document.createElement('script')
+    script.async = true
+    script.src = 'https://connect.facebook.net/en_US/fbevents.js'
+    document.head.appendChild(script)
+  }
+
+  if (!registry.meta.has(pixelId)) {
+    win.fbq('init', pixelId)
+    registry.meta.add(pixelId)
+  }
+}
+
+function trackPublicEvent(
+  form: FormModel & { integrations?: Record<string, string> },
+  eventName: 'heyform_view' | 'heyform_submit'
+) {
+  const win = window as Any
+  const payload = {
+    formId: form.id,
+    formName: form.name
+  }
+
+  if (form.integrations?.googleanalytics4 && typeof win.gtag === 'function') {
+    win.gtag('event', eventName, payload)
+  }
+
+  if (form.integrations?.googletagmanager && Array.isArray(win.dataLayer)) {
+    win.dataLayer.push({
+      event: eventName,
+      ...payload
+    })
+  }
+
+  if (form.integrations?.metapixel && typeof win.fbq === 'function') {
+    win.fbq('track', eventName === 'heyform_submit' ? 'Lead' : 'PageView')
+    win.fbq('trackCustom', eventName, payload)
+  }
+}
+
+export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId, experimentId }) => {
   const openTokenRef = useRef<string>('')
   const passwordTokenRef = useRef<string>('')
+  const lastKeepaliveSyncAtRef = useRef<number>(0)
+  const activeQuestionRef = useRef<
+    | {
+        questionId: string
+        order: number
+        title?: string
+      }
+    | undefined
+  >(undefined)
+  const activeQuestionStartedAtRef = useRef<number>(0)
+  const questionMetricsRef = useRef<
+    Record<
+      string,
+      {
+        questionId: string
+        order: number
+        title?: string
+        views: number
+        totalDurationMs: number
+        completed: boolean
+      }
+    >
+  >({})
   const [isPasswordChecked, setIsPasswordChecked] = useState(false)
+
+  function getSessionMetrics() {
+    return Object.values(questionMetricsRef.current).sort((left, right) => left.order - right.order)
+  }
+
+  function flushActiveQuestion(markCompleted = true) {
+    const activeQuestion = activeQuestionRef.current
+
+    if (!activeQuestion || !activeQuestionStartedAtRef.current) {
+      return
+    }
+
+    const metric = questionMetricsRef.current[activeQuestion.questionId]
+
+    if (!metric) {
+      return
+    }
+
+    metric.totalDurationMs += Math.max(0, Date.now() - activeQuestionStartedAtRef.current)
+
+    if (markCompleted) {
+      metric.completed = true
+    }
+
+    activeQuestionStartedAtRef.current = 0
+  }
+
+  async function syncSession(keepalive = false) {
+    if (!openTokenRef.current) {
+      return false
+    }
+
+    return EndpointService.updateFormSession({
+      formId: form.id,
+      openToken: openTokenRef.current,
+      metrics: getSessionMetrics(),
+      lastQuestionId: activeQuestionRef.current?.questionId,
+      lastQuestionOrder: activeQuestionRef.current?.order
+    }, { keepalive })
+  }
+
+  function syncSessionOnBackground() {
+    const now = Date.now()
+
+    if (now - lastKeepaliveSyncAtRef.current < 750) {
+      return
+    }
+
+    lastKeepaliveSyncAtRef.current = now
+    flushActiveQuestion(false)
+    void syncSession(true).catch(() => undefined)
+  }
+
+  function handleQuestionChange(
+    question?: {
+      questionId: string
+      order: number
+      title?: string
+    }
+  ) {
+    if (activeQuestionRef.current?.questionId === question?.questionId) {
+      return
+    }
+
+    flushActiveQuestion(true)
+    activeQuestionRef.current = question
+
+    if (!question) {
+      void syncSession().catch(console.error)
+      return
+    }
+
+    const metric = questionMetricsRef.current[question.questionId] || {
+      questionId: question.questionId,
+      order: question.order,
+      title: question.title,
+      views: 0,
+      totalDurationMs: 0,
+      completed: false
+    }
+
+    metric.order = question.order
+    metric.title = question.title
+    metric.views += 1
+    questionMetricsRef.current[question.questionId] = metric
+    activeQuestionStartedAtRef.current = Date.now()
+
+    void syncSession().catch(console.error)
+  }
 
   function loadExternalScript(id: string, src: string): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -125,7 +368,33 @@ export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId }) 
 
   async function openForm() {
     sendMessageToParent('FORM_OPENED')
-    openTokenRef.current = await EndpointService.openForm(form.id)
+    const input = {
+      formId: form.id,
+      experimentId,
+      variantFormId: form.id,
+      landingUrl: window.location.href,
+      referrer: document.referrer,
+      utmSource: query.utm_source,
+      utmMedium: query.utm_medium,
+      utmCampaign: query.utm_campaign,
+      utmTerm: query.utm_term,
+      utmContent: query.utm_content
+    }
+
+    let lastError: unknown
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        openTokenRef.current = await EndpointService.openForm(input)
+        trackPublicEvent(form, 'heyform_view')
+        await syncSession().catch(console.error)
+        return
+      } catch (error) {
+        lastError = error
+      }
+    }
+
+    throw lastError
   }
 
   function handlePasswordFinish(passwordToken: string) {
@@ -135,6 +404,9 @@ export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId }) 
 
   async function handleSubmit(values: Any, partialSubmission?: boolean, stripe?: Any) {
     try {
+      flushActiveQuestion(true)
+      await syncSession().catch(console.error)
+
       let token: Record<string, Any> = {}
 
       if (form.settings?.captchaKind === CaptchaKindEnum.GOOGLE_RECAPTCHA) {
@@ -189,6 +461,7 @@ export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId }) 
       }
 
       sendMessageToParent('FORM_SUBMITTED')
+      trackPublicEvent(form, 'heyform_submit')
     } catch (err: Any) {
       /**
        * Throw error to let Renderer knows that there was an error.
@@ -206,8 +479,37 @@ export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId }) 
     sendMessageToParent('FORM_LOADED')
 
     if (!form.suspended && form.settings?.active) {
-      openForm()
+      ensureGa4(form.integrations?.googleanalytics4)
+      ensureGtm(form.integrations?.googletagmanager)
+      ensureMetaPixel(form.integrations?.metapixel)
+      void openForm().catch(console.error)
       initCaptcha().catch(console.error)
+    }
+  }, [])
+
+  useEffect(() => {
+    function handlePageHide() {
+      syncSessionOnBackground()
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'hidden') {
+        syncSessionOnBackground()
+      } else if (
+        document.visibilityState === 'visible' &&
+        activeQuestionRef.current &&
+        !activeQuestionStartedAtRef.current
+      ) {
+        activeQuestionStartedAtRef.current = Date.now()
+      }
+    }
+
+    window.addEventListener('pagehide', handlePageHide)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('pagehide', handlePageHide)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [])
 
@@ -236,6 +538,7 @@ export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId }) 
         customUrlRedirects={(form.settings as Any)?.customUrlRedirects}
         enableQuestionList={form.settings?.enableQuestionList}
         enableNavigationArrows={form.settings?.enableNavigationArrows}
+        onQuestionChange={handleQuestionChange}
         onSubmit={handleSubmit}
       />
 

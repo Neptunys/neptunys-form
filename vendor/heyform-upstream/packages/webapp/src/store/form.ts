@@ -1,4 +1,4 @@
-import { getTheme } from '@heyform-inc/form-renderer'
+import { getTheme } from '@heyform-inc/form-renderer/src'
 import {
   FormSettings,
   ThemeSettings,
@@ -26,6 +26,8 @@ interface TempSettings extends FormSettings {
   _ipLimitTime?: TypeNumberValue
   captcha?: string
   enableRespondentNotification?: boolean
+  operatorNotificationEmails?: string[]
+  operatorNotificationEmailsText?: string
 }
 
 type EmbedConfigs = typeof DEFAULT_EMBED_CONFIGS
@@ -152,6 +154,9 @@ export const useFormStore = create<FormStoreType>()(
             if (tempSettings.ipLimitTime) {
               tempSettings._ipLimitTime = parseDuration(tempSettings.ipLimitTime)
             }
+
+            tempSettings.operatorNotificationEmailsText =
+              tempSettings.operatorNotificationEmails?.join('\n') || ''
 
             state.tempSettings = tempSettings
           } else {

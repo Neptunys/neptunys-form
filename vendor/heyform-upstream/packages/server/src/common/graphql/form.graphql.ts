@@ -100,6 +100,9 @@ class SharedPropertyInput {
   hideMarks?: boolean
 
   @Field({ nullable: true })
+  consentText?: string
+
+  @Field({ nullable: true })
   allowOther?: boolean
 
   @Field({ nullable: true })
@@ -145,7 +148,16 @@ class SharedPropertyInput {
   rightLabel?: string
 
   @Field({ nullable: true })
+  @IsOptional()
+  @IsIn(['both', 'first', 'last'])
+  fullNameMode?: string
+
+  @Field({ nullable: true })
   defaultCountryCode?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  hideCountrySelect?: boolean
 
   @Field({ nullable: true })
   currency?: string
@@ -167,6 +179,18 @@ class SharedPropertyInput {
 
   @Field({ nullable: true })
   score?: number
+
+  @Field({ nullable: true })
+  @IsOptional()
+  enableShareIcon?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
+  enableCompleteTime?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
+  showResponsePanel?: boolean
 
   @Field({ nullable: true })
   @IsUrl()
@@ -233,6 +257,18 @@ class LayoutInput {
   @Field({ nullable: true })
   @IsEnum(FieldLayoutAlignEnum)
   align?: FieldLayoutAlignEnum
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsIn(['top', 'bottom'])
+  inlineMediaPosition?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsNumber()
+  @Min(20)
+  @Max(100)
+  inlineMediaWidth?: number
 }
 
 @InputType()
@@ -428,11 +464,52 @@ export class FormAnalyticType {
   averageTime: FormAnalyticResult
 }
 
+@ObjectType()
+export class FormQuestionAnalyticType {
+  @Field()
+  questionId: string
+
+  @Field()
+  order: number
+
+  @Field({ nullable: true })
+  title?: string
+
+  @Field()
+  reachCount: number
+
+  @Field()
+  reachRate: number
+
+  @Field()
+  averageDuration: number
+
+  @Field()
+  completedCount: number
+
+  @Field()
+  dropOffCount: number
+
+  @Field()
+  dropOffRate: number
+
+  @Field()
+  frictionScore: number
+
+  @Field()
+  frictionLevel: string
+}
+
 @InputType()
 export class UpdateFormInput extends FormDetailInput {
   @Field({ nullable: true })
   @IsOptional()
   name?: string
+
+  @Field(type => GraphQLJSON, { nullable: true })
+  @IsEnum(FormKindEnum)
+  @IsOptional()
+  kind?: FormKindEnum
 
   @Field(type => Number, { nullable: true })
   @IsOptional()
@@ -581,6 +658,87 @@ export class UpdateFormInput extends FormDetailInput {
   @Field({ nullable: true })
   @IsOptional()
   enableEmailNotification?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
+  enableLeadScoring?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
+  leadScoreVariableId?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  leadMediumThreshold?: number
+
+  @Field({ nullable: true })
+  @IsOptional()
+  leadHighThreshold?: number
+
+  @Field({ nullable: true })
+  @IsOptional()
+  leadQualityLowLabel?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  leadQualityMediumLabel?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  leadQualityHighLabel?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  leadPriorityLowLabel?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  leadPriorityMediumLabel?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  leadPriorityHighLabel?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  respondentNameFieldId?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  respondentEmailFieldId?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  respondentPhoneFieldId?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  enableRespondentNotification?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
+  respondentNotificationSubject?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  respondentNotificationMessage?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  enableOperatorNotification?: boolean
+
+  @Field(type => [String], { nullable: true })
+  @IsArray()
+  @IsOptional()
+  operatorNotificationEmails?: string[]
+
+  @Field({ nullable: true })
+  @IsOptional()
+  operatorNotificationSubject?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  operatorNotificationMessage?: string
 }
 
 @InputType()
@@ -656,6 +814,10 @@ export class UpdateFormLogicsInput extends FormDetailInput {
 export class CreateFieldsWithAIInput extends FormDetailInput {
   @Field()
   prompt: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  reference?: string
 }
 
 @InputType()
@@ -753,10 +915,68 @@ export class FormThemeInput {
   fontFamily?: string
 
   @Field({ nullable: true })
+  titleFontSize?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @Min(20)
+  @Max(96)
+  titleFontSizePx?: number
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @Min(20)
+  @Max(96)
+  mobileTitleFontSizePx?: number
+
+  @Field({ nullable: true })
+  screenFontSize?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @Min(12)
+  @Max(48)
+  descriptionFontSizePx?: number
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @Min(12)
+  @Max(48)
+  mobileDescriptionFontSizePx?: number
+
+  @Field({ nullable: true })
+  fieldFontSize?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @Min(12)
+  @Max(56)
+  answerFontSizePx?: number
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @Min(12)
+  @Max(56)
+  mobileAnswerFontSizePx?: number
+
+  @Field({ nullable: true })
   questionTextColor?: string
 
   @Field({ nullable: true })
   answerTextColor?: string
+
+  @Field({ nullable: true })
+  answerKeyBackground?: string
+
+  @Field({ nullable: true })
+  answerKeyActiveColor?: string
+
+  @Field({ nullable: true })
+  answerKeyActiveBackground?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  showChoiceCheckIcon?: boolean
 
   @Field({ nullable: true })
   answerBorderRadius?: number
@@ -787,6 +1007,30 @@ export class FormThemeInput {
 
   @Field({ nullable: true })
   @IsOptional()
+  @Min(-100)
+  @Max(100)
+  desktopBackgroundBrightness?: number
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @Min(-100)
+  @Max(100)
+  mobileBackgroundBrightness?: number
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @Min(360)
+  @Max(1440)
+  desktopContentWidth?: number
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @Min(240)
+  @Max(720)
+  mobileContentWidth?: number
+
+  @Field({ nullable: true })
+  @IsOptional()
   @Min(240)
   @Max(960)
   desktopAnswerWidth?: number
@@ -810,6 +1054,12 @@ export class FormThemeInput {
   mobileAnswerGap?: number
 
   @Field({ nullable: true })
+  @IsOptional()
+  @Min(-320)
+  @Max(320)
+  desktopContentOffset?: number
+
+  @Field({ nullable: true })
   @Min(-100)
   @Max(100)
   backgroundBrightness?: number
@@ -819,6 +1069,12 @@ export class FormThemeInput {
 
   @Field({ nullable: true })
   progressTrackColor?: string
+
+  @Field({ nullable: true })
+  topProgressColor?: string
+
+  @Field({ nullable: true })
+  topProgressTrackColor?: string
 
   @Field({ nullable: true })
   customCSS?: string
@@ -1046,6 +1302,66 @@ export class FormSettingType {
 
   @Field({ nullable: true })
   enableEmailNotification?: boolean
+
+  @Field({ nullable: true })
+  enableLeadScoring?: boolean
+
+  @Field({ nullable: true })
+  leadScoreVariableId?: string
+
+  @Field({ nullable: true })
+  leadMediumThreshold?: number
+
+  @Field({ nullable: true })
+  leadHighThreshold?: number
+
+  @Field({ nullable: true })
+  leadQualityLowLabel?: string
+
+  @Field({ nullable: true })
+  leadQualityMediumLabel?: string
+
+  @Field({ nullable: true })
+  leadQualityHighLabel?: string
+
+  @Field({ nullable: true })
+  leadPriorityLowLabel?: string
+
+  @Field({ nullable: true })
+  leadPriorityMediumLabel?: string
+
+  @Field({ nullable: true })
+  leadPriorityHighLabel?: string
+
+  @Field({ nullable: true })
+  respondentNameFieldId?: string
+
+  @Field({ nullable: true })
+  respondentEmailFieldId?: string
+
+  @Field({ nullable: true })
+  respondentPhoneFieldId?: string
+
+  @Field({ nullable: true })
+  enableRespondentNotification?: boolean
+
+  @Field({ nullable: true })
+  respondentNotificationSubject?: string
+
+  @Field({ nullable: true })
+  respondentNotificationMessage?: string
+
+  @Field({ nullable: true })
+  enableOperatorNotification?: boolean
+
+  @Field(type => [String], { nullable: true })
+  operatorNotificationEmails?: string[]
+
+  @Field({ nullable: true })
+  operatorNotificationSubject?: string
+
+  @Field({ nullable: true })
+  operatorNotificationMessage?: string
 }
 
 @ObjectType()
@@ -1334,6 +1650,15 @@ export class FormIntegrationType {
 
   @Field(type => Number)
   status: IntegrationStatusEnum
+
+  @Field(type => Number, { nullable: true })
+  lastDeliveryAt?: number
+
+  @Field({ nullable: true })
+  lastDeliveryStatus?: string
+
+  @Field({ nullable: true })
+  lastDeliveryMessage?: string
 }
 
 @InputType()

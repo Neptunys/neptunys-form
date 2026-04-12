@@ -1,5 +1,5 @@
 export default {
-  'Made with HeyForm': 'Powered by <icon></icon> <span>HeyForm</span>',
+  'Made with NeptunysForm': 'Powered by <icon></icon> <span>NeptunysForm</span>',
   'This field is required': 'This field is required',
   'File type is not supported': 'File type is not supported',
   "File size can't exceed {{size}}": "File size can't exceed {{size}}",
@@ -49,8 +49,15 @@ export default {
   'Thank you!': 'Thank you!',
   'Thanks for completing this form. Now create your own form.':
     'Thanks for completing this form. Now create your own form.',
+  Continue: 'Continue',
+  'Submit another response': 'Submit another response',
+  'Completed in {{time}}': 'Completed in {{time}}',
+  'Link copied': 'Link copied',
+  Shared: 'Shared',
+  'Share form': 'Share form',
+  'Response recorded': 'Response recorded',
   'Form unavailable': 'Form unavailable',
-  'Create a heyform': 'Create a heyform',
+  'Create a NeptunysForm': 'Create a NeptunysForm',
   "The form can't receive new submissions now.": "The form can't receive new submissions now.",
   "This page doesn't exist": "This page doesn't exist",
   'If you have any questions, please contact us.': 'If you have any questions, please contact us.',

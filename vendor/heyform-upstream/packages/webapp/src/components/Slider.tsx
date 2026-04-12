@@ -1,4 +1,4 @@
-import { ChangeEvent, FC, useState } from 'react'
+import { ChangeEvent, FC, useEffect, useState } from 'react'
 
 import { cn } from '@/utils'
 
@@ -22,6 +22,10 @@ export const Slider: FC<SliderProps> = ({
   ...restProps
 }) => {
   const [value, setValue] = useState(rawValue)
+
+  useEffect(() => {
+    setValue(rawValue)
+  }, [rawValue])
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
     const newValue = Number(event.target.value)

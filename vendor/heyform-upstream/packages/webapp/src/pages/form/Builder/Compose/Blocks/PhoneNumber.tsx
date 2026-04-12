@@ -10,17 +10,28 @@ import { Block } from './Block'
 
 export const PhoneNumber: FC<BlockProps> = ({ field, locale, ...restProps }) => {
   const { t } = useTranslation()
-  const placeholder = useMemo(
-    () => COUNTRIES.find(c => c.value === field.properties?.defaultCountryCode)?.example,
+  const selectedCountry = useMemo(
+    () =>
+      COUNTRIES.find(c => c.value === field.properties?.defaultCountryCode) ||
+      COUNTRIES.find(c => c.value === 'US'),
     [field.properties?.defaultCountryCode]
   )
+  const placeholder = useMemo(
+    () => selectedCountry?.example,
+    [selectedCountry]
+  )
+  const hideCountrySelect = field.properties?.hideCountrySelect === true
 
   return (
     <Block className="heyform-phone-number" field={field} locale={locale} {...restProps}>
       <div className="flex items-center">
         <div className="heyform-calling-code">
-          <FlagIcon countryCode={field.properties?.defaultCountryCode} />
-          <IconChevronDown className="heyform-phone-arrow-icon" />
+          <FlagIcon countryCode={selectedCountry?.value} />
+          {hideCountrySelect ? (
+            <span className="heyform-phone-static-code">+{selectedCountry?.callingCode}</span>
+          ) : (
+            <IconChevronDown className="heyform-phone-arrow-icon" />
+          )}
         </div>
         <input type="text" className="heyform-input" placeholder={placeholder} disabled={true} />
       </div>

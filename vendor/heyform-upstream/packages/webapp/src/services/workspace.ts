@@ -17,6 +17,7 @@ import {
   TRANSFER_WORKSPACE_GQL,
   UPDATE_BRAND_KIT_GQL,
   UPDATE_WORKSPACE_GQL,
+  WORKSPACE_LEAD_FLOW_GQL,
   WORKSPACES_GQL,
   WORKSPACE_MEMBERS_GQL,
   WORKSPACE_OVERVIEW_GQL,
@@ -97,6 +98,18 @@ export class WorkspaceService {
           teamId
         }
       }
+    })
+  }
+
+  static async leadFlow(teamId: string) {
+    return apollo.query({
+      query: WORKSPACE_LEAD_FLOW_GQL,
+      variables: {
+        input: {
+          teamId
+        }
+      },
+      fetchPolicy: 'network-only'
     })
   }
 

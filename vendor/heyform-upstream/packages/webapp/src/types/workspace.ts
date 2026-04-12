@@ -26,8 +26,14 @@ export interface WorkspaceType {
   name: string
   ownerId: string
   avatar?: string
+  clientName?: string
   customDomain?: string
+  enableLeadReport?: boolean
+  leadNotificationEmails?: string[]
+  leadReportRangeDays?: number
+  leadReportLastSentAt?: number
   removeBranding?: boolean
+  reportingTimezone?: string
   inviteCode: string
   inviteCodeExpireAt?: number
   allowJoinByInviteLink: boolean
@@ -43,6 +49,20 @@ export interface WorkspaceType {
   members: UserType[]
   aiKey?: string
   aiModel?: string
+}
+
+export interface WorkspaceLeadFlowType {
+  clientName?: string
+  leadNotificationEmails?: string[]
+  enableLeadReport?: boolean
+  leadReportRangeDays?: number
+  leadReportLastSentAt?: number
+  reportingTimezone?: string
+  enableGoogleSheetsLeadSync?: boolean
+  googleSheetsLeadConfig?: AnyMap
+  googleSheetsLeadLastDeliveryAt?: number
+  googleSheetsLeadLastDeliveryStatus?: string
+  googleSheetsLeadLastDeliveryMessage?: string
 }
 
 export interface MemberType {

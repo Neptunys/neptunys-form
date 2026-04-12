@@ -24,6 +24,33 @@ export class UploadFormSignatureInput {
 export class OpenFormInput {
   @Field()
   formId: string
+
+  @Field({ nullable: true })
+  experimentId?: string
+
+  @Field({ nullable: true })
+  variantFormId?: string
+
+  @Field({ nullable: true })
+  landingUrl?: string
+
+  @Field({ nullable: true })
+  referrer?: string
+
+  @Field({ nullable: true })
+  utmSource?: string
+
+  @Field({ nullable: true })
+  utmMedium?: string
+
+  @Field({ nullable: true })
+  utmCampaign?: string
+
+  @Field({ nullable: true })
+  utmTerm?: string
+
+  @Field({ nullable: true })
+  utmContent?: string
 }
 
 @InputType()
@@ -45,6 +72,45 @@ class HiddenFieldAnswerInput {
 
   @Field({ nullable: true })
   value?: string
+}
+
+@InputType()
+export class FormSessionQuestionMetricInput {
+  @Field()
+  questionId: string
+
+  @Field()
+  order: number
+
+  @Field({ nullable: true })
+  title?: string
+
+  @Field()
+  views: number
+
+  @Field()
+  totalDurationMs: number
+
+  @Field()
+  completed: boolean
+}
+
+@InputType()
+export class UpdateFormSessionInput {
+  @Field()
+  formId: string
+
+  @Field()
+  openToken: string
+
+  @Field(type => [FormSessionQuestionMetricInput])
+  metrics: FormSessionQuestionMetricInput[]
+
+  @Field({ nullable: true })
+  lastQuestionId?: string
+
+  @Field({ nullable: true })
+  lastQuestionOrder?: number
 }
 
 @InputType()

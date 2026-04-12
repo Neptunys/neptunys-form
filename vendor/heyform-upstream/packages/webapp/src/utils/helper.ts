@@ -1,4 +1,4 @@
-import { getTheme, getThemeStyle } from '@heyform-inc/form-renderer'
+import { getTheme, getThemeStyle } from '@heyform-inc/form-renderer/src'
 import { FormTheme } from '@heyform-inc/shared-types-enums'
 
 import { isMobilePhone } from '@heyform-inc/answer-utils'

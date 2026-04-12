@@ -30,6 +30,11 @@ interface SubmissionNotificationOptions {
   link: string
 }
 
+interface DirectMailOptions {
+  subject: string
+  html: string
+}
+
 interface TeamDeletionAlertOptions {
   teamName: string
   userName: string
@@ -110,6 +115,27 @@ export class MailService {
 
   async submissionNotification(to: string, options: SubmissionNotificationOptions) {
     await this.addQueue('submission_notification', to, options)
+  }
+
+  async sendDirect(to: string | string[], options: DirectMailOptions, jobOptions?: JobOptions) {
+    const recipients = helper.isArray(to) ? to.filter(helper.isValid).join(',') : to
+
+    if (!helper.isValid(recipients) || !helper.isValid(options.subject) || !helper.isValid(options.html)) {
+      return
+    }
+
+    await this.mailQueue.add(
+      {
+        queueName: 'MailQueue',
+        data: {
+          from: SMTP_FROM,
+          to: recipients,
+          subject: options.subject,
+          html: options.html
+        }
+      },
+      jobOptions
+    )
   }
 
   async teamDataExportReady(to: string, link: string) {

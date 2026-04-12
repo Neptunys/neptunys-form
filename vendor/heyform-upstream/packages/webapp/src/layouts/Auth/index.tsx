@@ -4,25 +4,40 @@ import { useTranslation } from 'react-i18next'
 
 import { helper } from '@heyform-inc/utils'
 
-import Logo from '@/assets/logo.svg?react'
+import brandLogo from '@/assets/neptunys-logo.png'
 
 import LanguageSwitcher from './LanguageSwitcher'
+
+const APP_NAME = 'NeptunysForm'
 
 export const AuthLayout: FC<LayoutProps> = ({ options, children }) => {
   const { t } = useTranslation()
 
   useEffect(() => {
+    const root = document.documentElement
+    const hadDarkClass = root.classList.contains('dark')
+
+    if (!hadDarkClass) {
+      root.classList.add('dark')
+    }
+
     if (helper.isValid(options?.title)) {
-      document.title = `${t(options!.title)} - HeyForm`
+      document.title = `${t(options!.title)} - ${APP_NAME}`
+    }
+
+    return () => {
+      if (!hadDarkClass) {
+        root.classList.remove('dark')
+      }
     }
   }, [options, t])
 
   return (
-    <div className="bg-foreground flex min-h-screen flex-col">
+    <div className="dark bg-foreground text-primary flex min-h-screen flex-col">
       <div className="bg-foreground sticky top-0 flex items-center justify-between p-4">
-        <a href="/" className="flex items-center gap-2" title="HeyForm">
-          <Logo className="h-8 w-auto" />
-          <span className="text-xl font-medium">HeyForm</span>
+        <a href="/" className="flex items-center gap-1" title={APP_NAME}>
+          <img src={brandLogo} alt={APP_NAME} className="-mr-1 h-8 w-auto object-contain" />
+          <span className="text-xl font-medium">{APP_NAME}</span>
         </a>
 
         <LanguageSwitcher />

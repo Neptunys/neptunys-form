@@ -17,6 +17,7 @@ interface ChoiceRadioGroupProps extends Omit<IComponentProps, 'onChange'> {
   verticalAlignment?: boolean
   isOtherFilled?: boolean
   isHotkeyShow?: boolean
+  selectionFeedback?: boolean
   max?: number
   enableImage?: boolean
   value?: any
@@ -36,6 +37,7 @@ export const ChoiceRadioGroup: FC<ChoiceRadioGroupProps> = ({
   verticalAlignment = true,
   isOtherFilled = false,
   isHotkeyShow = true,
+  selectionFeedback = false,
   max = 0,
   enableImage,
   value: rawValue,
@@ -43,6 +45,7 @@ export const ChoiceRadioGroup: FC<ChoiceRadioGroupProps> = ({
   ...restProps
 }) => {
   const { t } = useTranslation()
+  const isMultipleSelection = helper.isTrue(allowMultiple)
 
   const values = useMemo(() => resetArray(rawValue?.value || []), [rawValue])
   const otherValue = useMemo(() => rawValue?.other, [rawValue])
@@ -57,7 +60,7 @@ export const ChoiceRadioGroup: FC<ChoiceRadioGroupProps> = ({
     (value: any) => {
       let newValues: any[]
 
-      if (!allowMultiple) {
+      if (!isMultipleSelection) {
         newValues = [value]
         setIsOtherSelected(false)
       } else {
@@ -73,7 +76,7 @@ export const ChoiceRadioGroup: FC<ChoiceRadioGroupProps> = ({
         other: otherValue
       })
     },
-    [allowMultiple, isDisabled, onChange, otherValue, values]
+    [isDisabled, isMultipleSelection, onChange, otherValue, values]
   )
 
   const handleOtherChange = useCallback(
@@ -106,13 +109,13 @@ export const ChoiceRadioGroup: FC<ChoiceRadioGroupProps> = ({
 
     setIsOtherSelected(true)
 
-    if (!isOtherSelected && !allowMultiple) {
+    if (!isOtherSelected && !isMultipleSelection) {
       onChange?.({
         value: [],
         other: otherValue
       })
     }
-  }, [isDisabled, isOtherSelected, allowMultiple, otherValue])
+  }, [isDisabled, isMultipleSelection, isOtherSelected, onChange, otherValue])
 
   useEffect(() => {
     if (allowOther) {
@@ -139,6 +142,7 @@ export const ChoiceRadioGroup: FC<ChoiceRadioGroupProps> = ({
           enableImage={enableImage}
           isHotkeyShow={isHotkeyShow}
           isChecked={values.includes(option.value)}
+          autoAdvanceFeedback={selectionFeedback}
           onClick={handleClick}
         />
       ))}
@@ -153,6 +157,7 @@ export const ChoiceRadioGroup: FC<ChoiceRadioGroupProps> = ({
           isHotkeyShow={isHotkeyShow}
           isChecked={isOtherSelected}
           isOther={true}
+          autoAdvanceFeedback={selectionFeedback}
           onBlur={handleOtherBlur}
           onClick={handleOtherClick}
           onChange={handleOtherChange}

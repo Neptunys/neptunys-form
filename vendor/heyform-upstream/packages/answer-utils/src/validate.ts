@@ -413,7 +413,10 @@ function validateFile(rule: FieldsToValidateRules, value: AnswerValue) {
 }
 
 function validateFullName(rule: FieldsToValidateRules, value: AnswerValue) {
-  if (helper.isEmpty(value.firstName)) {
+  const fullNameMode = rule.properties?.fullNameMode || 'both'
+  const fullNameValue = helper.isObject(value) ? value : {}
+
+  if (fullNameMode !== 'last' && helper.isEmpty(fullNameValue.firstName)) {
     throw new ValidateError({
       id: rule.id,
       kind: rule.kind,
@@ -422,7 +425,7 @@ function validateFullName(rule: FieldsToValidateRules, value: AnswerValue) {
     })
   }
 
-  if (helper.isEmpty(value.lastName)) {
+  if (fullNameMode !== 'first' && helper.isEmpty(fullNameValue.lastName)) {
     throw new ValidateError({
       id: rule.id,
       kind: rule.kind,
@@ -549,7 +552,20 @@ function validateLength(value: AnswerValue, min?: number, max?: number): boolean
 }
 
 function validateLegalTerms(rule: FieldsToValidateRules, value: AnswerValue): boolean {
-  return (rule.required && helper.isTrue(value)) || false
+  if (!rule.required && helper.isFalse(value)) {
+    return true
+  }
+
+  if (!helper.isTrue(value)) {
+    throw new ValidateError({
+      id: rule.id,
+      kind: rule.kind,
+      title: rule.title,
+      message: 'This field is required'
+    })
+  }
+
+  return true
 }
 
 function validateInputTable(rule: FieldsToValidateRules, value: AnswerValue): boolean {

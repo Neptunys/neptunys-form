@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { useStoreContext } from '../../store'
 import CoverAndLayout from './CoverAndLayout'
 import DateSettings from './Date'
+import FullNameSettings from './FullName'
+import LegalTermsSettings from './LegalTerms'
 import MultipleChoiceSettings from './MultipleChoice'
 import OpinionScaleSettings from './OpinionScale'
 import PaymentSettings from './Payment'
@@ -28,6 +30,12 @@ const Settings = ({ field }: RequiredSettingsProps) => {
 
       case FieldKindEnum.OPINION_SCALE:
         return <OpinionScaleSettings field={field} />
+
+      case FieldKindEnum.LEGAL_TERMS:
+        return <LegalTermsSettings field={field} />
+
+      case FieldKindEnum.FULL_NAME:
+        return <FullNameSettings field={field} />
 
       case FieldKindEnum.PHONE_NUMBER:
         return <PhoneNumberSettings field={field} />

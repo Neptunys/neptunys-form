@@ -77,26 +77,30 @@ const CircularProgressbar: FC<CircularProgressbarProps> = ({
 export const Progress: FC = () => {
   const { t } = useTranslation()
   const { state } = useStore()
-  const progressStyle = state.settings?.progressStyle === 'top-bar' ? 'top-bar' : 'circular'
-
-  if (progressStyle === 'top-bar') {
-    return (
-      <div className="heyform-progress heyform-progress-top-bar" aria-label={t('{{number}}% answered', { number: state.percentage })}>
-        <div className="heyform-progress-top-bar-track">
-          <div
-            className="heyform-progress-top-bar-fill"
-            style={{ width: `${Math.max(0, Math.min(100, state.percentage))}%` }}
-          />
-        </div>
-        <span>{t('{{number}}% answered', { number: state.percentage })}</span>
-      </div>
-    )
-  }
 
   return (
     <div className="heyform-progress">
       <CircularProgressbar current={state.percentage} />
       <span>{t('{{number}}% answered', { number: state.percentage })}</span>
+    </div>
+  )
+}
+
+export const TopProgressBar: FC = () => {
+  const { t } = useTranslation()
+  const { state } = useStore()
+
+  return (
+    <div
+      className="heyform-progress-top-bar"
+      aria-label={t('{{number}}% answered', { number: state.percentage })}
+    >
+      <div className="heyform-progress-top-bar-track">
+        <div
+          className="heyform-progress-top-bar-fill"
+          style={{ width: `${Math.max(0, Math.min(100, state.percentage))}%` }}
+        />
+      </div>
     </div>
   )
 }

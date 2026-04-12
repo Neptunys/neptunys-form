@@ -33,6 +33,7 @@ export const OpinionScale: FC<BlockProps> = ({ field, ...restProps }) => {
           input: [state.values[field.id]].filter(isNotNil)
         }}
         autoSubmit={true}
+        autoSubmitDelayMs={420}
         isSubmitShow={false}
         field={field}
         getValues={getValues}
@@ -46,7 +47,7 @@ export const OpinionScale: FC<BlockProps> = ({ field, ...restProps }) => {
             }
           ]}
         >
-          <RadioGroup options={options} isHotkeyShow={false} />
+          <RadioGroup options={options} isHotkeyShow={false} selectionFeedback={true} />
         </FormField>
 
         <div className="heyform-opinion-scale-labels">

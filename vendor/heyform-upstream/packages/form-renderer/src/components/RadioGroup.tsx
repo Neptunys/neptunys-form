@@ -12,6 +12,7 @@ interface RadioGroupProps extends Omit<IComponentProps, 'onChange'> {
   options: RadioOption[]
   allowMultiple?: boolean
   isHotkeyShow?: boolean
+  selectionFeedback?: boolean
   max?: number
   enableImage?: boolean
   value?: any
@@ -27,19 +28,21 @@ export const RadioGroup: FC<RadioGroupProps> = ({
   options,
   allowMultiple = false,
   isHotkeyShow = true,
+  selectionFeedback = false,
   max = 0,
   enableImage,
   value: rawValue,
   onChange,
   ...restProps
 }) => {
+  const isMultipleSelection = helper.isTrue(allowMultiple)
   const values = useMemo(() => resetArray(rawValue), [rawValue])
   const isDisabled = useMemo(() => max > 0 && values.length >= max, [values, max])
 
   function handleClick(value: any) {
     let newValues: any[]
 
-    if (!allowMultiple) {
+    if (!isMultipleSelection) {
       newValues = [value]
     } else {
       if (values.includes(value)) {
@@ -52,7 +55,7 @@ export const RadioGroup: FC<RadioGroupProps> = ({
     onChange?.(newValues)
   }
 
-  const handleClickCallback = useCallback(handleClick, [allowMultiple, isDisabled, onChange, values])
+  const handleClickCallback = useCallback(handleClick, [isDisabled, isMultipleSelection, onChange, values])
 
   return (
     <div
@@ -72,6 +75,7 @@ export const RadioGroup: FC<RadioGroupProps> = ({
           enableImage={enableImage}
           isHotkeyShow={isHotkeyShow}
           isChecked={values.includes(option.value)}
+          autoAdvanceFeedback={selectionFeedback}
           onClick={handleClickCallback}
         />
       ))}

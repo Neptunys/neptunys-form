@@ -16,6 +16,7 @@ import FormRender from '@/pages/form/Render'
 import FormSettings from '@/pages/form/Settings'
 import FormShare from '@/pages/form/Share'
 import FormSubmissions from '@/pages/form/Submissions'
+import ProjectExperiments from '@/pages/project/Experiments'
 import ProjectForms from '@/pages/project/Forms'
 import ProjectTrash from '@/pages/project/Trash'
 import CreateWorkspace from '@/pages/workspace/Create'
@@ -153,6 +154,16 @@ const routes = [
     }
   },
   {
+    path: '/workspace/:workspaceId/project/:projectId/experiments',
+    layout: WorkspaceLayout,
+    component: ProjectExperiments,
+    options: {
+      projectShell: true,
+      loginRequired: true,
+      title: 'Experiments'
+    }
+  },
+  {
     path: '/workspace/:workspaceId/project/:projectId/form/:formId/analytics',
     layout: WorkspaceLayout,
     component: FormAnalytics,
@@ -213,6 +224,14 @@ const routes = [
   },
   {
     path: '/form/:formId',
+    component: FormRender,
+    options: {
+      loginRequired: false,
+      title: 'form.render.title'
+    }
+  },
+  {
+    path: '/x/:experimentId',
     component: FormRender,
     options: {
       loginRequired: false,

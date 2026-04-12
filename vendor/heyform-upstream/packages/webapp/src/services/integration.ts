@@ -39,6 +39,7 @@ import {
   SUPPORTPAL_DEPARTMENTS_GQL,
   SUPPORTPAL_PRIORITIES_GQL,
   SUPPORTPAL_STATUS_GQL,
+  TEST_INTEGRATION_GQL,
   THIRD_PARTY_OAUTH_URL_GQL,
   UPDATE_INTEGRATION_SETTINGS_GQL,
   UPDATE_INTEGRATION_STATUS_GQL
@@ -85,6 +86,19 @@ export class IntegrationService {
   static async updateSettings(formId: string, appId: string, config: AnyMap) {
     return apollo.mutate({
       mutation: UPDATE_INTEGRATION_SETTINGS_GQL,
+      variables: {
+        input: {
+          formId,
+          appId,
+          config
+        }
+      }
+    })
+  }
+
+  static async testSettings(formId: string, appId: string, config: AnyMap) {
+    return apollo.mutate({
+      mutation: TEST_INTEGRATION_GQL,
       variables: {
         input: {
           formId,

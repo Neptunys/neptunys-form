@@ -24,6 +24,9 @@ export class UpdateIntegrationInput extends IntegrationInput {
 }
 
 @InputType()
+export class TestIntegrationInput extends UpdateIntegrationInput {}
+
+@InputType()
 export class UpdateIntegrationStatusInput extends IntegrationInput {
   @Field(type => Number)
   @IsEnum(IntegrationStatusEnum)

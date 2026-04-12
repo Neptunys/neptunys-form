@@ -12,6 +12,9 @@ export default function ThankYou({ field }: RequiredSettingsProps) {
 
   const handleChange = useCallback(
     (key: string, value: any) => {
+      const normalizedValue =
+        typeof value === 'string' ? value.trim() || undefined : value
+
       startTransition(() => {
         dispatch({
           type: 'updateField',
@@ -20,7 +23,7 @@ export default function ThankYou({ field }: RequiredSettingsProps) {
             updates: {
               properties: {
                 ...field.properties,
-                [key]: value
+                [key]: normalizedValue
               }
             }
           }
@@ -31,7 +34,59 @@ export default function ThankYou({ field }: RequiredSettingsProps) {
   )
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-3">
+      <div className="space-y-1">
+        <div className="text-sm/6">{t('form.builder.settings.buttonText')}</div>
+        <Input
+          placeholder={t('form.builder.settings.thankYou.buttonPlaceholder')}
+          value={field.properties?.buttonText}
+          onChange={value => handleChange('buttonText', value)}
+        />
+      </div>
+
+      <div className="space-y-1">
+        <div className="text-sm/6">{t('form.builder.settings.thankYou.buttonLink')}</div>
+        <Input
+          placeholder="https://example.com"
+          type="url"
+          value={field.properties?.buttonLinkUrl}
+          onChange={value => handleChange('buttonLinkUrl', value)}
+        />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <label className="text-sm/6" htmlFor="#">
+          {t('form.builder.settings.thankYou.showShareAction')}
+        </label>
+
+        <Switch
+          value={field.properties?.enableShareIcon}
+          onChange={value => handleChange('enableShareIcon', value)}
+        />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <label className="text-sm/6" htmlFor="#">
+          {t('form.builder.settings.thankYou.showCompletionTime')}
+        </label>
+
+        <Switch
+          value={field.properties?.enableCompleteTime}
+          onChange={value => handleChange('enableCompleteTime', value)}
+        />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <label className="text-sm/6" htmlFor="#">
+          {t('form.builder.settings.thankYou.showResponsePanel')}
+        </label>
+
+        <Switch
+          value={field.properties?.showResponsePanel !== false}
+          onChange={value => handleChange('showResponsePanel', value)}
+        />
+      </div>
+
       <div className="flex items-center justify-between">
         <label className="text-sm/6" htmlFor="#">
           {t('form.builder.settings.redirect')}

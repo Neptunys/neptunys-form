@@ -1,6 +1,7 @@
 import type { FC } from 'react'
 
 import { isNotNil, useTranslation } from '../utils'
+import { helper } from '@heyform-inc/utils'
 
 import { FormField, RadioGroup } from '../components'
 import { useStore } from '../store'
@@ -11,6 +12,7 @@ import { Form } from './Form'
 export const YesNo: FC<BlockProps> = ({ field, ...restProps }) => {
   const { state } = useStore()
   const { t } = useTranslation()
+  const autoAdvanceSingleChoice = helper.isTrue(state.settings?.autoAdvanceSingleChoice)
 
   const options = [
     {
@@ -35,8 +37,10 @@ export const YesNo: FC<BlockProps> = ({ field, ...restProps }) => {
         initialValues={{
           input: [state.values[field.id]].filter(isNotNil)
         }}
-        autoSubmit={true}
-        isSubmitShow={false}
+        autoSubmit={autoAdvanceSingleChoice}
+        autoSubmitDelayMs={autoAdvanceSingleChoice ? 420 : 80}
+        allowAutoSubmitWithNextButton={autoAdvanceSingleChoice}
+        isSubmitShow={true}
         field={field}
         getValues={getValues}
       >
@@ -49,7 +53,11 @@ export const YesNo: FC<BlockProps> = ({ field, ...restProps }) => {
             }
           ]}
         >
-          <RadioGroup className="w-full" options={options} />
+          <RadioGroup
+            className="w-full"
+            options={options}
+            selectionFeedback={autoAdvanceSingleChoice}
+          />
         </FormField>
       </Form>
     </Block>

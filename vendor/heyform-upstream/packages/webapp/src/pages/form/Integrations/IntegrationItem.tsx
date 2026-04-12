@@ -1,4 +1,4 @@
-import { IconLink, IconPencil, IconTrash } from '@tabler/icons-react'
+import { IconAlertCircle, IconCheck, IconLink, IconPencil, IconTrash } from '@tabler/icons-react'
 import { useRequest } from 'ahooks'
 import { FC, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -68,6 +68,21 @@ const IntegrationItem: FC<IntegrationItemProps> = ({ app }) => {
     })
   }
 
+  const deliverySummary = useMemo(() => {
+    if (!app.integration?.lastDeliveryStatus || !app.integration?.lastDeliveryAt) {
+      return null
+    }
+
+    const deliveredAt = new Date(app.integration.lastDeliveryAt * 1000).toLocaleString()
+    const failed = app.integration.lastDeliveryStatus === 'error'
+
+    return {
+      failed,
+      text: failed ? `Last sync failed · ${deliveredAt}` : `Last sync succeeded · ${deliveredAt}`,
+      message: app.integration.lastDeliveryMessage
+    }
+  }, [app.integration?.lastDeliveryAt, app.integration?.lastDeliveryMessage, app.integration?.lastDeliveryStatus])
+
   const children = useMemo(() => {
     switch (app.status) {
       case APP_STATUS_ENUM.ACTIVE:
@@ -116,6 +131,28 @@ const IntegrationItem: FC<IntegrationItemProps> = ({ app }) => {
       </div>
       <div className="mt-2 font-medium">{app.name}</div>
       <div className="text-secondary mt-1">{app.description}</div>
+      {deliverySummary && (
+        <div
+          className={helper.isValid(deliverySummary.message) ? 'mt-3' : 'mt-2'}
+          data-status={deliverySummary.failed ? 'error' : 'success'}
+        >
+          <div
+            className={deliverySummary.failed ? 'text-error flex items-center gap-x-2' : 'text-brand flex items-center gap-x-2'}
+          >
+            {deliverySummary.failed ? (
+              <IconAlertCircle className="h-4 w-4" />
+            ) : (
+              <IconCheck className="h-4 w-4" />
+            )}
+            <span>{deliverySummary.text}</span>
+          </div>
+          {helper.isValid(deliverySummary.message) && (
+            <div className="text-secondary mt-1 line-clamp-2 text-xs leading-5">
+              {deliverySummary.message}
+            </div>
+          )}
+        </div>
+      )}
     </li>
   )
 }

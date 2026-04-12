@@ -65,11 +65,21 @@ export class ExportFileService {
         ...field,
         title: helper.isArray(field.title) ? htmlUtils.serialize(field.title) : field.title
       }))
+    const variableNames = Array.from(
+      new Set(
+        submissions.flatMap(submission =>
+          (submission.variables || [])
+            .map(variable => variable.name)
+            .filter((name): name is string => helper.isValid(name))
+        )
+      )
+    )
 
     const fields: string[] = [
       FIELD_ID_KEY,
       ...selectedFormFields.map(field => field.title),
       ...selectedHiddenFields.map(hiddenField => hiddenField.name),
+      ...variableNames.map(name => `Variable: ${name}`),
       START_DATE_KEY,
       SUBMIT_DATE_KEY
     ]
@@ -97,6 +107,12 @@ export class ExportFileService {
         )?.value
 
         record[selectedHiddenField.name] = hiddenFieldValue
+      }
+
+      for (const variableName of variableNames) {
+        const variableValue = submission.variables.find(variable => variable.name === variableName)?.value
+
+        record[`Variable: ${variableName}`] = helper.isNil(variableValue) ? '' : variableValue
       }
 
       record[START_DATE_KEY] = submission.startAt ? unixDate(submission.startAt!).toISOString() : ''

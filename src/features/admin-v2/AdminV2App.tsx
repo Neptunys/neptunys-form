@@ -4719,6 +4719,14 @@ export function AdminV2App() {
       return null
     }
 
+    const selectedQuestionNumber = selection.kind === 'question' && selectedQuestion && selectedVariant
+      ? Math.max(1, selectedVariant.questions.findIndex((question) => question.id === selectedQuestion.id) + 1)
+      : 1
+
+    const selectedQuestionProgress = selection.kind === 'question' && selectedVariant?.questions.length
+      ? Math.max(10, (selectedQuestionNumber / (selectedVariant.questions.length + 1)) * 100)
+      : 0
+
     const previewLogo = activeBuilderTheme?.logoImage ? (
       <div className="admin-v2-preview-theme-logo-wrap" style={builderPreviewStyles.logoWrapStyle}>
         <img
@@ -4756,24 +4764,39 @@ export function AdminV2App() {
         <div className="admin-v2-preview-card admin-v2-preview-card--themed" style={builderPreviewStyles.cardStyle}>
           {previewLogo}
           <div className={`admin-v2-preview-body admin-v2-preview-body--question is-${selectedQuestionElementKey}`} style={builderPreviewStyles.bodyStyle}>
-            <div className="admin-v2-preview-question-head">
-              <span className="admin-v2-preview-kicker">1°</span>
-              <textarea
-                value={selectedQuestion.prompt}
-                className="admin-v2-preview-inline-title"
-                style={builderPreviewStyles.titleStyle}
-                placeholder="..."
-                onChange={(event) => updateSelectedQuestion((question) => ({ ...question, prompt: event.target.value }))}
-              />
+            <div className="admin-v2-preview-progress-rail" aria-hidden="true">
+              <span style={{ width: `${selectedQuestionProgress}%`, background: activeBuilderTheme?.buttonBorderColor ?? activeBuilderTheme?.buttonColor }} />
             </div>
-            <textarea
-              value={selectedQuestion.helper ?? ''}
-              className="admin-v2-preview-inline-helper"
-              style={builderPreviewStyles.descriptionStyle}
-              placeholder={builderPreviewCopy.optionalDescription}
-              onChange={(event) => updateSelectedQuestion((question) => ({ ...question, helper: event.target.value }))}
-            />
-            {renderQuestionPreviewBody()}
+            <div className="admin-v2-preview-question-layout">
+              <div className="admin-v2-preview-question-head">
+                <span className="admin-v2-preview-step-chip">{selectedQuestionNumber}</span>
+                <textarea
+                  value={selectedQuestion.prompt}
+                  className="admin-v2-preview-inline-title"
+                  style={builderPreviewStyles.titleStyle}
+                  placeholder="..."
+                  onChange={(event) => updateSelectedQuestion((question) => ({ ...question, prompt: event.target.value }))}
+                />
+              </div>
+              <textarea
+                value={selectedQuestion.helper ?? ''}
+                className="admin-v2-preview-inline-helper"
+                style={builderPreviewStyles.descriptionStyle}
+                placeholder={builderPreviewCopy.optionalDescription}
+                onChange={(event) => updateSelectedQuestion((question) => ({ ...question, helper: event.target.value }))}
+              />
+              {renderQuestionPreviewBody()}
+            </div>
+            {builderDevice === 'mobile' ? (
+              <div className="admin-v2-preview-question-footer is-mobile">
+                <button type="button" className="admin-v2-preview-button admin-v2-preview-button--ghost admin-v2-preview-footer-back" style={builderPreviewStyles.secondaryButtonStyle}>←</button>
+                <button type="button" className="admin-v2-preview-button admin-v2-preview-button--confirm" style={builderPreviewStyles.buttonStyle}>OK</button>
+              </div>
+            ) : (
+              <div className="admin-v2-preview-question-footer is-desktop">
+                <button type="button" className="admin-v2-preview-button admin-v2-preview-button--confirm" style={builderPreviewStyles.buttonStyle}>OK</button>
+              </div>
+            )}
           </div>
         </div>
       )

@@ -7,6 +7,10 @@ export class ScheduleService implements OnApplicationBootstrap {
   constructor(
     @InjectQueue('DeleteFormInTrashSchedule')
     private readonly deleteFormInTrashSchedule: Queue,
+    @InjectQueue('FinalizeExperimentSchedule')
+    private readonly finalizeExperimentSchedule: Queue,
+    @InjectQueue('LeadReportSchedule')
+    private readonly leadReportSchedule: Queue,
     @InjectQueue('ResetInviteCodeSchedule')
     private readonly resetInviteCodeSchedule: Queue,
     @InjectQueue('DeleteUserAccountSchedule')
@@ -17,6 +21,16 @@ export class ScheduleService implements OnApplicationBootstrap {
       this.deleteFormInTrashSchedule.add(null, {
         repeat: {
           cron: '0 0 * * * *'
+        }
+      }),
+      this.finalizeExperimentSchedule.add(null, {
+        repeat: {
+          cron: '0 * * * * *'
+        }
+      }),
+      this.leadReportSchedule.add(null, {
+        repeat: {
+          cron: '0 5 * * * *'
         }
       }),
       this.resetInviteCodeSchedule.add(null, {

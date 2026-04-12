@@ -8,6 +8,7 @@ import { Image, Slider } from '@/components'
 
 export interface ImageBrightnessProps {
   imageURL?: string
+  label?: string
   value?: any
   onChange?: (value?: any) => void
 }
@@ -26,7 +27,7 @@ export function getBrightnessStyle(brightness: number) {
   }
 }
 
-const ImageBrightness: FC<ImageBrightnessProps> = ({ imageURL, value, onChange }) => {
+const ImageBrightness: FC<ImageBrightnessProps> = ({ imageURL, label, value, onChange }) => {
   const { t } = useTranslation()
   const isImage = useMemo(() => isRenderableImageSource(imageURL), [imageURL])
 
@@ -53,7 +54,7 @@ const ImageBrightness: FC<ImageBrightnessProps> = ({ imageURL, value, onChange }
       )}
 
       <div className="flex-1">
-        <div className="mb-1 text-sm/6">{t('form.builder.settings.brightness')}</div>
+        <div className="mb-1 text-sm/6">{label ?? t('form.builder.settings.brightness')}</div>
         <Slider min={-100} max={100} value={value} onChange={handleChange} />
       </div>
     </div>

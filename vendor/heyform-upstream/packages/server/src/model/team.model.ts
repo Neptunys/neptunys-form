@@ -25,6 +25,39 @@ export class TeamModel extends Document {
   @Prop()
   removeBranding?: boolean
 
+  @Prop()
+  clientName?: string
+
+  @Prop({ type: [String], default: [] })
+  leadNotificationEmails?: string[]
+
+  @Prop({ default: false })
+  enableLeadReport?: boolean
+
+  @Prop({ default: 30 })
+  leadReportRangeDays?: number
+
+  @Prop()
+  leadReportLastSentAt?: number
+
+  @Prop()
+  reportingTimezone?: string
+
+  @Prop({ default: false })
+  enableGoogleSheetsLeadSync?: boolean
+
+  @Prop({ type: Object, default: {} })
+  googleSheetsLeadConfig?: Record<string, any>
+
+  @Prop()
+  googleSheetsLeadLastDeliveryAt?: number
+
+  @Prop()
+  googleSheetsLeadLastDeliveryStatus?: string
+
+  @Prop()
+  googleSheetsLeadLastDeliveryMessage?: string
+
   @Prop({ unique: true, sparse: true })
   customDomain?: string
 

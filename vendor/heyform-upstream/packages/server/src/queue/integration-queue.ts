@@ -1,16 +1,19 @@
 import { Process, Processor } from '@nestjs/bull'
 import { Job } from 'bull'
 
-import { AppService, FormService, IntegrationService, SubmissionService } from '@service'
+import { AppService, FormService, IntegrationService, SubmissionService, TeamService } from '@service'
 import { mapToObject } from '@utils'
 
 import { BaseQueue } from './base.queue'
 
 export interface IntegrationQueueJob {
   appId: string
-  integrationId: string
+  integrationId?: string
   formId: string
   submissionId: string
+  teamId?: string
+  config?: Record<string, any>
+  deliveryTarget?: 'integration' | 'workspace-google-sheets'
 }
 
 @Processor('IntegrationQueue')
@@ -19,31 +22,71 @@ export class IntegrationQueue extends BaseQueue {
     private readonly appService: AppService,
     private readonly integrationService: IntegrationService,
     private readonly submissionService: SubmissionService,
-    private readonly formService: FormService
+    private readonly formService: FormService,
+    private readonly teamService: TeamService
   ) {
     super()
   }
 
   @Process()
   async process(job: Job<IntegrationQueueJob>) {
-    const { appId, integrationId, formId, submissionId } = job.data
+    const { appId, config: rawConfig, deliveryTarget, formId, integrationId, submissionId, teamId } = job.data
     const app = this.appService.findById(appId)
 
     if (app) {
       const [integration, submission, form] = await Promise.all([
-        this.integrationService.findById(integrationId),
+        integrationId ? this.integrationService.findById(integrationId) : Promise.resolve(null),
         this.submissionService.findById(submissionId),
         this.formService.findById(formId)
       ])
 
-      if (integration && submission && form) {
-        const config = mapToObject(integration.config)
+      if (submission && form) {
+        const team = await this.teamService.findById(teamId || form.teamId)
+        const config = integration ? mapToObject(integration.config) : mapToObject(rawConfig)
 
-        await app.run({
-          submission,
-          form,
-          config
-        })
+        try {
+          await app.run({
+            submission,
+            form,
+            config,
+            team: team || undefined
+          })
+
+          if (integration) {
+            await this.integrationService.update(integration.id, {
+              lastDeliveryAt: Math.floor(Date.now() / 1000),
+              lastDeliveryStatus: 'success',
+              lastDeliveryMessage: ''
+            })
+          }
+
+          if (deliveryTarget === 'workspace-google-sheets' && teamId) {
+            await this.teamService.update(teamId, {
+              googleSheetsLeadLastDeliveryAt: Math.floor(Date.now() / 1000),
+              googleSheetsLeadLastDeliveryStatus: 'success',
+              googleSheetsLeadLastDeliveryMessage: ''
+            })
+          }
+        } catch (error: any) {
+          if (integration) {
+            await this.integrationService.update(integration.id, {
+              lastDeliveryAt: Math.floor(Date.now() / 1000),
+              lastDeliveryStatus: 'error',
+              lastDeliveryMessage: error?.message || 'Integration delivery failed'
+            })
+          }
+
+          if (deliveryTarget === 'workspace-google-sheets' && teamId) {
+            await this.teamService.update(teamId, {
+              googleSheetsLeadLastDeliveryAt: Math.floor(Date.now() / 1000),
+              googleSheetsLeadLastDeliveryStatus: 'error',
+              googleSheetsLeadLastDeliveryMessage:
+                error?.message || 'Workspace Google Sheets delivery failed'
+            })
+          }
+
+          throw error
+        }
       }
     }
   }

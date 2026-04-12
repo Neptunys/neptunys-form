@@ -9,7 +9,7 @@ import { UserService, WorkspaceService } from '@/services'
 import { clearAuthState, clearCookie, cn, getCookie, useParam, useRouter } from '@/utils'
 import { helper, timestamp } from '@heyform-inc/utils'
 
-import Logo from '@/assets/logo.svg?react'
+import brandLogo from '@/assets/neptunys-logo.png'
 import { Button, useAlert } from '@/components'
 import { REDIRECT_COOKIE_NAME, VERIFY_USER_EMAIL } from '@/consts'
 import { useAppStore, useUserStore, useWorkspaceStore } from '@/store'
@@ -27,6 +27,8 @@ import UserAccountModal from './UserAccountModal'
 import UserDeletionModal from './UserDeletionModal'
 import WorkspaceAccount from './WorkspaceAccount'
 import WorkspaceSidebar, { WorkspaceSidebarModal } from './WorkspaceSidebar'
+
+const APP_NAME = 'NeptunysForm'
 
 const GuardScreen: FC<{ title: string; message?: string }> = ({ title, message }) => (
   <div className="bg-foreground flex min-h-screen items-center justify-center p-6">
@@ -106,7 +108,7 @@ export const LoginGuard: FC<LayoutProps> = ({ options, children }) => {
 
   useEffect(() => {
     if (helper.isValid(options?.title)) {
-      document.title = `${t(options!.title)} - HeyForm`
+      document.title = `${t(options!.title)} - ${APP_NAME}`
     }
   }, [options, t])
 
@@ -211,7 +213,7 @@ export const WorkspaceGuard: FC<LayoutProps> = ({ options, children }) => {
     selectWorkspace(workspaceId)
 
     if (workspaceId) {
-      let title = `${workspace?.name} - HeyForm`
+      let title = `${workspace?.name} - ${APP_NAME}`
 
       if (helper.isValid(options?.title)) {
         title = `${t(options!.title)} · ` + title
@@ -225,7 +227,7 @@ export const WorkspaceGuard: FC<LayoutProps> = ({ options, children }) => {
     selectProject(projectId)
 
     if (projectId) {
-      let title = `${workspace?.name}/${project?.name} - HeyForm`
+      let title = `${workspace?.name}/${project?.name} - ${APP_NAME}`
 
       if (helper.isValid(options?.title)) {
         title = `${t(options!.title)} · ` + title
@@ -257,7 +259,7 @@ export const BaseLayout: FC<LayoutProps> = ({ options, children }) => {
 
   useEffect(() => {
     if (helper.isValid(options?.title)) {
-      document.title = `${t(options!.title)} - HeyForm`
+      document.title = `${t(options!.title)} - ${APP_NAME}`
     }
   }, [options, t])
 
@@ -265,9 +267,9 @@ export const BaseLayout: FC<LayoutProps> = ({ options, children }) => {
     <LoginGuard>
       <div className="bg-foreground flex min-h-screen flex-col">
         <div className="bg-foreground sticky top-0 flex items-center justify-between p-4">
-          <a href="/" className="flex items-center gap-2" title="HeyForm">
-            <Logo className="h-8 w-auto" />
-            <span className="text-xl font-medium">HeyForm</span>
+          <a href="/" className="flex items-center gap-2" title={APP_NAME}>
+            <img src={brandLogo} alt={APP_NAME} className="h-8 w-auto object-contain" />
+            <span className="text-xl font-medium">{APP_NAME}</span>
           </a>
 
           <WorkspaceAccount

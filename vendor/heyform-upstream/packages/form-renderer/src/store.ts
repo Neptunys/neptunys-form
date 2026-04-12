@@ -77,6 +77,12 @@ export interface IStripe {
   accountId: string
 }
 
+export interface QuestionChangePayload {
+  questionId: string
+  order: number
+  title?: string
+}
+
 export interface IState {
   formId: string
   instanceId: string
@@ -104,6 +110,8 @@ export interface IState {
   isSubmitTouched?: boolean
   isStarted?: boolean
   isSubmitted?: boolean
+  startedAt?: number
+  submittedAt?: number
   isSidebarOpen?: boolean
   reportAbuseURL?: string
   locale: string
@@ -114,6 +122,7 @@ export interface IState {
   logo?: string
   theme: FormTheme
   stripe?: IStripe
+  onQuestionChange?: (question?: QuestionChangePayload) => void
   onSubmit?: (values: Record<string, any>, isPartial?: boolean, stripe?: IStripe) => Promise<void>
 }
 
@@ -148,7 +157,7 @@ const actions: any = {
     const questionCount = fields.filter(f => QUESTION_FIELD_KINDS.includes(f.kind)).length
     const percentage = progressPercentage(Object.keys(newValues).length, questionCount)
 
-    const isTouched = validateLogicField(fields[state.scrollIndex!], state.jumpFieldIds, values)
+    const isTouched = validateLogicField(fields[state.scrollIndex!], state.jumpFieldIds, newValues)
     const isScrollNextDisabled = !isTouched || state.scrollIndex! >= fields.length - 1
 
     return {
@@ -167,6 +176,8 @@ const actions: any = {
       {
         ...state,
         isStarted,
+        startedAt: isStarted ? state.startedAt || Date.now() : state.startedAt,
+        submittedAt: undefined,
         isSubmitted: state.fields.length < 1
       },
       {
@@ -181,11 +192,17 @@ const actions: any = {
   setIsSubmitted: (state: IState, { isSubmitted, thankYouFieldId }: any) => ({
     ...state,
     isSubmitted,
+    submittedAt: isSubmitted ? Date.now() : undefined,
     isSidebarOpen: false,
     thankYouFieldId
   }),
 
   setIsSidebarOpen: (state: IState, { isSidebarOpen }: any) => ({ ...state, isSidebarOpen }),
+
+  syncRuntimeOptions: (state: IState, payload: Partial<IState>) => ({
+    ...state,
+    ...payload
+  }),
 
   setStripe: (state: IState, { stripe }: any) => ({ ...state, stripe }),
 

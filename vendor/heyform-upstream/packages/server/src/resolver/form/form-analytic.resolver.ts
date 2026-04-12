@@ -1,9 +1,14 @@
 import { Auth, FormGuard } from '@decorator'
-import { FormAnalyticInput, FormAnalyticResult, FormAnalyticType } from '@graphql'
-import { date, helper, parseJson } from '@heyform-inc/utils'
+import {
+  FormAnalyticInput,
+  FormAnalyticResult,
+  FormAnalyticType,
+  FormQuestionAnalyticType
+} from '@graphql'
+import { date, helper } from '@heyform-inc/utils'
 import { FormAnalyticRangeEnum } from '@model'
 import { Args, Query, Resolver } from '@nestjs/graphql'
-import { FormAnalyticService, RedisService } from '@service'
+import { FormAnalyticService } from '@service'
 
 function getChanges(prev: number, next: number, isInteger = true) {
   const result: FormAnalyticResult = {
@@ -35,21 +40,11 @@ function getRate(totalVisits: number, submissionCount: number) {
 @Resolver()
 @Auth()
 export class FormAnalyticResolver {
-  constructor(
-    private readonly formAnalyticService: FormAnalyticService,
-    private readonly redisService: RedisService
-  ) {}
+  constructor(private readonly formAnalyticService: FormAnalyticService) {}
 
   @Query(returns => FormAnalyticType)
   @FormGuard()
   async formAnalytic(@Args('input') input: FormAnalyticInput): Promise<FormAnalyticType> {
-    const key = `form:${input.formId}:analytic:${input.range}`
-    const cache = await this.redisService.get(key)
-
-    if (helper.isValid(cache)) {
-      return parseJson(cache)
-    }
-
     const now = date().endOf('day')
     let startAt: Date
     let prevStartAt: Date
@@ -108,12 +103,37 @@ export class FormAnalyticResolver {
       averageTime: getChanges(prev.avgAverageTime, next.avgAverageTime, false)
     }
 
-    await this.redisService.set({
-      key,
-      value: JSON.stringify(result),
-      duration: '10m'
-    })
-
     return result
+  }
+
+  @Query(returns => [FormQuestionAnalyticType])
+  @FormGuard()
+  async formQuestionAnalytics(@Args('input') input: FormAnalyticInput) {
+    const now = date().endOf('day')
+    let startAt: Date
+
+    switch (input.range) {
+      case FormAnalyticRangeEnum.WEEK:
+        startAt = now.subtract(7, 'days').startOf('day').toDate()
+        break
+
+      case FormAnalyticRangeEnum.MONTH:
+        startAt = now.subtract(1, 'months').startOf('day').toDate()
+        break
+
+      case FormAnalyticRangeEnum.THREE_MONTH:
+        startAt = now.subtract(3, 'months').startOf('day').toDate()
+        break
+
+      case FormAnalyticRangeEnum.SIX_MONTH:
+        startAt = now.subtract(6, 'months').startOf('day').toDate()
+        break
+
+      case FormAnalyticRangeEnum.YEAR:
+        startAt = now.subtract(1, 'years').startOf('day').toDate()
+        break
+    }
+
+    return this.formAnalyticService.questionAnalytics(input.formId, startAt!, now.toDate())
   }
 }

@@ -274,6 +274,18 @@ export function QuizRunner() {
         ? 'Just a few final details left.'
         : 'Built for fast review and clear next steps.'
 
+  const currentSingleChoiceValue = currentQuestion?.kind === 'single'
+    ? pendingChoice?.questionId === currentQuestion.id
+      ? pendingChoice.optionId
+      : typeof answers[currentQuestion.id] === 'string'
+        ? answers[currentQuestion.id] as string
+        : ''
+    : ''
+
+  const canSubmitCurrentQuestion = currentQuestion?.kind === 'multi'
+    ? Array.isArray(answers[currentQuestion.id]) && (answers[currentQuestion.id] as string[]).length > 0
+    : false
+
   const themeVars = {
     '--quiz-page-bg': activeQuiz?.theme.pageBackground,
     '--quiz-surface': activeQuiz?.theme.surface,
@@ -301,6 +313,18 @@ export function QuizRunner() {
     '--quiz-builder-answer-border': activeBuilderTheme?.answerBorderColor,
     '--quiz-builder-answer-text': activeBuilderTheme?.answerTextColor,
     '--quiz-control-radius': activeBuilderTheme ? ({ none: '0px', soft: '10px', pill: '999px' }[activeBuilderTheme.cornerRadius]) : undefined,
+  } as CSSProperties
+
+  const pageBackgroundOverlayOpacity = Math.max(0.46, Math.min(0.78, 0.32 + Math.max(0, -(activeBuilderTheme?.backgroundBrightness ?? 0)) / 100))
+  const pageStyle = {
+    ...themeVars,
+    backgroundColor: activeBuilderTheme?.backgroundColor ?? activeQuiz?.theme.pageBackground,
+    backgroundImage: activeBuilderTheme?.backgroundImage
+      ? `linear-gradient(rgba(4, 7, 10, ${pageBackgroundOverlayOpacity}), rgba(4, 7, 10, ${pageBackgroundOverlayOpacity})), url(${activeBuilderTheme.backgroundImage})`
+      : undefined,
+    backgroundPosition: activeBuilderTheme?.backgroundImage ? 'center' : undefined,
+    backgroundSize: activeBuilderTheme?.backgroundImage ? 'cover' : undefined,
+    backgroundRepeat: activeBuilderTheme?.backgroundImage ? 'no-repeat' : undefined,
   } as CSSProperties
 
   useEffect(() => {
@@ -505,6 +529,49 @@ export function QuizRunner() {
       ...previous,
       [question.id]: next,
     }))
+    setErrorMessage('')
+  }
+
+  function submitCurrentQuestion() {
+    if (!currentQuestion || currentQuestion.kind !== 'multi') {
+      return
+    }
+
+    const selectedValues = Array.isArray(answers[currentQuestion.id]) ? answers[currentQuestion.id] as string[] : []
+
+    if (!selectedValues.length) {
+      setErrorMessage('Select at least one option to continue.')
+      return
+    }
+
+    setErrorMessage('')
+    recordAnswer(currentQuestion, selectedValues)
+  }
+
+  function goToPreviousQuestion() {
+    if (!activeQuiz || !activeVariant || !currentQuestion) {
+      return
+    }
+
+    const previousQuestion = activeVariant.questions[questionIndex - 1]
+
+    if (!previousQuestion) {
+      if (introNode) {
+        setCurrentNodeId(introNode.id)
+        setPhase('intro')
+      }
+      return
+    }
+
+    const previousQuestionNode = activeQuiz.workflow.nodes.find(
+      (node) => node.type === 'question' && node.questionId === previousQuestion.id,
+    )
+
+    if (previousQuestionNode) {
+      setCurrentNodeId(previousQuestionNode.id)
+      setPhase('question')
+      setErrorMessage('')
+    }
   }
 
   function goToLeadFlow() {
@@ -748,7 +815,10 @@ export function QuizRunner() {
 
   const introButtonLabels = useMemo(() => activeVariant ? [activeVariant.intro.cta] : [], [activeVariant])
   const questionOptionLabels = useMemo(() => currentQuestion ? currentQuestion.options.map((option) => option.label) : [], [currentQuestion])
-  const questionContinueLabels = useMemo(() => currentQuestion?.kind === 'multi' ? ['Continue'] : [], [currentQuestion?.kind])
+  const questionContinueLabels = useMemo(
+    () => currentQuestion?.kind === 'multi' ? ['OK'] : [],
+    [currentQuestion?.kind],
+  )
   const resultButtonLabels = useMemo(() => result ? [result.primaryCta, result.secondaryCta ?? ''].filter(Boolean) : [], [result])
   const transitionButtonLabels = useMemo(() => activeQuiz ? [activeQuiz.transitionScreen.cta] : [], [activeQuiz])
   const leadSingleOptionLabels = useMemo(
@@ -865,7 +935,7 @@ export function QuizRunner() {
   }
 
   return (
-    <div className={`quiz-page ${isLiveView ? 'is-live-view' : ''} ${isPreviewMode ? 'is-preview-view' : ''}`} style={themeVars}>
+    <div className={`quiz-page ${isLiveView ? 'is-live-view' : ''} ${isPreviewMode ? 'is-preview-view' : ''}`} style={pageStyle}>
       <div className={`quiz-shell ${previewDevice === 'mobile' ? 'preview-mobile' : 'preview-desktop'}`}>
         {isLiveView ? (
           <div className="quiz-frame-toolbar">
@@ -878,10 +948,16 @@ export function QuizRunner() {
         ) : null}
 
         <section className="quiz-card stack">
-          <div className="stack">
-            <div className="copy-kicker">{activeProject.name}</div>
-            <ProgressBar value={progressValue} />
-            <p className="muted" style={{ margin: 0 }}>{microMessage}</p>
+          <div className={`stack ${isFramedMode ? 'quiz-stage-progress' : ''}`}>
+            {isFramedMode ? (
+              <ProgressBar value={progressValue} />
+            ) : (
+              <>
+                <div className="copy-kicker">{activeProject.name}</div>
+                <ProgressBar value={progressValue} />
+                <p className="muted" style={{ margin: 0 }}>{microMessage}</p>
+              </>
+            )}
           </div>
 
           {phase === 'intro' ? (
@@ -912,19 +988,28 @@ export function QuizRunner() {
           ) : null}
 
           {phase === 'question' && currentQuestion ? (
-            <div className="stack">
-              <div>
-                <div className="small-label">Question {questionIndex + 1} / {activeVariant.questions.length}</div>
-                <h2 style={{ fontSize: '2rem', marginBottom: 12 }}>{currentQuestion.prompt}</h2>
+            <div className={`stack quiz-stage-question ${isFramedMode ? `is-${previewDevice}` : ''}`}>
+              <div className={`quiz-question-copy ${isFramedMode ? 'is-framed' : ''}`}>
+                {isFramedMode ? (
+                  <div className="quiz-question-headline">
+                    <span className="quiz-step-chip">{questionIndex + 1}</span>
+                    <h2 style={{ fontSize: '2rem', margin: 0 }}>{currentQuestion.prompt}</h2>
+                  </div>
+                ) : (
+                  <>
+                    <div className="small-label">Question {questionIndex + 1} / {activeVariant.questions.length}</div>
+                    <h2 style={{ fontSize: '2rem', marginBottom: 12 }}>{currentQuestion.prompt}</h2>
+                  </>
+                )}
                 {currentQuestion.helper ? <p className="muted">{currentQuestion.helper}</p> : null}
               </div>
 
-              <div className={`option-grid ${currentQuestion.kind === 'multi' ? 'multi' : ''}`} ref={questionOptionWidth.containerRef}>
+              <div className={`option-grid quiz-stage-options ${currentQuestion.kind === 'multi' ? 'multi' : ''}`} ref={questionOptionWidth.containerRef}>
                 {currentQuestion.options.map((option) => {
                   const currentAnswer = answers[currentQuestion.id]
                   const isSelected = Array.isArray(currentAnswer)
                     ? currentAnswer.includes(option.id)
-                    : currentAnswer === option.id
+                    : currentSingleChoiceValue === option.id
                   const tone =
                     isSelected
                       ? 'selected'
@@ -939,7 +1024,9 @@ export function QuizRunner() {
                       disabled={pendingChoice?.questionId === currentQuestion.id}
                       onClick={() => {
                         if (currentQuestion.kind === 'single') {
+                          setErrorMessage('')
                           setPendingChoice({ questionId: currentQuestion.id, optionId: option.id })
+
                           window.setTimeout(() => {
                             recordAnswer(currentQuestion, option.id)
                             setPendingChoice(null)
@@ -955,13 +1042,22 @@ export function QuizRunner() {
                 })}
               </div>
 
-              {currentQuestion.kind === 'multi' ? (
-                <div className="button-row" ref={questionContinueButtonWidth.containerRef}>
-                  <Button tone="primary" style={questionContinueButtonWidth.controlStyle} onClick={() => recordAnswer(currentQuestion, (answers[currentQuestion.id] as string[]) ?? [])}>
-                    Continue
-                  </Button>
+              {(currentQuestion.kind === 'multi' || (isFramedMode && previewDevice === 'mobile')) ? (
+                <div className={`button-row quiz-question-actions ${isFramedMode ? `is-${previewDevice}` : ''}`} ref={questionContinueButtonWidth.containerRef}>
+                  {isFramedMode && previewDevice === 'mobile' ? (
+                    <Button className="quiz-question-back" onClick={goToPreviousQuestion}>
+                      ←
+                    </Button>
+                  ) : null}
+                  {currentQuestion.kind === 'multi' ? (
+                    <Button tone="primary" style={questionContinueButtonWidth.controlStyle} onClick={submitCurrentQuestion} disabled={!canSubmitCurrentQuestion}>
+                      OK
+                    </Button>
+                  ) : null}
                 </div>
               ) : null}
+
+              {errorMessage ? <p style={{ color: '#ffb27c', margin: 0 }}>{errorMessage}</p> : null}
             </div>
           ) : null}
 

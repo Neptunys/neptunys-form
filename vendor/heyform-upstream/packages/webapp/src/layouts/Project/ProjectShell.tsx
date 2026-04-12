@@ -33,6 +33,11 @@ export const ProjectShell: FC<ProjectShellProps> = ({ children }) => {
         value: 'trash',
         label: t('project.trash.title'),
         to: `/workspace/${workspaceId}/project/${projectId}/trash`
+      },
+      {
+        value: 'experiments',
+        label: 'Experiments',
+        to: `/workspace/${workspaceId}/project/${projectId}/experiments`
       }
     ],
     [projectId, workspaceId, t]

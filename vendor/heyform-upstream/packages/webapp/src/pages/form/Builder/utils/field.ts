@@ -264,6 +264,12 @@ export function getFieldFromKind(kind: FieldKindEnum | string): FormFieldType {
       }
       break
 
+    case FieldKindEnum.LEGAL_TERMS:
+      field.validations!.required = true
+      field.properties!.buttonText = 'Continue'
+      field.properties!.consentText = 'I agree to the terms and privacy policy.'
+      break
+
     case FieldKindEnum.GROUP:
       field.isCollapsed = false
       field.properties!.fields = [getFieldFromKind(FieldKindEnum.SHORT_TEXT)]

@@ -17,7 +17,7 @@ SESSION_MAX_AGE=15d
 SESSION_KEY=local-dev-session-key-please-rotate
 FORM_ENCRYPTION_KEY=local-dev-form-key-please-rotate
 
-SMTP_FROM=HeyForm Local <noreply@local.test>
+SMTP_FROM=NeptunysForm Local <noreply@local.test>
 SMTP_HOST=mailpit
 SMTP_PORT=1025
 SMTP_USER=
@@ -40,7 +40,7 @@ $composeOverrideContent = @'
 services:
   heyform:
     environment:
-      SMTP_FROM: ${SMTP_FROM:-HeyForm Local <noreply@local.test>}
+      SMTP_FROM: ${SMTP_FROM:-NeptunysForm Local <noreply@local.test>}
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
       SMTP_SECURE: false
@@ -58,7 +58,7 @@ services:
 '@
 
 if (-not (Test-Path $heyformRoot)) {
-  throw "HeyForm upstream clone not found at $heyformRoot"
+  throw "NeptunysForm upstream clone not found at $heyformRoot"
 }
 
 Set-Content -Path $envFile -Value $envContent -Encoding UTF8
@@ -99,6 +99,6 @@ finally {
 }
 
 Write-Host ''
-Write-Host 'HeyForm local stack started:'
+Write-Host 'NeptunysForm local stack started:'
 Write-Host '  App:     http://localhost:9513'
 Write-Host '  Mailpit: http://localhost:8025'
