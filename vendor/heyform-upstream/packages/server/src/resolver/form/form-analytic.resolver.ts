@@ -37,6 +37,82 @@ function getRate(totalVisits: number, submissionCount: number) {
   }
 }
 
+function getRangeDates(input: FormAnalyticInput) {
+  const now = date()
+  let startAt = now.startOf('day')
+  let endAt = now.endOf('day')
+  let prevStartAt = now.subtract(1, 'day').startOf('day')
+  let prevEndAt = now.subtract(1, 'day').endOf('day')
+
+  switch (input.range) {
+    case FormAnalyticRangeEnum.TODAY:
+      break
+
+    case FormAnalyticRangeEnum.WEEK:
+      startAt = now.subtract(7, 'days').startOf('day')
+      endAt = now.endOf('day')
+      prevStartAt = startAt.subtract(7, 'days').startOf('day')
+      prevEndAt = startAt.subtract(1, 'day').endOf('day')
+      break
+
+    case FormAnalyticRangeEnum.MONTH:
+      startAt = now.subtract(1, 'months').startOf('day')
+      endAt = now.endOf('day')
+      prevStartAt = startAt.subtract(1, 'months').startOf('day')
+      prevEndAt = startAt.subtract(1, 'day').endOf('day')
+      break
+
+    case FormAnalyticRangeEnum.THREE_MONTH:
+      startAt = now.subtract(3, 'months').startOf('day')
+      endAt = now.endOf('day')
+      prevStartAt = startAt.subtract(3, 'months').startOf('day')
+      prevEndAt = startAt.subtract(1, 'day').endOf('day')
+      break
+
+    case FormAnalyticRangeEnum.SIX_MONTH:
+      startAt = now.subtract(6, 'months').startOf('day')
+      endAt = now.endOf('day')
+      prevStartAt = startAt.subtract(6, 'months').startOf('day')
+      prevEndAt = startAt.subtract(1, 'day').endOf('day')
+      break
+
+    case FormAnalyticRangeEnum.YEAR:
+      startAt = now.subtract(1, 'years').startOf('day')
+      endAt = now.endOf('day')
+      prevStartAt = startAt.subtract(1, 'years').startOf('day')
+      prevEndAt = startAt.subtract(1, 'day').endOf('day')
+      break
+
+    case FormAnalyticRangeEnum.CUSTOM: {
+      const rawStart = input.startDate ? date(input.startDate) : now
+      const rawEnd = input.endDate ? date(input.endDate) : rawStart
+      const normalizedStart = rawEnd.isBefore(rawStart)
+        ? rawEnd.startOf('day')
+        : rawStart.startOf('day')
+      const normalizedEnd = rawEnd.isBefore(rawStart)
+        ? rawStart.endOf('day')
+        : rawEnd.endOf('day')
+      const rangeDays = Math.max(
+        1,
+        normalizedEnd.startOf('day').diff(normalizedStart.startOf('day'), 'day') + 1
+      )
+
+      startAt = normalizedStart
+      endAt = normalizedEnd
+      prevStartAt = normalizedStart.subtract(rangeDays, 'day').startOf('day')
+      prevEndAt = normalizedStart.subtract(1, 'day').endOf('day')
+      break
+    }
+  }
+
+  return {
+    startAt: startAt.toDate(),
+    endAt: endAt.toDate(),
+    prevStartAt: prevStartAt.toDate(),
+    prevEndAt: prevEndAt.toDate()
+  }
+}
+
 @Resolver()
 @Auth()
 export class FormAnalyticResolver {
@@ -45,48 +121,23 @@ export class FormAnalyticResolver {
   @Query(returns => FormAnalyticType)
   @FormGuard()
   async formAnalytic(@Args('input') input: FormAnalyticInput): Promise<FormAnalyticType> {
-    const now = date().endOf('day')
-    let startAt: Date
-    let prevStartAt: Date
-
-    switch (input.range) {
-      case FormAnalyticRangeEnum.WEEK:
-        startAt = now.subtract(7, 'days').startOf('day').toDate()
-        prevStartAt = now.subtract(14, 'days').startOf('day').toDate()
-        break
-
-      case FormAnalyticRangeEnum.MONTH:
-        startAt = now.subtract(1, 'months').startOf('day').toDate()
-        prevStartAt = now.subtract(2, 'months').startOf('day').toDate()
-        break
-
-      case FormAnalyticRangeEnum.THREE_MONTH:
-        startAt = now.subtract(3, 'months').startOf('day').toDate()
-        prevStartAt = now.subtract(6, 'months').startOf('day').toDate()
-        break
-
-      case FormAnalyticRangeEnum.SIX_MONTH:
-        startAt = now.subtract(6, 'months').startOf('day').toDate()
-        prevStartAt = now.subtract(12, 'months').startOf('day').toDate()
-        break
-
-      case FormAnalyticRangeEnum.YEAR:
-        startAt = now.subtract(1, 'years').startOf('day').toDate()
-        prevStartAt = now.subtract(2, 'years').startOf('day').toDate()
-        break
-    }
+    const { startAt, endAt, prevStartAt, prevEndAt } = getRangeDates(input)
 
     const [prev, next] = await Promise.all([
       this.formAnalyticService.summary({
         formId: input.formId,
         startAt: prevStartAt,
-        endAt: startAt
+        endAt: prevEndAt,
+        sourceChannel: input.sourceChannel,
+        dedupeByIp: input.dedupeByIp
       }),
       this.formAnalyticService.summary({
         formId: input.formId,
         startAt,
-        endAt: now.toDate(),
-        isNext: true
+        endAt,
+        isNext: true,
+        sourceChannel: input.sourceChannel,
+        dedupeByIp: input.dedupeByIp
       })
     ])
 
@@ -100,7 +151,8 @@ export class FormAnalyticResolver {
         value: nextRate,
         change: prevRate ? nextRate - prevRate : undefined
       },
-      averageTime: getChanges(prev.avgAverageTime, next.avgAverageTime, false)
+      averageTime: getChanges(prev.avgAverageTime, next.avgAverageTime, false),
+      sourceBreakdown: next.sourceBreakdown || []
     }
 
     return result
@@ -109,31 +161,11 @@ export class FormAnalyticResolver {
   @Query(returns => [FormQuestionAnalyticType])
   @FormGuard()
   async formQuestionAnalytics(@Args('input') input: FormAnalyticInput) {
-    const now = date().endOf('day')
-    let startAt: Date
+    const { startAt, endAt } = getRangeDates(input)
 
-    switch (input.range) {
-      case FormAnalyticRangeEnum.WEEK:
-        startAt = now.subtract(7, 'days').startOf('day').toDate()
-        break
-
-      case FormAnalyticRangeEnum.MONTH:
-        startAt = now.subtract(1, 'months').startOf('day').toDate()
-        break
-
-      case FormAnalyticRangeEnum.THREE_MONTH:
-        startAt = now.subtract(3, 'months').startOf('day').toDate()
-        break
-
-      case FormAnalyticRangeEnum.SIX_MONTH:
-        startAt = now.subtract(6, 'months').startOf('day').toDate()
-        break
-
-      case FormAnalyticRangeEnum.YEAR:
-        startAt = now.subtract(1, 'years').startOf('day').toDate()
-        break
-    }
-
-    return this.formAnalyticService.questionAnalytics(input.formId, startAt!, now.toDate())
+    return this.formAnalyticService.questionAnalytics(input.formId, startAt, endAt, {
+      sourceChannel: input.sourceChannel,
+      dedupeByIp: input.dedupeByIp
+    })
   }
 }

@@ -36,6 +36,7 @@ export class UpdateFormResolver {
       ['enableProgress', 'settings.enableProgress'],
       ['progressStyle', 'settings.progressStyle'],
       ['autoAdvanceSingleChoice', 'settings.autoAdvanceSingleChoice'],
+      ['enableQuestionNumbers', 'settings.enableQuestionNumbers'],
       ['enableQuestionList', 'settings.enableQuestionList'],
       ['enableNavigationArrows', 'settings.enableNavigationArrows'],
       ['locale', 'settings.locale'],
@@ -118,6 +119,18 @@ export class UpdateFormResolver {
       updates['settings.metaOGImageUrl'] = null
     }
 
-    return this.formService.update(input.formId, updates)
+    const tasks = [this.formService.update(input.formId, updates)]
+
+    if (Object.prototype.hasOwnProperty.call(input, 'slug')) {
+      tasks.push(this.formService.updatePublicSlug(form, input.slug))
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, 'isDomainRoot')) {
+      tasks.push(this.formService.setDomainRoot(form, helper.isTrue(input.isDomainRoot)))
+    }
+
+    const results = await Promise.all(tasks)
+
+    return results.every(Boolean)
   }
 }

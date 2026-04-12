@@ -25,6 +25,33 @@ export class ProjectModel extends Document {
   @Prop()
   avatar?: string
 
+  @Prop({ index: true })
+  launchPath?: string
+
+  @Prop()
+  launchMode?: string
+
+  @Prop()
+  launchFormId?: string
+
+  @Prop()
+  launchExperimentId?: string
+
+  @Prop({ type: [String] })
+  leadNotificationEmails?: string[]
+
+  @Prop()
+  enableLeadReport?: boolean
+
+  @Prop()
+  leadReportRangeDays?: number
+
+  @Prop()
+  leadReportLastSentAt?: number
+
+  @Prop()
+  reportingTimezone?: string
+
   /**
    * Attach references to the project model for easy query,
    * will not be used as a column in the project schema
@@ -39,3 +66,5 @@ export class ProjectModel extends Document {
 }
 
 export const ProjectSchema = SchemaFactory.createForClass(ProjectModel)
+
+ProjectSchema.index({ teamId: 1, launchPath: 1 }, { unique: true, sparse: true })

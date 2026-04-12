@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { cn, isRenderableImageSource } from '@/utils'
 import { helper } from '@heyform-inc/utils'
 
+import { useFormStore } from '@/store'
 import { FormFieldType } from '@/types'
 
 import { RichText } from '../../RichText'
@@ -27,6 +28,7 @@ export const Block: FC<BlockProps> = ({
   ...restProps
 }) => {
   const { dispatch } = useStoreContext()
+  const { tempSettings } = useFormStore()
   const { t } = useTranslation()
 
   const titleRef = useRef<HTMLDivElement>(undefined)
@@ -38,6 +40,7 @@ export const Block: FC<BlockProps> = ({
   const inlineMediaWidth = helper.isValid(field.layout?.inlineMediaWidth)
     ? Math.max(20, Math.min(100, Number(field.layout?.inlineMediaWidth)))
     : 75
+  const showQuestionNumber = tempSettings?.enableQuestionNumbers !== false
   const stepLabel =
     QUESTION_FIELD_KINDS.includes(field.kind) && helper.isValid(field.index)
       ? String(field.index)
@@ -121,7 +124,9 @@ export const Block: FC<BlockProps> = ({
 
             <div className="mb-10">
               <div className="heyform-block-title-row">
-                {stepLabel && <span className="heyform-question-index">{stepLabel}</span>}
+                {showQuestionNumber && stepLabel && (
+                  <span className="heyform-question-index">{stepLabel}</span>
+                )}
                 <RichText
                   className="heyform-block-title"
                   innerRef={titleRef as RefObject<HTMLDivElement>}

@@ -11,7 +11,16 @@ export function useQuery(): AnyMap {
 }
 
 export function useParam() {
-  const { workspaceId, projectId, formId, templateId, code, categoryId } = useParams() as AnyMap<
+  const {
+    workspaceId,
+    projectId,
+    formId,
+    templateId,
+    code,
+    categoryId,
+    experimentId,
+    publicSlug
+  } = useParams() as AnyMap<
     string,
     string
   >
@@ -22,7 +31,9 @@ export function useParam() {
     formId,
     templateId,
     categoryId,
-    code
+    code,
+    experimentId,
+    publicSlug
   }
 }
 

@@ -9,10 +9,31 @@ export interface ProjectType {
   teamId: string
   name: string
   ownerId: string
+  icon?: string
+  launchPath?: string
+  launchMode?: 'form' | 'experiment'
+  launchFormId?: string
+  launchExperimentId?: string
+  leadNotificationEmails?: string[]
+  enableLeadReport?: boolean
+  leadReportRangeDays?: number
+  leadReportLastSentAt?: number
+  reportingTimezone?: string
   formCount: number
   isOwner?: boolean
   members: string[]
   forms: FormModel
+}
+
+export interface ProjectLaunchOverviewType {
+  projectId: string
+  formCount: number
+  publishedFormCount: number
+  experimentCount: number
+  runningExperimentCount: number
+  leadCount30d: number
+  highPriorityLeadCount30d: number
+  lastLeadAt?: number
 }
 
 export interface BrandKitType {

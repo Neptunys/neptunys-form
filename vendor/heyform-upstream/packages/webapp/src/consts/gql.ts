@@ -92,6 +92,15 @@ export const WORKSPACES_GQL = gql`
         name
         ownerId
         icon
+        launchPath
+        launchMode
+        launchFormId
+        launchExperimentId
+        leadNotificationEmails
+        enableLeadReport
+        leadReportRangeDays
+        leadReportLastSentAt
+        reportingTimezone
         members
         formCount
         isOwner
@@ -152,6 +161,8 @@ export const WORKSPACE_RECENT_FORMS_GQL = gql`
   query teamRecentForms($input: RecentFormsInput!) {
     teamRecentForms(input: $input) {
       id
+      slug
+      isDomainRoot
       teamId
       projectId
       memberId
@@ -182,6 +193,7 @@ export const WORKSPACE_RECENT_FORMS_GQL = gql`
         enableProgress
         progressStyle
         autoAdvanceSingleChoice
+        enableQuestionNumbers
         enableQuestionList
         enableNavigationArrows
         locale
@@ -358,6 +370,27 @@ export const CREATE_PROJECT_GQL = gql`
   }
 `
 
+export const UPDATE_PROJECT_GQL = gql`
+  mutation updateProject($input: UpdateProjectInput!) {
+    updateProject(input: $input)
+  }
+`
+
+export const PROJECT_LAUNCH_OVERVIEW_GQL = gql`
+  query projectLaunchOverview($input: ProjectDetailInput!) {
+    projectLaunchOverview(input: $input) {
+      projectId
+      formCount
+      publishedFormCount
+      experimentCount
+      runningExperimentCount
+      leadCount30d
+      highPriorityLeadCount30d
+      lastLeadAt
+    }
+  }
+`
+
 export const EXPERIMENTS_GQL = gql`
   query experiments($input: ProjectDetailInput!) {
     experiments(input: $input) {
@@ -370,6 +403,8 @@ export const EXPERIMENTS_GQL = gql`
       autoPromote
       durationHours
       minimumSampleSize
+      minimumSampleReached
+      promotionBlockedReason
       startAt
       endAt
       winnerFormId
@@ -386,6 +421,8 @@ export const EXPERIMENTS_GQL = gql`
         conversionRate
         averageTime
         isWinner
+        meetsMinimumSample
+        minimumSampleGap
       }
     }
   }
@@ -473,6 +510,8 @@ export const FORMS_GQL = gql`
   query forms($input: FormsInput!) {
     forms(input: $input) {
       id
+      slug
+      isDomainRoot
       teamId
       projectId
       memberId
@@ -501,6 +540,7 @@ export const FORMS_GQL = gql`
         ipLimitCount
         ipLimitTime
         enableProgress
+        enableQuestionNumbers
         enableQuestionList
         enableNavigationArrows
         locale
@@ -539,6 +579,11 @@ export const FORM_ANALYTIC_GQL = gql`
       averageTime {
         value
         change
+      }
+      sourceBreakdown {
+        channel
+        totalVisits
+        submissionCount
       }
     }
   }
@@ -625,6 +670,8 @@ export const FORM_DETAIL_GQL = gql`
   query formDetail($input: FormDetailInput!) {
     formDetail(input: $input) {
       id
+      slug
+      isDomainRoot
       teamId
       memberId
       name
@@ -657,6 +704,7 @@ export const FORM_DETAIL_GQL = gql`
         enableProgress
         progressStyle
         autoAdvanceSingleChoice
+        enableQuestionNumbers
         enableQuestionList
         enableNavigationArrows
         enableEmailNotification
@@ -955,6 +1003,7 @@ export const SUBMISSIONS_GQL = gql`
       total
       submissions {
         id
+        isPartial
         category
         title
         answers
@@ -1520,6 +1569,8 @@ export const PUBLIC_FORM_GQL = gql`
   query publicForm($input: FormDetailInput!) {
     publicForm(input: $input) {
       id
+      slug
+      isDomainRoot
       teamId
       memberId
       name
@@ -1552,6 +1603,7 @@ export const PUBLIC_FORM_GQL = gql`
         enableProgress
         progressStyle
         autoAdvanceSingleChoice
+        enableQuestionNumbers
         enableQuestionList
         enableNavigationArrows
         locale
@@ -1597,6 +1649,105 @@ export const PUBLIC_FORM_GQL = gql`
       isDraft
       status
       integrations
+    }
+  }
+`
+
+export const PUBLIC_FORM_BY_DOMAIN_GQL = gql`
+  query publicFormByDomain($input: PublicFormRouteInput!) {
+    publicFormByDomain(input: $input) {
+      id
+      slug
+      isDomainRoot
+      teamId
+      memberId
+      name
+      description
+      interactiveMode
+      kind
+      stripeAccount {
+        accountId
+        email
+      }
+      settings {
+        captchaKind
+        googleRecaptchaKey
+        active
+        enableExpirationDate
+        expirationTimeZone
+        enabledAt
+        closedAt
+        enableTimeLimit
+        timeLimit
+        filterSpam
+        allowArchive
+        password
+        requirePassword
+        enableQuotaLimit
+        quotaLimit
+        enableIpLimit
+        ipLimitCount
+        ipLimitTime
+        enableProgress
+        progressStyle
+        autoAdvanceSingleChoice
+        enableQuestionNumbers
+        enableQuestionList
+        enableNavigationArrows
+        locale
+        languages
+        enableClosedMessage
+        closedFormTitle
+        closedFormDescription
+      }
+      drafts {
+        id
+        title
+        titleSchema
+        description
+        kind
+        validations
+        properties
+        layout
+      }
+      fields {
+        id
+        title
+        titleSchema
+        description
+        kind
+        validations
+        properties
+        layout
+      }
+      translations
+      hiddenFields {
+        id
+        name
+      }
+      logics
+      variables
+      fieldsUpdatedAt
+      themeSettings {
+        logo
+        theme
+      }
+      retentionAt
+      suspended
+      isDraft
+      status
+      integrations
+    }
+  }
+`
+
+export const PUBLIC_ROUTE_BY_DOMAIN_GQL = gql`
+  query publicRouteByDomain($input: PublicFormRouteInput!) {
+    publicRouteByDomain(input: $input) {
+      kind
+      formId
+      experimentId
+      projectId
     }
   }
 `

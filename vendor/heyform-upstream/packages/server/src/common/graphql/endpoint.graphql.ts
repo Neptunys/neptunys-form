@@ -141,6 +141,26 @@ export class CompleteSubmissionInput {
   recaptchaToken?: string
 }
 
+@InputType()
+export class CaptureLeadSubmissionInput {
+  @Field()
+  formId: string
+
+  @Field(type => GraphQLJSONObject)
+  answers: Record<string, any>
+
+  @Field(type => [HiddenFieldAnswerInput], { nullable: true })
+  hiddenFields?: HiddenFieldAnswer[]
+
+  @Field()
+  openToken: string
+
+  @Field({ nullable: true })
+  @IsString()
+  @IsOptional()
+  passwordToken?: string
+}
+
 @ObjectType()
 export class CompleteSubmissionType {
   @Field({ nullable: true })

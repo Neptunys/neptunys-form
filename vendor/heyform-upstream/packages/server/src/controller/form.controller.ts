@@ -1,5 +1,5 @@
-import { Controller, Get, Res } from '@nestjs/common'
-import { Response } from 'express'
+import { Controller, Get, Param, Req, Res } from '@nestjs/common'
+import { Request, Response } from 'express'
 
 import {
   APP_HOMEPAGE_URL,
@@ -8,12 +8,14 @@ import {
   GOOGLE_RECAPTCHA_KEY,
   STRIPE_PUBLISHABLE_KEY
 } from '@environments'
+import { TeamService } from '@service'
 
 @Controller()
 export class FormController {
-  @Get('/form/:formId')
-  async index(@Res() res: Response) {
-    return res.render('index', {
+  constructor(private readonly teamService: TeamService) {}
+
+  private runtimeConfig() {
+    return {
       heyform: {
         homepageURL: APP_HOMEPAGE_URL,
         websiteURL: APP_HOMEPAGE_URL,
@@ -22,6 +24,33 @@ export class FormController {
         stripePublishableKey: STRIPE_PUBLISHABLE_KEY,
         googleRecaptchaKey: GOOGLE_RECAPTCHA_KEY
       }
-    })
+    }
+  }
+
+  private async isCustomDomainHost(hostname?: string) {
+    if (!hostname) {
+      return false
+    }
+
+    return !!(await this.teamService.findByCustomDomain(hostname.toLowerCase()))
+  }
+
+  @Get('/form/:formId')
+  async index(@Res() res: Response) {
+    return res.render('index', this.runtimeConfig())
+  }
+
+  @Get('/x/:experimentId')
+  async experiment(@Res() res: Response) {
+    return res.render('index', this.runtimeConfig())
+  }
+
+  @Get('/:slug')
+  async customDomainSlug(@Req() req: Request, @Param('slug') _slug: string, @Res() res: Response) {
+    if (!(await this.isCustomDomainHost(req.hostname))) {
+      return res.status(404).send('Not Found')
+    }
+
+    return res.render('index', this.runtimeConfig())
   }
 }

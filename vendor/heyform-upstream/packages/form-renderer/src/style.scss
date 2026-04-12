@@ -646,7 +646,7 @@ button.button-icon-only {
   --heyform-content-offset-desktop: 0px;
   --heyform-question-transition-duration: 1000ms;
   --heyform-question-transition-easing: cubic-bezier(0.22, 1, 0.36, 1);
-  --heyform-question-transition-distance: 100vh;
+  --heyform-question-transition-distance: 100dvh;
 }
 
 .heyform-root-android {
@@ -1124,6 +1124,9 @@ button.button-icon-only {
 // ----------------------------------------------------------------------------
 // Opinion scale
 .heyform-opinion-scale {
+  --heyform-opinion-option-size: 3rem;
+  --heyform-opinion-option-size-mobile: 2.75rem;
+
   .heyform-radio-icon {
     @apply hidden;
   }
@@ -1140,14 +1143,26 @@ button.button-icon-only {
     }
   }
 
+  &.heyform-options-center {
+    .heyform-radio-group,
+    .heyform-opinion-scale-labels {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .heyform-radio-group {
+      justify-content: center;
+    }
+  }
+
   .heyform-radio {
     @apply m-0 flex-none;
-    height: 3rem;
-    width: 3rem;
+    height: var(--heyform-opinion-option-size);
+    width: var(--heyform-opinion-option-size);
 
     @media (max-width: 800px) {
-      height: 2.75rem;
-      width: 2.75rem;
+      height: var(--heyform-opinion-option-size-mobile);
+      width: var(--heyform-opinion-option-size-mobile);
     }
   }
 
@@ -1171,7 +1186,14 @@ button.button-icon-only {
 
 .heyform-opinion-scale-labels {
   @apply mt-1 flex items-center;
+  width: min(100%, var(--heyform-answer-width-desktop));
+  margin-left: 0;
+  margin-right: auto;
   color: var(--heyform-answer-color);
+
+  @media (max-width: 800px) {
+    width: min(100%, var(--heyform-answer-width-mobile));
+  }
 }
 
 // ----------------------------------------------------------------------------
@@ -1299,6 +1321,115 @@ button.button-icon-only {
 }
 
 @media (max-width: 800px) {
+  .heyform-block-container {
+    overflow: hidden;
+  }
+
+  .heyform-block-main:has(.heyform-form-mobile-docked) {
+    position: relative;
+    min-height: calc(100dvh - 4.75rem - env(safe-area-inset-bottom));
+    max-width: min(calc(100% - 2.5rem), var(--heyform-answer-width-mobile));
+    margin-left: auto;
+    margin-right: auto;
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .heyform-block-main:has(.heyform-form-mobile-docked) .heyform-block-wrapper {
+    min-height: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    display: block;
+  }
+
+  .heyform-block-main:has(.heyform-form-mobile-docked) .heyform-block-header {
+    margin-top: 0;
+    margin-bottom: 1.75rem;
+  }
+
+  .heyform-block-main:has(.heyform-form-mobile-docked) .heyform-block-title-row {
+    gap: 0.4rem;
+    align-items: flex-start;
+  }
+
+  .heyform-form-mobile-docked {
+    min-height: 0;
+    display: block;
+  }
+
+  .heyform-form-mobile-docked .heyform-form-content {
+    display: block;
+  }
+
+  .heyform-form-mobile-docked .heyform-form-actions {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(0.75rem + env(safe-area-inset-bottom));
+    z-index: 12;
+    margin-top: 0;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 0.75rem;
+    width: 100%;
+    padding-top: 0;
+    padding-bottom: 0;
+    background: transparent;
+  }
+
+  .heyform-form-mobile-docked .heyform-submit-container {
+    order: 1;
+    flex: 1 1 0%;
+    min-width: 0;
+    margin-top: 0;
+  }
+
+  .heyform-form-mobile-docked button.heyform-submit-button {
+    width: 100%;
+    min-height: 3.25rem;
+    border-radius: var(--heyform-button-radius);
+    font-size: 1rem;
+    font-weight: 700;
+    box-shadow: none;
+  }
+
+  .heyform-form-mobile-docked .heyform-back-button {
+    order: 0;
+    width: 3.25rem;
+    min-width: 3.25rem;
+    min-height: 3.25rem;
+    padding: 0;
+    border-radius: 0.4rem;
+    color: var(--heyform-button-text-color);
+    background-color: var(--heyform-button-color);
+    box-shadow: none;
+  }
+
+  .heyform-form-mobile-docked .heyform-back-button:hover {
+    color: var(--heyform-button-text-color);
+    background-color: var(--heyform-button-opacity-80-color);
+    box-shadow: none;
+  }
+
+  .heyform-form-mobile-docked .heyform-back-button-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .heyform-form-mobile-docked .heyform-back-button-text {
+    display: none;
+  }
+
+  .heyform-form-mobile-docked .heyform-skip-button {
+    order: 2;
+    margin-left: auto;
+    padding-right: 0;
+  }
+
   .heyform-multiple-choice,
   .heyform-yes-no,
   .heyform-picture-choice {
@@ -1596,6 +1727,60 @@ button.button-icon-only {
   }
 }
 
+.heyform-picture-choice-compare {
+  .heyform-radio-group.heyform-picture-choice-list-compare {
+    width: min(100%, var(--heyform-content-width-desktop));
+  }
+
+  .heyform-picture-choice-list-compare {
+    .heyform-radio {
+      height: clamp(18rem, 34vw, 26rem);
+      width: calc(50% - (var(--heyform-answer-gap-desktop) / 2));
+      max-width: calc(50% - (var(--heyform-answer-gap-desktop) / 2));
+
+      @media (min-width: 960px) {
+        width: calc(50% - (var(--heyform-answer-gap-desktop) / 2));
+        max-width: calc(50% - (var(--heyform-answer-gap-desktop) / 2));
+      }
+
+      @media (min-width: 1280px) {
+        width: calc(50% - (var(--heyform-answer-gap-desktop) / 2));
+        max-width: calc(50% - (var(--heyform-answer-gap-desktop) / 2));
+      }
+
+      @media (max-width: 800px) {
+        height: auto;
+      }
+
+      @media (max-width: 520px) {
+        width: 100%;
+        max-width: 100%;
+      }
+    }
+
+    .heyform-radio-container {
+      gap: 0.75rem;
+    }
+
+    .heyform-radio-image {
+      @apply flex-1 items-center justify-center pb-0;
+      min-height: 0;
+    }
+
+    .heyform-radio-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: calc(var(--heyform-answer-radius) - 1px);
+      background-color: var(--heyform-background-color);
+    }
+
+    .heyform-radio-content {
+      padding-top: 0.25rem;
+    }
+  }
+}
+
 // ----------------------------------------------------------------------------
 // Legal terms
 .heyform-legal-terms {
@@ -1768,6 +1953,9 @@ button.button-icon-only {
 // ----------------------------------------------------------------------------
 // Rating
 .heyform-rating {
+  --heyform-rating-icon-size: 3rem;
+  --heyform-rating-icon-size-mobile: 2.6rem;
+
   .rate {
     @apply flex-wrap;
     width: min(100%, var(--heyform-answer-width-desktop));
@@ -1781,23 +1969,31 @@ button.button-icon-only {
     }
   }
 
+  &.heyform-options-center {
+    .rate {
+      margin-left: auto;
+      margin-right: auto;
+      justify-content: center;
+    }
+  }
+
   .rate-item {
     @apply m-0 flex cursor-pointer flex-col;
-    width: 3.25rem;
+    width: calc(var(--heyform-rating-icon-size) + 0.25rem);
 
     @media (max-width: 800px) {
-      width: 2.85rem;
+      width: calc(var(--heyform-rating-icon-size-mobile) + 0.25rem);
     }
   }
 
   .heyform-icon {
     @apply mb-1.5;
-    height: 3rem;
-    width: 3rem;
+    height: var(--heyform-rating-icon-size);
+    width: var(--heyform-rating-icon-size);
 
     @media (max-width: 800px) {
-      height: 2.6rem;
-      width: 2.6rem;
+      height: var(--heyform-rating-icon-size-mobile);
+      width: var(--heyform-rating-icon-size-mobile);
     }
   }
 
@@ -2561,12 +2757,16 @@ button.heyform-submit-button {
 
 .heyform-back-button {
   @apply inline-flex min-h-[3.25rem] items-center justify-center gap-2 px-0 py-0 text-sm font-semibold transition;
-  color: var(--heyform-question-color);
+  width: 3.25rem;
+  min-width: 3.25rem;
+  border-radius: var(--heyform-button-radius);
+  color: var(--heyform-button-text-color);
+  background-color: var(--heyform-desktop-back-button-color);
   box-shadow: none;
 
   &:hover {
-    color: var(--heyform-answer-color);
-    background-color: transparent;
+    color: var(--heyform-button-text-color);
+    background-color: var(--heyform-desktop-back-button-opacity-80-color);
     box-shadow: none;
   }
 
@@ -2582,7 +2782,7 @@ button.heyform-submit-button {
 }
 
 .heyform-back-button-text {
-  @apply leading-none;
+  display: none;
 }
 
 // ----------------------------------------------------------------------------
@@ -2803,29 +3003,64 @@ button.heyform-submit-button {
 
   .heyform-opinion-scale .heyform-radio-group {
     @apply space-x-0;
+    justify-content: flex-start;
   }
 
   .heyform-opinion-scale .heyform-radio {
-    margin-left: 0.25rem;
-    margin-right: 0.25rem;
-    height: 3.5rem;
-    width: 3.5rem;
+    margin-left: 0;
+    margin-right: 0;
+    height: var(--heyform-opinion-option-size-mobile);
+    width: var(--heyform-opinion-option-size-mobile);
     flex: none;
+  }
+
+  .heyform-opinion-scale.heyform-options-center .heyform-radio-group {
+    justify-content: center;
+  }
+
+  .heyform-picture-choice .heyform-radio-group {
+    align-items: flex-start;
   }
 
   .heyform-picture-choice .heyform-radio {
     width: 100%;
     max-width: 100%;
+    height: auto;
+    align-self: flex-start;
+  }
+
+  .heyform-picture-choice .heyform-radio-container {
+    height: auto;
+  }
+
+  .heyform-picture-choice .heyform-radio-image {
+    height: auto;
+    min-height: 0;
+    flex: none;
+    padding-bottom: 0.75rem;
+  }
+
+  .heyform-picture-choice .heyform-radio-image img {
+    width: 100%;
+    height: auto;
+    max-height: min(52vh, 24rem);
+    object-fit: contain;
+    border-radius: calc(var(--heyform-answer-radius) - 1px);
+    background-color: var(--heyform-background-color);
   }
 
   .heyform-rating .rate {
-    justify-content: center;
+    justify-content: flex-start;
     @apply space-x-0;
   }
 
   .heyform-rating .rate-item {
-    margin-left: 0.25rem;
-    margin-right: 0.25rem;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .heyform-rating.heyform-options-center .rate {
+    justify-content: center;
   }
 
   .heyform-phone-number .heyform-input {

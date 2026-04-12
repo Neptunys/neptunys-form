@@ -2,7 +2,7 @@ import { createElement } from 'react'
 import { Navigate } from 'react-router-dom'
 
 import { isRegistrationDisabled } from '@/consts'
-import { AuthLayout, BaseLayout, WorkspaceGuard, WorkspaceLayout } from '@/layouts'
+import { AuthLayout, BaseLayout, WorkspaceLayout } from '@/layouts'
 import ForgotPassword from '@/pages/auth/ForgotPassword'
 import Login from '@/pages/auth/Login'
 import OAuth from '@/pages/auth/OAuth'
@@ -13,11 +13,13 @@ import FormAnalytics from '@/pages/form/Analytics'
 import FormBuilder from '@/pages/form/Builder'
 import FormIntegrations from '@/pages/form/Integrations'
 import FormRender from '@/pages/form/Render'
+import RootEntry from '@/pages/form/Render/RootEntry'
 import FormSettings from '@/pages/form/Settings'
 import FormShare from '@/pages/form/Share'
 import FormSubmissions from '@/pages/form/Submissions'
 import ProjectExperiments from '@/pages/project/Experiments'
 import ProjectForms from '@/pages/project/Forms'
+import ProjectSettings from '@/pages/project/Settings'
 import ProjectTrash from '@/pages/project/Trash'
 import CreateWorkspace from '@/pages/workspace/Create'
 import WorkspaceDashboard from '@/pages/workspace/Dashboard'
@@ -83,11 +85,9 @@ const routes = [
   },
   {
     path: '/',
-    layout: WorkspaceGuard,
-    component: () => null,
+    component: RootEntry,
     options: {
-      loginRequired: true,
-      isHomePage: true
+      loginRequired: false
     }
   },
   {
@@ -140,7 +140,17 @@ const routes = [
     options: {
       projectShell: true,
       loginRequired: true,
-      title: 'project.forms.title'
+      title: 'Launch'
+    }
+  },
+  {
+    path: '/workspace/:workspaceId/project/:projectId/settings',
+    layout: WorkspaceLayout,
+    component: ProjectSettings,
+    options: {
+      projectShell: true,
+      loginRequired: true,
+      title: 'Settings'
     }
   },
   {
@@ -232,6 +242,14 @@ const routes = [
   },
   {
     path: '/x/:experimentId',
+    component: FormRender,
+    options: {
+      loginRequired: false,
+      title: 'form.render.title'
+    }
+  },
+  {
+    path: '/:publicSlug',
     component: FormRender,
     options: {
       loginRequired: false,

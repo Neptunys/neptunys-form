@@ -2,7 +2,7 @@ import { IconCode } from '@tabler/icons-react'
 import { FC, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { useParam } from '@/utils'
+import { buildPublicFormUrl, useParam } from '@/utils'
 import { helper } from '@heyform-inc/utils'
 
 import { Button, ColorPicker, Input, Modal, Select, Switch } from '@/components'
@@ -333,8 +333,8 @@ const EmbedComponent = () => {
 
   const { formId } = useParam()
   const { openModal, closeModal } = useAppStore()
-  const { embedType, embedConfig, selectEmbedType } = useFormStore()
-  const { sharingURLPrefix } = useWorkspaceStore()
+  const { embedType, embedConfig, form, selectEmbedType } = useFormStore()
+  const { sharingURLPrefix, workspace } = useWorkspaceStore()
 
   const sidebar = useMemo(() => {
     switch (embedType) {
@@ -359,17 +359,25 @@ const EmbedComponent = () => {
       return [...prev, `${name}="${embedConfig[key]}"`]
     }, [] as string[])
 
+    const publicUrl = buildPublicFormUrl({
+      sharingURLPrefix,
+      formId,
+      slug: form?.slug,
+      isDomainRoot: form?.isDomainRoot,
+      customDomain: workspace?.customDomain
+    })
+
     return `<div
-\tdata-heyform-id="${formId}"
-\tdata-heyform-type="${embedType}"
-\tdata-heyform-custom-url="${sharingURLPrefix}/form/${formId}"
-\t${attributes.join('\n\t')}
+	data-heyform-id="${formId}"
+	data-heyform-type="${embedType}"
+	data-heyform-custom-url="${publicUrl}"
+	${attributes.join('\n\t')}
 >
   ${embedType === 'modal' ? `<button class="heyform__trigger-button" type="button" onclick="HeyForm.openModal('${formId}Modal')">${embedConfig.triggerText}</button>` : ''}
 </div>
 <script src="https://www.unpkg.com/@heyform-inc/embed@latest/dist/index.umd.js"></script>
 `
-  }, [embedConfig, embedType, formId, sharingURLPrefix])
+  }, [embedConfig, embedType, form?.isDomainRoot, form?.slug, formId, sharingURLPrefix, workspace?.customDomain])
 
   const content = useMemo(() => FRAME_CONTENT.replace('{form}', code), [code])
 

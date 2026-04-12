@@ -67,6 +67,8 @@ export interface ExperimentVariantMetricType extends ExperimentVariantType {
   conversionRate: number
   averageTime: number
   isWinner: boolean
+  meetsMinimumSample?: boolean
+  minimumSampleGap?: number
 }
 
 export interface ExperimentType {
@@ -79,12 +81,21 @@ export interface ExperimentType {
   autoPromote: boolean
   durationHours: number
   minimumSampleSize: number
+  minimumSampleReached?: boolean
+  promotionBlockedReason?: string
   startAt: number
   endAt: number
   winnerFormId?: string
   promotedAt?: number
   variants: ExperimentVariantType[]
   metrics?: ExperimentVariantMetricType[]
+}
+
+export interface PublicRouteType {
+  kind: 'form' | 'experiment'
+  formId?: string
+  experimentId?: string
+  projectId?: string
 }
 
 export interface PublicExperimentType {
@@ -94,6 +105,8 @@ export interface PublicExperimentType {
 }
 
 export interface PublicFormType extends FormModel {
+  slug?: string
+  isDomainRoot?: boolean
   integrations?: Record<string, string>
 }
 

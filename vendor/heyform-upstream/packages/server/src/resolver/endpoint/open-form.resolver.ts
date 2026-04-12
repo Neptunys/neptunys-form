@@ -6,7 +6,7 @@ import { EndpointAnonymousIdGuard } from '@guard'
 import { timestamp } from '@heyform-inc/utils'
 import { Args, Context, Query, Resolver } from '@nestjs/graphql'
 import { FormAnalyticService, FormService, FormSessionService } from '@service'
-import { aesEncryptObject } from '@utils'
+import { aesEncryptObject, ip } from '@utils'
 
 @Resolver()
 @UseGuards(EndpointAnonymousIdGuard)
@@ -34,11 +34,13 @@ export class OpenFormResolver {
     }
 
     const anonymousId = context?.req?.get('x-anonymous-id')
+    const clientIp = ip(context?.req)
     const { sessionId, isNewSession } = await this.formSessionService.create({
       formId: form.id,
       projectId: form.projectId,
       teamId: form.teamId,
       anonymousId,
+      ip: clientIp,
       experimentId: input.experimentId,
       variantFormId: input.variantFormId || form.id,
       source: {

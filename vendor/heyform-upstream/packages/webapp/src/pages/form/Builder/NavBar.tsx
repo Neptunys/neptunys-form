@@ -16,7 +16,7 @@ import { Link } from 'react-router-dom'
 
 import { getFilteredFields } from './utils'
 import { FormService } from '@/services'
-import { useParam, useRouter } from '@/utils'
+import { buildPublicFormUrl, useParam, useRouter } from '@/utils'
 import IconAI from '@/assets/ai.svg?react'
 import { deepEqual, helper } from '@heyform-inc/utils'
 
@@ -38,7 +38,13 @@ export default function BuilderNavBar() {
   const { state } = useStoreContext()
   const { workspace, project, sharingURLPrefix } = useWorkspaceStore()
   const { form, themeSettings, updateForm } = useFormStore()
-  const shareLink = `${sharingURLPrefix}/form/${formId}`
+  const shareLink = buildPublicFormUrl({
+    sharingURLPrefix,
+    formId,
+    slug: form?.slug,
+    isDomainRoot: form?.isDomainRoot,
+    customDomain: workspace?.customDomain
+  })
 
   const { loading, run } = useRequest(
     async () => {

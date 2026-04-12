@@ -8,15 +8,35 @@ import {
 import { InjectQueue } from '@nestjs/bull'
 import { BadRequestException, Injectable } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
+import { slugify } from '@heyform-inc/utils'
 import { Queue } from 'bull'
 import { Model } from 'mongoose'
 
 import { TeamService } from './team.service'
 import { GOOGLE_RECAPTCHA_KEY } from '@environments'
 import { helper, pickObject, timestamp } from '@heyform-inc/utils'
-import { FormModel } from '@model'
+import { FormModel, ProjectModel } from '@model'
 import { mapToObject } from '@utils'
 import { getUpdateQuery } from '@utils'
+
+const DEFAULT_PUBLIC_FORM_SLUG = 'form'
+const RESERVED_PUBLIC_FORM_SLUGS = new Set([
+  'api',
+  'dashboard',
+  'form',
+  'forgot-password',
+  'graphql',
+  'health',
+  'login',
+  'logout',
+  'oauth',
+  'reset-password',
+  'sign-up',
+  'static',
+  'verify-email',
+  'workspace',
+  'x'
+])
 
 function normalizeEnumValue<T extends Record<string, string | number>>(
   enumType: T,
@@ -38,6 +58,37 @@ function normalizeEnumValue<T extends Record<string, string | number>>(
   return value
 }
 
+function normalizeDomainHostname(value?: string) {
+  if (!helper.isValid(value)) {
+    return undefined
+  }
+
+  return value!
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, '')
+    .replace(/:\d+$/, '')
+    .replace(/\/.*$/, '')
+    .replace(/\.+$/, '')
+}
+
+function normalizePublicFormSlug(value?: string) {
+  if (!helper.isValid(value)) {
+    return undefined
+  }
+
+  const normalized = slugify(value!, {
+    replacement: '-',
+    lower: true,
+    strict: true,
+    trim: true
+  })
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+  return normalized || undefined
+}
+
 interface UpdateFiledOptions {
   formId: string
   fieldId: string
@@ -49,6 +100,8 @@ export class FormService {
   constructor(
     @InjectModel(FormModel.name)
     private readonly formModel: Model<FormModel>,
+    @InjectModel(ProjectModel.name)
+    private readonly projectModel: Model<ProjectModel>,
     private readonly teamService: TeamService,
     @InjectQueue('TranslateFormQueue')
     private readonly translateFormQueue: Queue
@@ -206,8 +259,15 @@ export class FormService {
   }
 
   public async create(form: FormModel | any): Promise<string> {
+    const publicSlug = await this.buildUniquePublicSlug(form.teamId, form.slug || form.name)
+    const shouldOwnRoot = helper.isTrue(form.isDomainRoot)
+      ? true
+      : (await this.countAll(form.teamId)) === 0
+
     const result = await this.formModel.create({
       ...form,
+      slug: publicSlug,
+      isDomainRoot: shouldOwnRoot,
       interactiveMode: normalizeEnumValue(InteractiveModeEnum, form.interactiveMode),
       kind: normalizeEnumValue(FormKindEnum, form.kind),
       status: normalizeEnumValue(FormStatusEnum, form.status)
@@ -323,6 +383,191 @@ export class FormService {
     return true
   }
 
+  public async findBySlug(teamId: string, slug: string): Promise<FormModel | null> {
+    return this.formModel.findOne({
+      teamId,
+      slug,
+      status: normalizeEnumValue(FormStatusEnum, FormStatusEnum.NORMAL)
+    })
+  }
+
+  public async findDomainRootForm(teamId: string): Promise<FormModel | null> {
+    return this.formModel
+      .findOne({
+        teamId,
+        isDomainRoot: true,
+        status: normalizeEnumValue(FormStatusEnum, FormStatusEnum.NORMAL)
+      })
+      .sort({
+        updatedAt: -1
+      })
+  }
+
+  public async resolvePublicFormByDomain(hostname: string, slug?: string): Promise<FormModel | null> {
+    const normalizedHostname = normalizeDomainHostname(hostname)
+
+    if (!helper.isValid(normalizedHostname)) {
+      return null
+    }
+
+    const team = await this.teamService.findByCustomDomain(normalizedHostname!)
+
+    if (!team) {
+      return null
+    }
+
+    if (helper.isValid(slug)) {
+      const normalizedSlug = normalizePublicFormSlug(slug)
+
+      if (!normalizedSlug) {
+        return null
+      }
+
+      return this.findBySlug(team.id, normalizedSlug)
+    }
+
+    return this.findDomainRootForm(team.id)
+  }
+
+  public async buildUniquePublicSlug(
+    teamId: string,
+    value?: string,
+    excludeFormId?: string
+  ): Promise<string> {
+    const normalizedSlug = normalizePublicFormSlug(value)
+    let baseSlug = normalizedSlug || DEFAULT_PUBLIC_FORM_SLUG
+
+    if (RESERVED_PUBLIC_FORM_SLUGS.has(baseSlug)) {
+      baseSlug = `${DEFAULT_PUBLIC_FORM_SLUG}-${baseSlug}`
+    }
+
+    let candidate = baseSlug
+    let counter = 2
+
+    while (
+      (await this.formModel.exists({
+        teamId,
+        slug: candidate,
+        ...(excludeFormId
+          ? {
+              _id: {
+                $ne: excludeFormId
+              }
+            }
+          : {})
+      })) ||
+      (await this.projectModel.exists({
+        teamId,
+        launchPath: candidate
+      }))
+    ) {
+      candidate = `${baseSlug}-${counter++}`
+    }
+
+    return candidate
+  }
+
+  public async updatePublicSlug(form: Pick<FormModel, 'id' | 'name' | 'teamId'>, value?: string) {
+    const normalizedSlug = normalizePublicFormSlug(value)
+
+    if (!normalizedSlug) {
+      const result = await this.formModel.updateOne(
+        {
+          _id: form.id
+        },
+        {
+          $unset: {
+            slug: 1
+          }
+        }
+      )
+
+      return result.acknowledged
+    }
+
+    if (RESERVED_PUBLIC_FORM_SLUGS.has(normalizedSlug)) {
+      throw new BadRequestException('This public path is reserved. Please choose another one.')
+    }
+
+    const projectConflict = await this.projectModel.findOne({
+      teamId: form.teamId,
+      launchPath: normalizedSlug
+    })
+
+    if (projectConflict) {
+      throw new BadRequestException('This public path is already used by a project launch page.')
+    }
+
+    const existing = await this.formModel.findOne({
+      teamId: form.teamId,
+      slug: normalizedSlug,
+      _id: {
+        $ne: form.id
+      }
+    })
+
+    if (existing) {
+      throw new BadRequestException('This public path is already in use in the workspace.')
+    }
+
+    const result = await this.formModel.updateOne(
+      {
+        _id: form.id
+      },
+      {
+        $set: {
+          slug: normalizedSlug
+        }
+      }
+    )
+
+    return result.acknowledged
+  }
+
+  public async setDomainRoot(form: Pick<FormModel, 'id' | 'teamId'>, isDomainRoot?: boolean) {
+    if (helper.isTrue(isDomainRoot)) {
+      await this.formModel.updateMany(
+        {
+          teamId: form.teamId,
+          _id: {
+            $ne: form.id
+          }
+        },
+        {
+          $unset: {
+            isDomainRoot: 1
+          }
+        }
+      )
+
+      const result = await this.formModel.updateOne(
+        {
+          _id: form.id
+        },
+        {
+          $set: {
+            isDomainRoot: true
+          }
+        }
+      )
+
+      return result.acknowledged
+    }
+
+    const result = await this.formModel.updateOne(
+      {
+        _id: form.id
+      },
+      {
+        $unset: {
+          isDomainRoot: 1
+        }
+      }
+    )
+
+    return result.acknowledged
+  }
+
   public async findPublicForm(formId: string): Promise<Record<string, any> | undefined> {
     const form = await this.findById(formId)
 
@@ -333,6 +578,8 @@ export class FormService {
         projectId: form?.projectId,
         memberId: form?.memberId,
         name: form?.name,
+        slug: form?.slug,
+        isDomainRoot: form?.isDomainRoot,
         fields: [],
         hiddenFields: [],
         settings: {
@@ -359,6 +606,8 @@ export class FormService {
         projectId: form.projectId,
         memberId: form.memberId,
         name: form?.name,
+        slug: form.slug,
+        isDomainRoot: form.isDomainRoot,
         fields: [],
         hiddenFields: [],
         settings: {
@@ -378,6 +627,8 @@ export class FormService {
       'teamId',
       'projectId',
       'memberId',
+      'slug',
+      'isDomainRoot',
       'nameSchema',
       'name',
       'interactiveMode',
@@ -398,6 +649,7 @@ export class FormService {
       'enableProgress',
       'progressStyle',
       'autoAdvanceSingleChoice',
+      'enableQuestionNumbers',
       'enableQuestionList',
       'enableNavigationArrows',
       'locale',

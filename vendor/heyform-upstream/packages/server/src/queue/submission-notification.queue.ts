@@ -3,7 +3,7 @@ import { Job } from 'bull'
 
 import { APP_HOMEPAGE_URL } from '@environments'
 import { helper } from '@heyform-inc/utils'
-import { FormService, MailService, SubmissionService, TeamService, UserService } from '@service'
+import { FormService, MailService, ProjectService, SubmissionService, TeamService, UserService } from '@service'
 import {
   buildLeadCapturePayload,
   buildLeadTemplateValues,
@@ -41,6 +41,16 @@ function getUniqueEmails(...groups: Array<string[] | undefined>) {
   )
 }
 
+function resolveInheritedRecipients(primary?: string[], fallback?: string[]) {
+  const normalizedPrimary = (primary || []).filter(helper.isValid)
+
+  if (normalizedPrimary.length > 0) {
+    return normalizedPrimary
+  }
+
+  return (fallback || []).filter(helper.isValid)
+}
+
 @Processor('SubmissionNotificationQueue')
 export class SubmissionNotificationQueue extends BaseQueue {
   constructor(
@@ -48,7 +58,8 @@ export class SubmissionNotificationQueue extends BaseQueue {
     private readonly mailService: MailService,
     private readonly formService: FormService,
     private readonly userService: UserService,
-    private readonly teamService: TeamService
+    private readonly teamService: TeamService,
+    private readonly projectService: ProjectService
   ) {
     super()
   }
@@ -60,15 +71,22 @@ export class SubmissionNotificationQueue extends BaseQueue {
       this.formService.findById(job.data.formId)
     ])
 
-    const [user, team] = await Promise.all([
+    const [user, team, project] = await Promise.all([
       this.userService.findById(form.memberId),
-      this.teamService.findById(form.teamId)
+      this.teamService.findById(form.teamId),
+      this.projectService.findById(form.projectId)
     ])
 
-    const payload = buildLeadCapturePayload(form, submission, team || undefined)
+    const resolvedTimezone = project?.reportingTimezone || team?.reportingTimezone
+    const inheritedProjectRecipients = resolveInheritedRecipients(
+      project?.leadNotificationEmails,
+      team?.leadNotificationEmails
+    )
+    const payload = buildLeadCapturePayload(form, submission, team || undefined, project || undefined)
     const submissionLink = `${APP_HOMEPAGE_URL}/workspace/${form.teamId}/project/${form.projectId}/form/${form.id}/submissions`
     const values = buildLeadTemplateValues(payload, {
       workspaceName: team?.name,
+      projectName: project?.name,
       submissionLink
     })
 
@@ -104,7 +122,7 @@ export class SubmissionNotificationQueue extends BaseQueue {
 
     const operatorEmails = getUniqueEmails(
       (form.settings as any)?.operatorNotificationEmails,
-      team?.leadNotificationEmails
+      inheritedProjectRecipients
     )
 
     if ((form.settings as any)?.enableOperatorNotification && operatorEmails.length > 0) {
@@ -131,9 +149,13 @@ export class SubmissionNotificationQueue extends BaseQueue {
             <div style="margin-top:20px;">
               <a href="${submissionLink}" style="display:inline-block;padding:10px 14px;background:#111827;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:600;">Open submission</a>
             </div>`,
-          helper.isValid(payload.clientName)
-            ? `Client: ${escapeHtml(payload.clientName!)}${helper.isValid(team?.reportingTimezone) ? ` | Timezone: ${escapeHtml(team!.reportingTimezone!)}` : ''}`
-            : undefined
+          [
+            helper.isValid(payload.clientName) ? `Client: ${escapeHtml(payload.clientName!)}` : undefined,
+            helper.isValid(project?.name) ? `Project: ${escapeHtml(project!.name)}` : undefined,
+            helper.isValid(resolvedTimezone) ? `Timezone: ${escapeHtml(resolvedTimezone!)}` : undefined
+          ]
+            .filter(Boolean)
+            .join(' | ') || undefined
         )
       })
     }

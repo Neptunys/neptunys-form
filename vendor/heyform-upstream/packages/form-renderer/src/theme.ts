@@ -398,6 +398,8 @@ export function getThemeStyle(theme: RendererFormTheme, query?: Record<string, a
     normalizedTheme.answerKeyActiveColor || normalizedTheme.backgroundColor
   const answerKeyActiveBackground =
     normalizedTheme.answerKeyActiveBackground || alpha(normalizedTheme.answerTextColor!, 0.8)
+  const desktopBackButtonBackground =
+    normalizedTheme.desktopBackButtonBackground || normalizedTheme.buttonBackground
   const answerSelectionIndicatorDisplay = helper.isFalse(normalizedTheme.showChoiceCheckIcon)
     ? 'none'
     : 'block'
@@ -495,6 +497,8 @@ export function getThemeStyle(theme: RendererFormTheme, query?: Record<string, a
     --heyform-button-color: ${normalizedTheme.buttonBackground};
     --heyform-button-opacity-80-color: ${alpha(normalizedTheme.buttonBackground!, 0.8)};
     --heyform-button-text-color: ${normalizedTheme.buttonTextColor};
+    --heyform-desktop-back-button-color: ${desktopBackButtonBackground};
+    --heyform-desktop-back-button-opacity-80-color: ${alpha(desktopBackButtonBackground!, 0.8)};
     --heyform-button-text-opacity-20-color: ${alpha(normalizedTheme.buttonTextColor!, 0.2)};
     --heyform-button-radius: ${normalizedTheme.buttonBorderRadius}px;
     --heyform-background-color: ${normalizedTheme.backgroundColor};

@@ -112,11 +112,23 @@ export function getPropertiesFromKind(properties: Property, newKind: FieldKindEn
       if (!props.shape) {
         props.shape = 'star'
       }
+      if (!props.optionAlignment) {
+        props.optionAlignment = 'left'
+      }
       break
 
     case FieldKindEnum.OPINION_SCALE:
       if (!props.total) {
         props.total = 10
+      }
+      if (!props.optionAlignment) {
+        props.optionAlignment = 'left'
+      }
+      break
+
+    case FieldKindEnum.LEGAL_TERMS:
+      if (helper.isNil(props.defaultChecked)) {
+        props.defaultChecked = false
       }
       break
 
@@ -214,10 +226,12 @@ export function getFieldFromKind(kind: FieldKindEnum | string): FormFieldType {
     case FieldKindEnum.RATING:
       field.properties!.total = 5
       field.properties!.shape = 'star'
+      field.properties!.optionAlignment = 'left'
       break
 
     case FieldKindEnum.OPINION_SCALE:
       field.properties!.total = 10
+      field.properties!.optionAlignment = 'left'
       break
 
     case FieldKindEnum.YES_NO:
@@ -268,6 +282,7 @@ export function getFieldFromKind(kind: FieldKindEnum | string): FormFieldType {
       field.validations!.required = true
       field.properties!.buttonText = 'Continue'
       field.properties!.consentText = 'I agree to the terms and privacy policy.'
+      field.properties!.defaultChecked = false
       break
 
     case FieldKindEnum.GROUP:

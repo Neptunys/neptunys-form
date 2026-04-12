@@ -40,6 +40,12 @@ export class FormModel extends Document {
   @Prop()
   description?: string
 
+  @Prop()
+  slug?: string
+
+  @Prop({ default: false })
+  isDomainRoot?: boolean
+
   @Prop({
     type: String,
     required: true,
@@ -142,3 +148,4 @@ FormSchema.virtual('canPublish').get(function () {
 })
 
 FormSchema.index({ teamId: 1, projectId: 1 }, { unique: false })
+FormSchema.index({ teamId: 1, slug: 1 }, { unique: true, sparse: true })

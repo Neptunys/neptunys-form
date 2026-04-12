@@ -124,6 +124,7 @@ export interface IState {
   stripe?: IStripe
   onQuestionChange?: (question?: QuestionChangePayload) => void
   onSubmit?: (values: Record<string, any>, isPartial?: boolean, stripe?: IStripe) => Promise<void>
+  onLeadCapture?: (values: Record<string, any>, field: FormField) => Promise<void> | void
 }
 
 const actions: any = {

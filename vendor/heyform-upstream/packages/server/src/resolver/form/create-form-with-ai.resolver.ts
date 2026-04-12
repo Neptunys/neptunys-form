@@ -40,6 +40,7 @@ export class CreateFormWithAIResolver {
         allowArchive: true,
         requirePassword: false,
         locale: 'en',
+        enableQuestionNumbers: true,
         enableQuestionList: true,
         enableNavigationArrows: true,
         enableEmailNotification: true

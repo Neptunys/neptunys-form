@@ -147,6 +147,10 @@ export const useFormStore = create<FormStoreType>()(
               tempSettings.locale = DEFAULT_LNG
             }
 
+            if (helper.isNil(tempSettings.enableQuestionNumbers)) {
+              tempSettings.enableQuestionNumbers = true
+            }
+
             if (tempSettings.timeLimit) {
               tempSettings._timeLimit = parseDuration(tempSettings.timeLimit)
             }

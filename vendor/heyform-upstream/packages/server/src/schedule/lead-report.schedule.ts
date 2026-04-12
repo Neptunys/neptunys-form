@@ -3,8 +3,8 @@ import { Process, Processor } from '@nestjs/bull'
 import { APP_HOMEPAGE_URL } from '@environments'
 import { FormStatusEnum } from '@heyform-inc/shared-types-enums'
 import { date, helper, timestamp } from '@heyform-inc/utils'
-import { TeamModel } from '@model'
-import { FormService, MailService, SubmissionService, TeamService } from '@service'
+import { ProjectModel, TeamModel } from '@model'
+import { FormService, MailService, ProjectService, SubmissionService, TeamService } from '@service'
 import { buildLeadCapturePayload, escapeHtml } from '@utils'
 
 import { BaseQueue } from '../queue/base.queue'
@@ -13,6 +13,28 @@ const MONTHLY_REPORT_SEND_HOUR = 9
 const MONTHLY_REPORT_CATCHUP_DAYS = 3
 const RECENT_LEADS_LIMIT = 10
 const TOP_FORMS_LIMIT = 5
+
+function resolveLeadReportRecipients(primary?: string[], fallback?: string[]) {
+  const normalizedPrimary = (primary || []).filter(helper.isValid)
+
+  if (normalizedPrimary.length > 0) {
+    return normalizedPrimary
+  }
+
+  return (fallback || []).filter(helper.isValid)
+}
+
+function resolveLeadReportRangeDays(primary?: number, fallback?: number) {
+  if (helper.isValid(primary) && primary! > 0) {
+    return primary!
+  }
+
+  if (helper.isValid(fallback) && fallback! > 0) {
+    return fallback!
+  }
+
+  return 30
+}
 
 function normalizeTimeZone(timeZone?: string) {
   const fallback = 'UTC'
@@ -246,6 +268,7 @@ function renderLeadReportEmail(options: {
 export class LeadReportSchedule extends BaseQueue {
   constructor(
     private readonly teamService: TeamService,
+    private readonly projectService: ProjectService,
     private readonly formService: FormService,
     private readonly submissionService: SubmissionService,
     private readonly mailService: MailService
@@ -255,13 +278,34 @@ export class LeadReportSchedule extends BaseQueue {
 
   @Process()
   async process(): Promise<void> {
-    const teams = await this.teamService.findAllBy({
-      enableLeadReport: true
-    })
+    const [teams, projects] = await Promise.all([
+      this.teamService.findAllBy({
+        enableLeadReport: true
+      }),
+      this.projectService.findAllBy({
+        enableLeadReport: true
+      })
+    ])
+    const teamMap = new Map(teams.map(team => [team.id, team]))
+    const missingTeamIds = Array.from(
+      new Set(projects.map(project => project.teamId).filter(teamId => !teamMap.has(teamId)))
+    )
+
+    if (missingTeamIds.length > 0) {
+      const projectTeams = await this.teamService.findAllBy({
+        _id: {
+          $in: missingTeamIds
+        }
+      })
+
+      projectTeams.forEach(team => {
+        teamMap.set(team.id, team)
+      })
+    }
 
     for (const team of teams) {
       try {
-        await this.sendMonthlyLeadReport(team)
+        await this.sendWorkspaceLeadReport(team)
       } catch (error) {
         this.logger.trace(
           `LeadReportSchedule failed for workspace ${team.id}`,
@@ -269,10 +313,27 @@ export class LeadReportSchedule extends BaseQueue {
         )
       }
     }
+
+    for (const project of projects) {
+      const team = teamMap.get(project.teamId)
+
+      if (!team) {
+        continue
+      }
+
+      try {
+        await this.sendProjectLeadReport(project, team)
+      } catch (error) {
+        this.logger.trace(
+          `LeadReportSchedule failed for project ${project.id}`,
+          error instanceof Error ? error.stack : undefined
+        )
+      }
+    }
   }
 
-  private async sendMonthlyLeadReport(team: TeamModel): Promise<void> {
-    const recipients = (team.leadNotificationEmails || []).filter(helper.isValid)
+  private async sendWorkspaceLeadReport(team: TeamModel): Promise<void> {
+    const recipients = resolveLeadReportRecipients(team.leadNotificationEmails)
     const timeZone = normalizeTimeZone(team.reportingTimezone)
 
     if (!team.enableLeadReport || recipients.length < 1) {
@@ -286,10 +347,7 @@ export class LeadReportSchedule extends BaseQueue {
     const forms = (await this.formService.findAllInTeam(team.id)).filter(
       form => form.status === FormStatusEnum.NORMAL && !form.suspended
     )
-    const rangeDays =
-      helper.isValid(team.leadReportRangeDays) && team.leadReportRangeDays! > 0
-        ? team.leadReportRangeDays!
-        : 30
+    const rangeDays = resolveLeadReportRangeDays(team.leadReportRangeDays)
     const endAt = timestamp()
     const startAt = date().subtract(rangeDays, 'days').unix()
     const formIds = forms.map(form => form.id)
@@ -371,6 +429,108 @@ export class LeadReportSchedule extends BaseQueue {
     })
 
     await this.teamService.update(team.id, {
+      leadReportLastSentAt: endAt
+    })
+  }
+
+  private async sendProjectLeadReport(project: ProjectModel, team: TeamModel): Promise<void> {
+    const recipients = resolveLeadReportRecipients(project.leadNotificationEmails, team.leadNotificationEmails)
+    const timeZone = normalizeTimeZone(project.reportingTimezone || team.reportingTimezone)
+
+    if (!project.enableLeadReport || recipients.length < 1) {
+      return
+    }
+
+    if (!shouldSendMonthlyReport(timeZone, project.leadReportLastSentAt)) {
+      return
+    }
+
+    const forms = (await this.formService.findAll(project.id, FormStatusEnum.NORMAL)).filter(
+      form => !form.suspended
+    )
+    const rangeDays = resolveLeadReportRangeDays(project.leadReportRangeDays, team.leadReportRangeDays)
+    const endAt = timestamp()
+    const startAt = date().subtract(rangeDays, 'days').unix()
+    const formIds = forms.map(form => form.id)
+    const submissions = await this.submissionService.findAllInFormsByDateRange(formIds, startAt, endAt)
+    const formMap = new Map(forms.map(form => [form.id, form]))
+    const leads = submissions
+      .map(submission => {
+        const form = formMap.get(submission.formId)
+
+        if (!form) {
+          return undefined
+        }
+
+        return buildLeadCapturePayload(form, submission, team, project)
+      })
+      .filter(Boolean)
+    const scoredLeads = leads.filter(lead => helper.isValid(lead!.leadScore))
+    const averageScore = scoredLeads.length
+      ? (scoredLeads.reduce((sum, lead) => sum + (lead!.leadScore || 0), 0) / scoredLeads.length).toFixed(1)
+      : '0'
+    const topForms = Array.from(
+      submissions.reduce((accumulator, submission) => {
+        accumulator.set(submission.formId, (accumulator.get(submission.formId) || 0) + 1)
+        return accumulator
+      }, new Map<string, number>())
+    )
+      .map(([formId, count]) => ({
+        name: formMap.get(formId)?.name || formId,
+        count
+      }))
+      .sort((left, right) => right.count - left.count)
+      .slice(0, TOP_FORMS_LIMIT)
+    const recentLeads = leads.slice(0, RECENT_LEADS_LIMIT).map(lead => ({
+      formName: lead!.formName,
+      respondentName: lead!.respondentName,
+      respondentEmail: lead!.respondentEmail,
+      respondentPhone: lead!.respondentPhone,
+      leadLevel: lead!.leadLevel,
+      leadPriority: lead!.leadPriority,
+      leadScore: lead!.leadScore,
+      submittedAt: lead!.submittedAt
+    }))
+    const metricGrid = renderMetricGrid([
+      {
+        label: 'Total leads',
+        value: String(submissions.length),
+        caption: `${forms.length} active forms monitored`
+      },
+      {
+        label: 'Forms with leads',
+        value: String(new Set(submissions.map(submission => submission.formId)).size),
+        caption: 'Forms that produced at least one lead'
+      },
+      {
+        label: 'Average score',
+        value: averageScore,
+        caption: scoredLeads.length ? `${scoredLeads.length} scored submissions` : 'No scored submissions'
+      },
+      {
+        label: 'Priority mix',
+        value: `${leads.filter(lead => lead!.leadLevel === 'high').length}/${leads.filter(lead => lead!.leadLevel === 'medium').length}/${leads.filter(lead => lead!.leadLevel === 'low').length}`,
+        caption: 'High / Medium / Low'
+      }
+    ])
+    const workspaceLabel = helper.isValid(team.clientName) ? team.clientName! : team.name
+    const projectLabel = helper.isValid(project.name) ? project.name : 'Untitled project'
+    const dateRangeLabel = `${formatTimestamp(startAt, timeZone)} - ${formatTimestamp(endAt, timeZone)}`
+    const workspaceUrl = `${APP_HOMEPAGE_URL}/workspace/${team.id}/project/${project.id}`
+
+    await this.mailService.sendDirect(recipients, {
+      subject: `${workspaceLabel} - ${projectLabel} monthly lead report - ${dateRangeLabel}`,
+      html: renderLeadReportEmail({
+        title: projectLabel,
+        subtitle: `${workspaceLabel} | ${dateRangeLabel} | Timezone ${timeZone}`,
+        metricGrid,
+        topFormsTable: renderTopForms(topForms),
+        recentLeadsTable: renderRecentLeads(recentLeads, timeZone),
+        workspaceUrl
+      })
+    })
+
+    await this.projectService.update(project.id, {
       leadReportLastSentAt: endAt
     })
   }

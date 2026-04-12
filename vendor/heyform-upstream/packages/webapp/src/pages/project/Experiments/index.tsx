@@ -4,10 +4,10 @@ import { useRequest } from 'ahooks'
 import { useMemo } from 'react'
 
 import { FormService, ProjectService } from '@/services'
-import { useParam } from '@/utils'
+import { normalizeCustomDomain, useParam } from '@/utils'
 import { helper, toDuration, toFixed } from '@heyform-inc/utils'
 
-import { Button, Form, Input, Select, Skeleton, Switch, useToast } from '@/components'
+import { Badge, Button, Form, Input, Select, Skeleton, Switch, useToast } from '@/components'
 import { useWorkspaceStore } from '@/store'
 import { ExperimentType } from '@/types'
 
@@ -31,20 +31,23 @@ function ExperimentCard({
   experiment,
   formNameMap,
   sharingURLPrefix,
+  isLaunchTarget,
+  launchAliasUrl,
   onDelete
 }: {
   experiment: ExperimentType
   formNameMap: Map<string, string>
   sharingURLPrefix: string
+  isLaunchTarget?: boolean
+  launchAliasUrl?: string
   onDelete: (experimentId: string) => Promise<void>
 }) {
   const toast = useToast()
 
-  async function handleCopy() {
-    const url = `${sharingURLPrefix}/x/${experiment.id}`
+  async function handleCopy(url: string, label: string) {
     await navigator.clipboard.writeText(url)
     toast({
-      title: 'Experiment link copied',
+      title: `${label} copied`,
       message: url
     })
   }
@@ -53,14 +56,26 @@ function ExperimentCard({
     <div className="hf-card p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="text-lg font-semibold">{experiment.name}</div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="text-lg font-semibold">{experiment.name}</div>
+            {isLaunchTarget && <Badge color="sky">Project launch target</Badge>}
+          </div>
           <div className="text-secondary mt-1 text-sm/6">
             {experiment.status} · ends {formatExperimentDate(experiment.endAt)}
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button.Link size="sm" onClick={handleCopy}>
+          {launchAliasUrl && (
+            <Button.Link size="sm" onClick={() => handleCopy(launchAliasUrl, 'Launch URL')}>
+              <IconCopy className="h-4 w-4" />
+              <span>Copy launch URL</span>
+            </Button.Link>
+          )}
+          <Button.Link
+            size="sm"
+            onClick={() => handleCopy(`${sharingURLPrefix}/x/${experiment.id}`, 'Experiment link')}
+          >
             <IconCopy className="h-4 w-4" />
             <span>Copy link</span>
           </Button.Link>
@@ -70,6 +85,12 @@ function ExperimentCard({
           </Button.Link>
         </div>
       </div>
+
+      {helper.isValid(experiment.promotionBlockedReason) && (
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm/6 text-amber-900">
+          {experiment.promotionBlockedReason}
+        </div>
+      )}
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <div className="hf-card-muted px-4 py-3">
@@ -83,6 +104,11 @@ function ExperimentCard({
         <div className="hf-card-muted px-4 py-3">
           <div className="text-secondary text-xs font-medium uppercase tracking-wide">Minimum sample</div>
           <div className="mt-1 font-semibold">{experiment.minimumSampleSize || 0} visits</div>
+          <div className="text-secondary mt-1 text-sm/6">
+            {experiment.minimumSampleReached
+              ? 'Every variant passed the promotion threshold.'
+              : 'Winner promotion stays blocked until every variant reaches the threshold.'}
+          </div>
         </div>
       </div>
 
@@ -108,6 +134,11 @@ function ExperimentCard({
                       Best performer
                     </div>
                   )}
+                  {!metric.meetsMinimumSample && helper.isValid(metric.minimumSampleGap) && metric.minimumSampleGap! > 0 && (
+                    <div className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                      Needs {metric.minimumSampleGap} more visits
+                    </div>
+                  )}
                 </td>
                 <td className="py-3 pr-4">{metric.weight}%</td>
                 <td className="py-3 pr-4">{metric.visits}</td>
@@ -125,9 +156,10 @@ function ExperimentCard({
 
 export default function ProjectExperiments() {
   const { projectId } = useParam()
-  const { sharingURLPrefix } = useWorkspaceStore()
+  const { project, sharingURLPrefix, workspace } = useWorkspaceStore()
   const [rcForm] = Form.useForm()
   const toast = useToast()
+  const normalizedDomain = normalizeCustomDomain(workspace?.customDomain)
 
   const { data, loading, refreshAsync } = useRequest(
     async () => {
@@ -207,7 +239,8 @@ export default function ProjectExperiments() {
         <h2 className="text-xl font-semibold">Launch experiment</h2>
         <p className="text-secondary mt-1 text-sm/6">
           Split traffic between multiple forms in this project and automatically promote the best
-          converter when the test window ends.
+          converter when the test window ends. Minimum sample thresholds now block promotion until
+          every variant has enough traffic.
         </p>
 
         <div className="mt-5">
@@ -277,6 +310,17 @@ export default function ProjectExperiments() {
             experiment={experiment}
             formNameMap={formNameMap}
             sharingURLPrefix={sharingURLPrefix}
+            isLaunchTarget={
+              project?.launchMode === 'experiment' && project?.launchExperimentId === experiment.id
+            }
+            launchAliasUrl={
+              normalizedDomain &&
+              project?.launchMode === 'experiment' &&
+              project?.launchExperimentId === experiment.id &&
+              helper.isValid(project?.launchPath)
+                ? `https://${normalizedDomain}/${project!.launchPath}`
+                : undefined
+            }
             onDelete={handleDelete}
           />
         ))

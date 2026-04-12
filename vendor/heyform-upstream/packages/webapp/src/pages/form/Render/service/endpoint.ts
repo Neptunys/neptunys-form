@@ -28,6 +28,10 @@ const COMPLETE_SUBMISSION_GQL = `mutation completeSubmission($input: CompleteSub
 	}
 }`
 
+const CAPTURE_LEAD_SUBMISSION_GQL = `mutation captureLeadSubmission($input: CaptureLeadSubmissionInput!) {
+  captureLeadSubmission(input: $input)
+}`
+
 export class EndpointService {
   static async openForm(input: {
     formId: string
@@ -157,5 +161,22 @@ export class EndpointService {
       }
     })
     return result.completeSubmission
+  }
+
+  static async captureLeadSubmission(input: {
+    formId: string
+    openToken: string
+    passwordToken?: string
+    answers: Record<string, Any>
+    hiddenFields?: HiddenFieldAnswer[]
+  }): Promise<boolean> {
+    const result = await axios({
+      query: CAPTURE_LEAD_SUBMISSION_GQL,
+      variables: {
+        input
+      }
+    })
+
+    return result.captureLeadSubmission === true
   }
 }

@@ -1,9 +1,15 @@
 import { Auth, FormGuard, Team } from '@decorator'
-import { FormDetailInput, FormType, PublicFormType } from '@graphql'
+import {
+  FormDetailInput,
+  FormType,
+  PublicFormRouteInput,
+  PublicFormType,
+  PublicRouteType
+} from '@graphql'
 import { date, helper } from '@heyform-inc/utils'
 import { FormModel, IntegrationStatusEnum, TeamModel } from '@model'
 import { Args, Query, Resolver } from '@nestjs/graphql'
-import { FormService, IntegrationService, SubmissionService } from '@service'
+import { FormService, IntegrationService, ProjectService, SubmissionService } from '@service'
 
 const DEFAULT_FORM_NAME = 'Untitled'
 
@@ -44,12 +50,12 @@ export class FormDetailResolver {
 export class PublicFormResolver {
   constructor(
     private readonly formService: FormService,
-    private readonly integrationService: IntegrationService
+    private readonly integrationService: IntegrationService,
+    private readonly projectService: ProjectService
   ) {}
 
-  @Query(returns => PublicFormType)
-  async publicForm(@Args('input') input: FormDetailInput): Promise<PublicFormType> {
-    const form = await this.formService.findPublicForm(input.formId)
+  private async buildPublicFormResponse(formId: string): Promise<PublicFormType> {
+    const form = await this.formService.findPublicForm(formId)
 
     if (!form) {
       throw new Error('Form not found')
@@ -66,7 +72,7 @@ export class PublicFormResolver {
     const integrations: Record<string, any> = {}
 
     if (form.settings?.active) {
-      const rows = await this.integrationService.findAllInFormByApps(input.formId, [
+      const rows = await this.integrationService.findAllInFormByApps(formId, [
         'googleanalytics4',
         'googletagmanager',
         'metapixel'
@@ -104,6 +110,8 @@ export class PublicFormResolver {
       teamId: form.teamId,
       projectId: form.projectId,
       memberId: form.memberId,
+      slug: form.slug,
+      isDomainRoot: form.isDomainRoot,
       name: helper.isEmpty(form.name) ? DEFAULT_FORM_NAME : form.name,
       description: form.description,
       interactiveMode: form.interactiveMode,
@@ -132,5 +140,35 @@ export class PublicFormResolver {
       },
       integrations
     }
+  }
+
+  @Query(returns => PublicFormType)
+  async publicForm(@Args('input') input: FormDetailInput): Promise<PublicFormType> {
+    return this.buildPublicFormResponse(input.formId)
+  }
+
+  @Query(returns => PublicFormType)
+  async publicFormByDomain(@Args('input') input: PublicFormRouteInput): Promise<PublicFormType> {
+    const resolvedForm = await this.formService.resolvePublicFormByDomain(input.hostname, input.slug)
+
+    if (!resolvedForm) {
+      throw new Error('Form not found')
+    }
+
+    return this.buildPublicFormResponse(resolvedForm.id)
+  }
+
+  @Query(returns => PublicRouteType)
+  async publicRouteByDomain(@Args('input') input: PublicFormRouteInput): Promise<PublicRouteType> {
+    const resolvedRoute = await this.projectService.resolvePublicRouteByDomain(
+      input.hostname,
+      input.slug
+    )
+
+    if (!resolvedRoute) {
+      throw new Error('Form not found')
+    }
+
+    return resolvedRoute
   }
 }

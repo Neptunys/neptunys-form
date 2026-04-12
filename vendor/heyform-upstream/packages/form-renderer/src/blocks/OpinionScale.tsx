@@ -1,4 +1,4 @@
-import type { FC } from 'react'
+import type { CSSProperties, FC } from 'react'
 
 import { isNotNil, useTranslation } from '../utils'
 
@@ -8,9 +8,25 @@ import type { BlockProps } from './Block'
 import { Block } from './Block'
 import { Form } from './Form'
 
+function getOpinionScaleStyle(optionSize?: number): CSSProperties | undefined {
+  if (typeof optionSize !== 'number' || Number.isNaN(optionSize)) {
+    return undefined
+  }
+
+  const desktopSize = Math.max(24, Math.min(96, Math.round(optionSize)))
+  const mobileSize = Math.max(24, Math.round(desktopSize * 0.9))
+
+  return {
+    ['--heyform-opinion-option-size' as string]: `${desktopSize}px`,
+    ['--heyform-opinion-option-size-mobile' as string]: `${mobileSize}px`
+  }
+}
+
 export const OpinionScale: FC<BlockProps> = ({ field, ...restProps }) => {
   const { state } = useStore()
   const { t } = useTranslation()
+  const isCentered = field.properties?.optionAlignment === 'center'
+  const style = getOpinionScaleStyle(field.properties?.optionSize)
 
   const options = Array.from({ length: field.properties?.total || 10 }).map((_, index) => {
     const value = index + 1
@@ -27,7 +43,12 @@ export const OpinionScale: FC<BlockProps> = ({ field, ...restProps }) => {
   }
 
   return (
-    <Block className="heyform-opinion-scale" field={field} {...restProps}>
+    <Block
+      className={`heyform-opinion-scale${isCentered ? ' heyform-options-center' : ''}`}
+      field={field}
+      style={style}
+      {...restProps}
+    >
       <Form
         initialValues={{
           input: [state.values[field.id]].filter(isNotNil)

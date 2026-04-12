@@ -1,5 +1,5 @@
 import { IconChevronLeft } from '@tabler/icons-react'
-import type { FormField } from '@heyform-inc/shared-types-enums'
+import type { FormField, FormSettings } from '@heyform-inc/shared-types-enums'
 import { FieldKindEnum, NumberPrice } from '@heyform-inc/shared-types-enums'
 import Big from 'big.js'
 import clsx from 'clsx'
@@ -20,6 +20,32 @@ import { clone, helper } from '@heyform-inc/utils'
 
 import { Submit } from '../components'
 import { removeStorage, useStore } from '../store'
+
+function getLeadContactFieldIds(fields: FormField[], settings?: FormSettings) {
+  const fieldIds = new Set<string>()
+
+  if (helper.isValid(settings?.respondentEmailFieldId)) {
+    fieldIds.add(settings!.respondentEmailFieldId!)
+  } else {
+    fields
+      .filter(candidate => candidate.kind === FieldKindEnum.EMAIL)
+      .forEach(candidate => fieldIds.add(candidate.id))
+  }
+
+  if (helper.isValid(settings?.respondentPhoneFieldId)) {
+    fieldIds.add(settings!.respondentPhoneFieldId!)
+  } else {
+    fields
+      .filter(candidate => candidate.kind === FieldKindEnum.PHONE_NUMBER)
+      .forEach(candidate => fieldIds.add(candidate.id))
+  }
+
+  return Array.from(fieldIds)
+}
+
+function hasLeadContactValue(values: Record<string, any>, fields: FormField[], settings?: FormSettings) {
+  return getLeadContactFieldIds(fields, settings).some(fieldId => helper.isValid(values[fieldId]))
+}
 
 interface FormProps extends RCFormProps {
   field: FormField
@@ -53,6 +79,8 @@ export const Form: FC<FormProps> = ({
   const [loading, setLoading] = useState(false)
   const [submitError, setSubmitError] = useState<string>()
   const autoSubmitTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
+  const leadCaptureTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
+  const lastLeadCaptureKeyRef = useRef<string>()
 
   const autoSubmit = useMemo(
     () => rawAutoSubmit && (allowAutoSubmitWithNextButton || !state.alwaysShowNextButton),
@@ -237,6 +265,36 @@ export const Form: FC<FormProps> = ({
     const nextValue = getValues ? getValues(nextFormValues) : nextFormValues
     const shouldSubmitOnChange =
       helper.isValid(nextValue) && (autoSubmit || submitOnChangeWhen?.(nextValue) === true)
+    const nextLeadValues = {
+      ...state.values,
+      [field.id]: nextValue
+    }
+
+    if (state.onLeadCapture && hasLeadContactValue(nextLeadValues, state.allFields, state.settings)) {
+      const leadCaptureKey = JSON.stringify({
+        fieldId: field.id,
+        value: nextLeadValues[field.id]
+      })
+
+      try {
+        validateFields([field], {
+          [field.id]: nextValue
+        })
+
+        if (leadCaptureKey !== lastLeadCaptureKeyRef.current) {
+          if (leadCaptureTimeoutRef.current) {
+            clearTimeout(leadCaptureTimeoutRef.current)
+          }
+
+          leadCaptureTimeoutRef.current = setTimeout(() => {
+            lastLeadCaptureKeyRef.current = leadCaptureKey
+            void Promise.resolve(state.onLeadCapture?.(nextLeadValues, field)).catch(console.error)
+          }, 320)
+        }
+      } catch {
+        // Ignore invalid intermediate values while the respondent is still typing.
+      }
+    }
 
     if (shouldSubmitOnChange) {
       if (autoSubmitTimeoutRef.current) {
@@ -308,12 +366,16 @@ export const Form: FC<FormProps> = ({
       if (autoSubmitTimeoutRef.current) {
         clearTimeout(autoSubmitTimeoutRef.current)
       }
+
+      if (leadCaptureTimeoutRef.current) {
+        clearTimeout(leadCaptureTimeoutRef.current)
+      }
     }
   }, [])
 
   return (
     <RCForm
-      className={clsx('heyform-form', {
+      className={clsx('heyform-form', 'heyform-form-mobile-docked', {
         'heyform-form-last': isLastBlock
       })}
       autoComplete="off"

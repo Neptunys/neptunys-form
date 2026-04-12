@@ -38,6 +38,7 @@ export interface FormSettings {
   enableProgress?: boolean
   progressStyle?: 'circular' | 'top-bar'
   autoAdvanceSingleChoice?: boolean
+  enableQuestionNumbers?: boolean
 
   // Translation
   locale?: string
@@ -149,6 +150,8 @@ export interface Property {
   shape?: string
   total?: number
   start?: number
+  optionSize?: number
+  optionAlignment?: 'left' | 'center'
 
   // Opinion Scale
   leftLabel?: string
@@ -188,6 +191,7 @@ export interface Property {
   enableShareIcon?: boolean
   enableCompleteTime?: boolean
   consentText?: string
+  defaultChecked?: boolean
 
   // Thank You
   showResponsePanel?: boolean
@@ -256,6 +260,7 @@ export interface FormTheme {
   logoSize?: number
   buttonBackground?: string
   buttonTextColor?: string
+  desktopBackButtonBackground?: string
   buttonBorderRadius?: number
   backgroundColor?: string
   backgroundImage?: string

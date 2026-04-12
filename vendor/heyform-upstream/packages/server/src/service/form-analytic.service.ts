@@ -16,12 +16,19 @@ interface FormAnalyticOptions {
   startAt: Date
   endAt: Date
   isNext?: boolean
+  sourceChannel?: string
+  dedupeByIp?: boolean
 }
 
 interface FormAnalyticResult {
   avgTotalVisits: number
   avgSubmissionCount: number
   avgAverageTime: number
+  sourceBreakdown: Array<{
+    channel: string
+    totalVisits: number
+    submissionCount: number
+  }>
 }
 
 @Injectable()
@@ -33,18 +40,41 @@ export class FormAnalyticService {
     private readonly submissionService: SubmissionService
   ) {}
 
-  public async summary({ formId, startAt, endAt, isNext }: FormAnalyticOptions) {
+  public async summary({
+    formId,
+    startAt,
+    endAt,
+    isNext,
+    sourceChannel,
+    dedupeByIp
+  }: FormAnalyticOptions) {
     const sessionSummary = await this.formSessionService.getSummary(
       formId,
       toUnixSeconds(startAt),
-      toUnixSeconds(endAt)
+      toUnixSeconds(endAt),
+      {
+        sourceChannel,
+        dedupeByIp
+      }
     )
+
+    const hasSessionFilters = helper.isValid(sourceChannel) || dedupeByIp
 
     if (sessionSummary.totalVisits > 0) {
       return {
         avgTotalVisits: sessionSummary.totalVisits,
         avgSubmissionCount: sessionSummary.submissionCount,
-        avgAverageTime: sessionSummary.averageTime
+        avgAverageTime: sessionSummary.averageTime,
+        sourceBreakdown: sessionSummary.sourceBreakdown || []
+      }
+    }
+
+    if (hasSessionFilters) {
+      return {
+        avgTotalVisits: 0,
+        avgSubmissionCount: 0,
+        avgAverageTime: 0,
+        sourceBreakdown: []
       }
     }
 
@@ -60,7 +90,8 @@ export class FormAnalyticService {
     const analytic = {
       avgTotalVisits: 0,
       avgSubmissionCount: 0,
-      avgAverageTime: 0
+      avgAverageTime: 0,
+      sourceBreakdown: []
     }
 
     if (avgTotalVisits > 0) {
@@ -79,11 +110,17 @@ export class FormAnalyticService {
     }
   }
 
-  public async questionAnalytics(formId: string, startAt: Date, endAt: Date) {
+  public async questionAnalytics(
+    formId: string,
+    startAt: Date,
+    endAt: Date,
+    options: Pick<FormAnalyticOptions, 'sourceChannel' | 'dedupeByIp'> = {}
+  ) {
     return this.formSessionService.getQuestionAnalytics(
       formId,
       toUnixSeconds(startAt),
-      toUnixSeconds(endAt)
+      toUnixSeconds(endAt),
+      options
     )
   }
 

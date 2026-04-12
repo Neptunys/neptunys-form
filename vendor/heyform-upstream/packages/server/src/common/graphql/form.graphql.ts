@@ -25,6 +25,7 @@ import {
 import {
   IsArray,
   IsBoolean,
+  IsDateString,
   IsEnum,
   IsIn,
   IsNumber,
@@ -139,6 +140,18 @@ class SharedPropertyInput {
   start?: number
 
   @Field({ nullable: true })
+  @IsOptional()
+  @IsNumber()
+  @Min(24)
+  @Max(96)
+  optionSize?: number
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsIn(['left', 'center'])
+  optionAlignment?: string
+
+  @Field({ nullable: true })
   leftLabel?: string
 
   @Field({ nullable: true })
@@ -187,6 +200,10 @@ class SharedPropertyInput {
   @Field({ nullable: true })
   @IsOptional()
   enableCompleteTime?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
+  defaultChecked?: boolean
 
   @Field({ nullable: true })
   @IsOptional()
@@ -391,6 +408,16 @@ export class FormDetailInput {
 }
 
 @InputType()
+export class PublicFormRouteInput {
+  @Field()
+  hostname: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  slug?: string
+}
+
+@InputType()
 export class MoveFormInput extends FormDetailInput {
   @Field()
   targetProjectId: string
@@ -438,6 +465,37 @@ export class FormAnalyticInput extends FormDetailInput {
   @Field()
   @IsEnum(FormAnalyticRangeEnum)
   range: FormAnalyticRangeEnum
+
+  @Field({ nullable: true })
+  @IsOptional()
+  sourceChannel?: string
+
+  @Field({ nullable: true })
+  @IsBoolean()
+  @IsOptional()
+  dedupeByIp?: boolean
+
+  @Field({ nullable: true })
+  @IsDateString()
+  @IsOptional()
+  startDate?: string
+
+  @Field({ nullable: true })
+  @IsDateString()
+  @IsOptional()
+  endDate?: string
+}
+
+@ObjectType()
+export class FormSourceAnalyticType {
+  @Field()
+  channel: string
+
+  @Field()
+  totalVisits: number
+
+  @Field()
+  submissionCount: number
 }
 
 @ObjectType()
@@ -462,6 +520,9 @@ export class FormAnalyticType {
 
   @Field(type => FormAnalyticResult)
   averageTime: FormAnalyticResult
+
+  @Field(type => [FormSourceAnalyticType], { defaultValue: [] })
+  sourceBreakdown: FormSourceAnalyticType[]
 }
 
 @ObjectType()
@@ -505,6 +566,14 @@ export class UpdateFormInput extends FormDetailInput {
   @Field({ nullable: true })
   @IsOptional()
   name?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  slug?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  isDomainRoot?: boolean
 
   @Field(type => GraphQLJSON, { nullable: true })
   @IsEnum(FormKindEnum)
@@ -609,6 +678,10 @@ export class UpdateFormInput extends FormDetailInput {
   @Field({ nullable: true })
   @IsOptional()
   autoAdvanceSingleChoice?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
+  enableQuestionNumbers?: boolean
 
   @Field({ nullable: true })
   @IsOptional()
@@ -991,6 +1064,9 @@ export class FormThemeInput {
   buttonTextColor?: string
 
   @Field({ nullable: true })
+  desktopBackButtonBackground?: string
+
+  @Field({ nullable: true })
   buttonBorderRadius?: number
 
   @Field({ nullable: true })
@@ -1271,6 +1347,9 @@ export class FormSettingType {
   autoAdvanceSingleChoice?: boolean
 
   @Field({ nullable: true })
+  enableQuestionNumbers?: boolean
+
+  @Field({ nullable: true })
   enableQuestionList?: boolean
 
   @Field({ nullable: true })
@@ -1471,6 +1550,12 @@ export class FormType {
 
   @Field()
   name: string
+
+  @Field({ nullable: true })
+  slug?: string
+
+  @Field({ nullable: true })
+  isDomainRoot?: boolean
 
   @Field({ nullable: true })
   description?: string

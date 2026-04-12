@@ -45,6 +45,7 @@ export class UseTemplateResolver {
         allowArchive: true,
         requirePassword: false,
         locale: 'en',
+        enableQuestionNumbers: true,
         enableQuestionList: true,
         enableNavigationArrows: true,
         enableEmailNotification: true

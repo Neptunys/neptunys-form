@@ -492,8 +492,20 @@
   
   
   .heyform-opinion-scale {
+    --heyform-opinion-option-size: 3.5rem;
+
     .heyform-radio {
-      @apply h-14 flex-1;
+      height: var(--heyform-opinion-option-size, 3.5rem);
+      width: var(--heyform-opinion-option-size, 3.5rem);
+      flex: none;
+    }
+
+    .heyform-radio-group {
+      @apply flex flex-wrap items-center;
+      width: min(100%, var(--heyform-answer-width-desktop));
+      margin-left: 0;
+      margin-right: auto;
+      gap: var(--heyform-answer-gap-desktop);
     }
 
     .heyform-radio-container {
@@ -501,12 +513,27 @@
     }
 
     .heyform-radio-label {
-      text-align: left;
+      text-align: center;
+    }
+
+    &.heyform-options-center {
+      .heyform-radio-group,
+      .heyform-opinion-scale-labels {
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .heyform-radio-group {
+        justify-content: center;
+      }
     }
   }
 
   .heyform-opinion-scale-labels {
     @apply mt-1 flex items-center;
+    width: min(100%, var(--heyform-answer-width-desktop));
+    margin-left: 0;
+    margin-right: auto;
     color: var(--heyform-answer-color);
   }
 
@@ -701,6 +728,34 @@
     }
   }
 
+  .heyform-picture-choice-list-compare {
+    width: min(100%, var(--heyform-content-width-desktop));
+
+    .heyform-radio {
+      height: clamp(16rem, 28vw, 22rem);
+      width: calc(50% - (var(--heyform-answer-gap-desktop) / 2));
+      max-width: calc(50% - (var(--heyform-answer-gap-desktop) / 2));
+
+      &:last-child {
+        height: 4rem;
+        width: 100%;
+        max-width: 100%;
+      }
+    }
+
+    .heyform-radio-image {
+      @apply flex-1 items-center justify-center py-0;
+      min-height: 0;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background-color: var(--heyform-background-color);
+      }
+    }
+  }
+
   
   
   .heyform-file-uploader {
@@ -750,16 +805,32 @@
   }
 
   .heyform-rating {
+    --heyform-rating-icon-size: 4rem;
+
     .rate {
-      @apply space-x-2;
+      width: min(100%, var(--heyform-answer-width-desktop));
+      margin-left: 0;
+      margin-right: auto;
+      gap: var(--heyform-answer-gap-desktop);
+    }
+
+    &.heyform-options-center {
+      .rate {
+        margin-left: auto;
+        margin-right: auto;
+        justify-content: center;
+      }
     }
 
     .rate-item {
-      @apply flex w-16 cursor-pointer flex-col;
+      @apply flex cursor-pointer flex-col;
+      width: calc(var(--heyform-rating-icon-size, 4rem) + 0.25rem);
     }
 
     .heyform-icon {
-      @apply mb-2 h-16 w-16;
+      @apply mb-2;
+      height: var(--heyform-rating-icon-size, 4rem);
+      width: var(--heyform-rating-icon-size, 4rem);
     }
 
     .heyform-icon-stroke {
@@ -1305,7 +1376,42 @@
 }
 
 .rule-action-calculate {
-  grid-template-columns: 3rem 12rem 10rem 10rem minmax(auto, 13rem);
+  align-items: start;
+  grid-template-columns: 3rem 12rem minmax(0, 1fr);
+}
+
+.rule-action-calculate-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.rule-action-calculate-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.rule-action-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.rule-action-input-label {
+  @apply text-secondary text-xs font-medium;
+}
+
+.rule-action-help {
+  @apply rounded-lg bg-slate-50 px-3 py-2 text-sm/6 text-slate-700;
+}
+
+@media (max-width: 1024px) {
+  .rule-action-calculate-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .condition-select-popup {

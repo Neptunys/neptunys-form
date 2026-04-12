@@ -125,11 +125,13 @@ export class ExperimentService {
       experiment.endAt
     )
     const rowMap = new Map(rows.map((row: any) => [row._id, row]))
+    const minimumSampleSize = Number(experiment.minimumSampleSize) || 0
 
     return experiment.variants.map(variant => {
       const row = rowMap.get(variant.formId)
       const visits = row?.visits || 0
       const submissions = row?.submissions || 0
+      const meetsMinimumSample = minimumSampleSize < 1 || visits >= minimumSampleSize
 
       return {
         formId: variant.formId,
@@ -137,14 +139,20 @@ export class ExperimentService {
         visits,
         submissions,
         conversionRate: visits > 0 ? (submissions / visits) * 100 : 0,
-        averageTime: row?.averageTime || 0
+        averageTime: row?.averageTime || 0,
+        meetsMinimumSample,
+        minimumSampleGap: meetsMinimumSample ? 0 : minimumSampleSize - visits
       }
     })
   }
 
   async evaluateWinner(experiment: ExperimentModel) {
     const metrics = await this.getMetrics(experiment)
-    const ranked = [...metrics].sort((left, right) => {
+    const minimumSampleSize = Number(experiment.minimumSampleSize) || 0
+    const minimumSampleReached =
+      minimumSampleSize < 1 || metrics.every(metric => metric.visits >= minimumSampleSize)
+    const eligibleMetrics = minimumSampleReached ? metrics.filter(metric => metric.visits > 0) : []
+    const ranked = [...eligibleMetrics].sort((left, right) => {
       if (right.conversionRate !== left.conversionRate) {
         return right.conversionRate - left.conversionRate
       }
@@ -159,6 +167,10 @@ export class ExperimentService {
 
     return {
       winnerFormId: winner?.formId,
+      minimumSampleReached,
+      promotionBlockedReason: minimumSampleReached
+        ? undefined
+        : `Needs at least ${minimumSampleSize} visits on every variant before a winner can be promoted.`,
       metrics: metrics.map(metric => ({
         ...metric,
         isWinner: metric.formId === winner?.formId

@@ -1,46 +1,89 @@
 import { IconTrendingDown, IconTrendingUp } from '@tabler/icons-react'
 import { useRequest } from 'ahooks'
-import { FC, useState } from 'react'
+import { FC, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { FormService } from '@/services'
 import { useParam } from '@/utils'
-import { helper, toDuration, toFixed } from '@heyform-inc/utils'
+import { date, helper, toDuration, toFixed } from '@heyform-inc/utils'
 
-import { Select, Skeleton } from '@/components'
+import { Checkbox, Input, Select, Skeleton } from '@/components'
 
 interface TrendIndicatorProps {
-  change: number | null
-  label: string
+  change?: number | null
+  text: string
 }
 
-const ANALYTIC_RANGES = [
+const SOURCE_CHANNEL_OPTIONS = [
   {
-    label: 'form.analytics.7d',
-    value: '7d'
+    label: 'All sources',
+    value: 'all'
   },
   {
-    label: 'form.analytics.1m',
-    value: '1m'
+    label: 'Direct link',
+    value: 'direct'
   },
   {
-    label: 'form.analytics.3m',
-    value: '3m'
+    label: 'Meta',
+    value: 'meta'
   },
   {
-    label: 'form.analytics.6m',
-    value: '6m'
+    label: 'Google',
+    value: 'google'
   },
   {
-    label: 'form.analytics.1y',
-    value: '1y'
+    label: 'LinkedIn',
+    value: 'linkedin'
+  },
+  {
+    label: 'X',
+    value: 'x'
+  },
+  {
+    label: 'YouTube',
+    value: 'youtube'
+  },
+  {
+    label: 'TikTok',
+    value: 'tiktok'
+  },
+  {
+    label: 'Email',
+    value: 'email'
+  },
+  {
+    label: 'Other',
+    value: 'other'
   }
 ]
 
-const TrendIndicator: FC<TrendIndicatorProps> = ({ change, label }) => {
-  const { t } = useTranslation()
+const SOURCE_CHANNEL_LABELS = SOURCE_CHANNEL_OPTIONS.reduce<Record<string, string>>((acc, option) => {
+  acc[option.value] = option.label
+  return acc
+}, {})
 
-  if (helper.isNull(change)) {
+function getTrendText(t: (key: string, options?: Record<string, any>) => string, range: string, change?: number | null) {
+  if (helper.isNil(change)) {
+    return ''
+  }
+
+  const formattedChange = `${change > 0 ? '+' : ''}${toFixed(change)}`
+
+  if (range === 'today') {
+    return `${formattedChange}% from yesterday`
+  }
+
+  if (range === 'custom') {
+    return `${formattedChange}% from the previous period`
+  }
+
+  return t(`form.analytics.${range}Trend`, {
+    change: formattedChange
+  })
+}
+
+const TrendIndicator: FC<TrendIndicatorProps> = ({ change, text }) => {
+  if (helper.isNil(change)) {
     return null
   }
 
@@ -51,11 +94,7 @@ const TrendIndicator: FC<TrendIndicatorProps> = ({ change, label }) => {
       ) : (
         <IconTrendingDown className="h-4 w-4 text-red-600" />
       )}
-      <span className="text-secondary">
-        {t(label, {
-          change: (change! > 0 ? '+' : '') + toFixed(change!)
-        })}
-      </span>
+      <span className="text-secondary">{text}</span>
     </div>
   )
 }
@@ -64,13 +103,63 @@ export default function FormAnalyticsOverview() {
   const { t } = useTranslation()
 
   const { formId } = useParam()
+  const defaultCustomEnd = date().format('YYYY-MM-DD')
+  const defaultCustomStart = date().subtract(6, 'days').format('YYYY-MM-DD')
   const [range, setRange] = useState('7d')
+  const [sourceChannel, setSourceChannel] = useState('all')
+  const [dedupeByIp, setDedupeByIp] = useState(false)
+  const [startDate, setStartDate] = useState(defaultCustomStart)
+  const [endDate, setEndDate] = useState(defaultCustomEnd)
+  const isCustomRange = range === 'custom'
+  const analyticRanges = useMemo(
+    () => [
+      {
+        label: 'Today',
+        value: 'today'
+      },
+      {
+        label: t('form.analytics.7d'),
+        value: '7d'
+      },
+      {
+        label: t('form.analytics.1m'),
+        value: '1m'
+      },
+      {
+        label: t('form.analytics.3m'),
+        value: '3m'
+      },
+      {
+        label: t('form.analytics.6m'),
+        value: '6m'
+      },
+      {
+        label: t('form.analytics.1y'),
+        value: '1y'
+      },
+      {
+        label: 'Custom range',
+        value: 'custom'
+      }
+    ],
+    [t]
+  )
 
   const { loading, data } = useRequest(
     async () => {
       const [analytic, questions] = await Promise.all([
-        FormService.analytic(formId, range),
-        FormService.questionAnalytics(formId, range)
+        FormService.analytic(formId, range, {
+          sourceChannel,
+          dedupeByIp,
+          startDate,
+          endDate
+        }),
+        FormService.questionAnalytics(formId, range, {
+          sourceChannel,
+          dedupeByIp,
+          startDate,
+          endDate
+        })
       ])
 
       return {
@@ -79,7 +168,7 @@ export default function FormAnalyticsOverview() {
       }
     },
     {
-      refreshDeps: [formId, range],
+      refreshDeps: [dedupeByIp, endDate, formId, range, sourceChannel, startDate],
       pollingInterval: 10_000,
       pollingWhenHidden: false,
       refreshOnWindowFocus: true
@@ -99,15 +188,80 @@ export default function FormAnalyticsOverview() {
             />
             <span>{isRefreshing ? 'Refreshing live analytics...' : 'Live updates every 10s'}</span>
           </div>
-          <Select
-            className="w-full sm:w-40"
-            value={range}
-            options={ANALYTIC_RANGES}
-            placeholder={t('form.analytics.7d')}
-            disabled={isInitialLoading}
-            multiLanguage
-            onChange={setRange}
-          />
+          <label className="text-secondary flex items-center gap-2 text-sm/6">
+            <Checkbox value={dedupeByIp} disabled={isInitialLoading} onChange={setDedupeByIp} />
+            <span>Count one visit and one submission per IP</span>
+          </label>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Select
+              className="w-full sm:w-44"
+              value={sourceChannel}
+              options={SOURCE_CHANNEL_OPTIONS}
+              placeholder="All sources"
+              disabled={isInitialLoading}
+              onChange={setSourceChannel}
+            />
+            <Select
+              className="w-full sm:w-40"
+              value={range}
+              options={analyticRanges}
+              placeholder="Range"
+              disabled={isInitialLoading}
+              onChange={setRange}
+            />
+          </div>
+          {isCustomRange && (
+            <div className="grid w-full gap-2 sm:grid-cols-2">
+              <label className="flex min-w-0 flex-col gap-1">
+                <span className="text-secondary text-xs font-medium uppercase tracking-wide">From</span>
+                <Input type="date" value={startDate} disabled={isInitialLoading} onChange={setStartDate} />
+              </label>
+              <label className="flex min-w-0 flex-col gap-1">
+                <span className="text-secondary text-xs font-medium uppercase tracking-wide">To</span>
+                <Input type="date" value={endDate} disabled={isInitialLoading} onChange={setEndDate} />
+              </label>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 px-6">
+        <div className="hf-card p-5">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="hf-label-muted">Source mix</div>
+              <p className="text-secondary mt-2 text-sm/6">
+                {sourceChannel === 'all'
+                  ? 'Visits and submissions grouped by access channel for the selected range.'
+                  : `Filtered to ${SOURCE_CHANNEL_LABELS[sourceChannel] || sourceChannel}.`}
+              </p>
+            </div>
+            {dedupeByIp && (
+              <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                Unique IP mode
+              </span>
+            )}
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {(data?.analytic?.sourceBreakdown || []).map((row: any) => (
+              <div key={row.channel} className="hf-card-muted flex min-h-[5.5rem] flex-col justify-between p-4">
+                <div className="text-primary text-sm font-semibold">
+                  {SOURCE_CHANNEL_LABELS[row.channel] || row.channel}
+                </div>
+                <div className="space-y-0.5">
+                  <div className="text-secondary text-xs/5">{row.totalVisits} visits</div>
+                  <div className="text-secondary text-xs/5">{row.submissionCount} submissions</div>
+                </div>
+              </div>
+            ))}
+
+            {!isInitialLoading && !(data?.analytic?.sourceBreakdown || []).length && (
+              <div className="hf-card-muted text-secondary border-dashed p-4 text-sm">
+                No source data yet for this range.
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -129,7 +283,7 @@ export default function FormAnalyticsOverview() {
           >
             <TrendIndicator
               change={data?.analytic?.totalVisits.change}
-              label={`form.analytics.${range}Trend`}
+              text={getTrendText(t, range, data?.analytic?.totalVisits.change)}
             />
           </Skeleton>
         </div>
@@ -151,7 +305,7 @@ export default function FormAnalyticsOverview() {
           >
             <TrendIndicator
               change={data?.analytic?.submissionCount.change}
-              label={`form.analytics.${range}Trend`}
+              text={getTrendText(t, range, data?.analytic?.submissionCount.change)}
             />
           </Skeleton>
         </div>
@@ -173,7 +327,7 @@ export default function FormAnalyticsOverview() {
           >
             <TrendIndicator
               change={data?.analytic?.completeRate.change}
-              label={`form.analytics.${range}Trend`}
+              text={getTrendText(t, range, data?.analytic?.completeRate.change)}
             />
           </Skeleton>
         </div>
@@ -195,7 +349,7 @@ export default function FormAnalyticsOverview() {
           >
             <TrendIndicator
               change={data?.analytic?.averageTime.change}
-              label={`form.analytics.${range}Trend`}
+              text={getTrendText(t, range, data?.analytic?.averageTime.change)}
             />
           </Skeleton>
         </div>
@@ -207,6 +361,7 @@ export default function FormAnalyticsOverview() {
             <h3 className="text-lg font-semibold">Question journey</h3>
             <p className="text-secondary mt-1 text-sm/6">
               Reach, drop-off, and time-on-question across the selected range.
+              {dedupeByIp ? ' One representative session per IP is counted.' : ''}
             </p>
           </div>
 

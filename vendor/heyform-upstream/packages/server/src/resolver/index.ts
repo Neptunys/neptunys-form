@@ -34,6 +34,8 @@ export { AddProjectMemberResolver } from './project/add-project-member.resolver'
 export { DeleteProjectMemberResolver } from './project/delete-project-member.resolver'
 export { EmptyProjectTrashResolver } from './project/empty-project-trash.resolver'
 export { LeaveProjectResolver } from './project/leave-project.resolver'
+export { UpdateProjectResolver } from './project/update-project.resolver'
+export { ProjectLaunchOverviewResolver } from './project/project-launch-overview.resolver'
 
 export { AppsResolver } from './apps/apps.resolver'
 
@@ -67,6 +69,7 @@ export { MoveFormResolver } from './form/move-form.resolver'
 export { FormIntegrationsResolver } from './form/form-integrations.resolver'
 
 export { OpenFormResolver } from './endpoint/open-form.resolver'
+export { CaptureLeadSubmissionResolver } from './endpoint/capture-lead-submission.resolver'
 export { CompleteSubmissionResolver } from './endpoint/complete-submission.resolver'
 export { FormPasswordResolver } from './endpoint/form-password.resolver'
 export { UpdateFormSessionResolver } from './endpoint/update-form-session.resolver'

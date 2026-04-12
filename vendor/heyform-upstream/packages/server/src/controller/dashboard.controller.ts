@@ -1,5 +1,5 @@
-import { Controller, Get, Header, Res } from '@nestjs/common'
-import { Response } from 'express'
+import { Controller, Get, Header, Req, Res } from '@nestjs/common'
+import { Request, Response } from 'express'
 
 import {
   APP_DISABLE_REGISTRATION,
@@ -11,9 +11,12 @@ import {
   VERIFY_EMAIL_RESEND_COOLDOWN
 } from '@environments'
 import { hs } from '@heyform-inc/utils'
+import { TeamService } from '@service'
 
 @Controller()
 export class DashboardController {
+  constructor(private readonly teamService: TeamService) {}
+
   private runtimeConfig() {
     return {
       homepageURL: APP_HOMEPAGE_URL,
@@ -33,12 +36,12 @@ export class DashboardController {
   }
 
   @Get('/sign-up')
-  signUp(@Res() res: Response) {
+  signUp(@Req() req: Request, @Res() res: Response) {
     if (APP_DISABLE_REGISTRATION) {
       return res.redirect(302, '/login')
     }
 
-    return this.index(res)
+    return this.index(req, res)
   }
 
   @Get([
@@ -55,7 +58,17 @@ export class DashboardController {
     '/workspace/*'
   ])
   @Header('X-Frame-Options', 'SAMEORIGIN')
-  index(@Res() res: Response) {
+  async index(@Req() req: Request, @Res() res: Response) {
+    const customDomainWorkspace = await this.teamService.findByCustomDomain(
+      req.hostname?.toLowerCase()
+    )
+
+    if (customDomainWorkspace) {
+      return res.render('index', {
+        heyform: this.runtimeConfig()
+      })
+    }
+
     return res.render('index', {
       title: 'NeptunysForm Dashboard - Create and Manage Custom Forms Effortlessly',
       description:

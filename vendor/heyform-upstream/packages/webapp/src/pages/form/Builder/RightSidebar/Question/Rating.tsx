@@ -2,7 +2,8 @@ import { RATING_SHAPE_ICONS } from '@heyform-inc/form-renderer'
 import { startTransition, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { Select } from '@/components'
+import { Input, Select } from '@/components'
+import { helper } from '@heyform-inc/utils'
 
 import { useStoreContext } from '../../store'
 import { RequiredSettingsProps } from './Required'
@@ -10,6 +11,16 @@ import { RequiredSettingsProps } from './Required'
 export default function Rating({ field }: RequiredSettingsProps) {
   const { t } = useTranslation()
   const { dispatch } = useStoreContext()
+  const alignmentItems = [
+    {
+      value: 'left',
+      label: 'Left'
+    },
+    {
+      value: 'center',
+      label: 'Center'
+    }
+  ]
 
   const totalItems = Array.from({ length: 6 }, (_, index) => ({
     value: index + 5,
@@ -48,6 +59,23 @@ export default function Rating({ field }: RequiredSettingsProps) {
 
   return (
     <>
+      <div className="space-y-1">
+        <label className="text-sm/6" htmlFor="#">
+          Icon size
+        </label>
+
+        <Input
+          type="number"
+          min={24}
+          max={96}
+          placeholder="48"
+          value={field.properties?.optionSize}
+          onChange={value =>
+            handleChange('optionSize', helper.isEmpty(value) ? undefined : Number(value))
+          }
+        />
+      </div>
+
       <div className="flex items-center justify-between">
         <label className="text-sm/6" htmlFor="#">
           {t('form.builder.settings.total')}
@@ -58,6 +86,18 @@ export default function Rating({ field }: RequiredSettingsProps) {
           options={totalItems}
           value={field.properties?.total || 5}
           onChange={value => handleChange('total', value)}
+        />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <label className="text-sm/6" htmlFor="#">
+          Alignment
+        </label>
+
+        <Select
+          value={field.properties?.optionAlignment || 'left'}
+          options={alignmentItems}
+          onChange={value => handleChange('optionAlignment', value)}
         />
       </div>
 

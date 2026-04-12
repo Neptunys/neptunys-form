@@ -11,7 +11,9 @@ import {
   EMPTY_TRASH_GQL,
   EXPERIMENTS_GQL,
   LEAVE_PROJECT_GQL,
-  RENAME_PROJECT_GQL
+  PROJECT_LAUNCH_OVERVIEW_GQL,
+  RENAME_PROJECT_GQL,
+  UPDATE_PROJECT_GQL
 } from '@/consts'
 
 export class ProjectService {
@@ -36,6 +38,18 @@ export class ProjectService {
           projectId,
           name,
           memberIds
+        }
+      }
+    })
+  }
+
+  static update(projectId: string, updates: AnyMap) {
+    return apollo.mutate({
+      mutation: UPDATE_PROJECT_GQL,
+      variables: {
+        input: {
+          projectId,
+          ...updates
         }
       }
     })
@@ -114,6 +128,18 @@ export class ProjectService {
   static experiments(projectId: string) {
     return apollo.query({
       query: EXPERIMENTS_GQL,
+      variables: {
+        input: {
+          projectId
+        }
+      },
+      fetchPolicy: 'network-only'
+    })
+  }
+
+  static launchOverview(projectId: string) {
+    return apollo.query({
+      query: PROJECT_LAUNCH_OVERVIEW_GQL,
       variables: {
         input: {
           projectId

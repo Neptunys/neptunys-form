@@ -25,9 +25,14 @@ export const ProjectShell: FC<ProjectShellProps> = ({ children }) => {
   const navigations = useMemo(
     () => [
       {
-        value: 'analytics',
-        label: t('project.forms.title'),
+        value: 'launch',
+        label: 'Launch',
         to: `/workspace/${workspaceId}/project/${projectId}/`
+      },
+      {
+        value: 'settings',
+        label: 'Settings',
+        to: `/workspace/${workspaceId}/project/${projectId}/settings`
       },
       {
         value: 'trash',

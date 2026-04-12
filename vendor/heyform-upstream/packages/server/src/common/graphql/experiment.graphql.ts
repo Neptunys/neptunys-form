@@ -129,6 +129,12 @@ export class ExperimentVariantMetricType {
 
   @Field()
   isWinner: boolean
+
+  @Field()
+  meetsMinimumSample: boolean
+
+  @Field()
+  minimumSampleGap: number
 }
 
 @ObjectType()
@@ -174,6 +180,12 @@ export class ExperimentType {
 
   @Field({ nullable: true })
   promotedAt?: number
+
+  @Field()
+  minimumSampleReached: boolean
+
+  @Field({ nullable: true })
+  promotionBlockedReason?: string
 
   @Field(type => [ExperimentVariantMetricType], { nullable: true })
   metrics?: ExperimentVariantMetricType[]

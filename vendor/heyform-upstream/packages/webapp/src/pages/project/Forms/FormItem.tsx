@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 import { FormService } from '@/services'
-import { timeFromNow, timeToNow, useRouter } from '@/utils'
+import { buildPublicFormUrl, timeFromNow, timeToNow, useRouter } from '@/utils'
 
 import IconLink from '@/assets/link.svg?react'
 import IconMoveTo from '@/assets/move-to.svg?react'
@@ -96,6 +96,13 @@ const FormItem: FC<FormItemProps> = ({ form, isInTrash, onChange }) => {
   const prompt = usePrompt()
   const router = useRouter()
   const { workspace, sharingURLPrefix } = useWorkspaceStore()
+  const shareLink = buildPublicFormUrl({
+    sharingURLPrefix,
+    formId: form.id,
+    slug: form.slug,
+    isDomainRoot: form.isDomainRoot,
+    customDomain: workspace?.customDomain
+  })
 
   const options = useMemo(
     () =>
@@ -333,7 +340,7 @@ const FormItem: FC<FormItemProps> = ({ form, isInTrash, onChange }) => {
             <Button.Copy
               size="sm"
               className="text-primary order-last sm:order-first [&_svg]:h-[1.125rem] [&_svg]:w-[1.125rem]"
-              text={`${sharingURLPrefix}/form/${form.id}`}
+              text={shareLink}
               label={t('form.copyLinkToShare')}
               icon={<IconLink strokeWidth={2.2} />}
             />

@@ -609,6 +609,19 @@ export default function Customize() {
           </Form.Item>
 
           <Form.Item
+            name="desktopBackButtonBackground"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:flex [&_[data-slot=control]]:items-center [&_[data-slot=control]]:justify-between"
+            label="Desktop back button"
+          >
+            <ColorPicker
+              contentProps={{
+                side: 'bottom',
+                align: 'end'
+              }}
+            />
+          </Form.Item>
+
+          <Form.Item
             name="progressColor"
             className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:flex [&_[data-slot=control]]:items-center [&_[data-slot=control]]:justify-between"
             label="Circular progress color"

@@ -63,6 +63,16 @@ export default function FormSettingsGeneral() {
 
         <Form.Item
           className="[&_[data-slot=content]]:pt-1.5"
+          name="enableQuestionNumbers"
+          label="Show question numbers"
+          description="Display the small step number before each page title in the live form and builder preview."
+          isInline
+        >
+          <Switch />
+        </Form.Item>
+
+        <Form.Item
+          className="[&_[data-slot=content]]:pt-1.5"
           name="enableQuestionList"
           label={t('form.settings.general.viewQuestions.headline')}
           description={t('form.settings.general.viewQuestions.subHeadline')}

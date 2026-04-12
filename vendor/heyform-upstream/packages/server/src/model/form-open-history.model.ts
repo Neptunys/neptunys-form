@@ -17,6 +17,9 @@ export class FormSessionSourceModel {
   referrer?: string
 
   @Prop()
+  channel?: string
+
+  @Prop()
   utmSource?: string
 
   @Prop()
@@ -77,6 +80,9 @@ export class FormOpenHistoryModel extends Document {
 
   @Prop({ required: true, index: true })
   anonymousId: string
+
+  @Prop({ index: true })
+  ip?: string
 
   @Prop({ index: true })
   experimentId?: string

@@ -33,11 +33,18 @@ const NON_QUESTION_FIELD_KINDS = [
 
 interface LeadAwareForm {
   id?: string
+  projectId?: string
   name: string
   settings?: Record<string, any>
   fields?: FormField[]
   hiddenFields?: HiddenField[]
   variables?: Variable[]
+}
+
+interface LeadAwareProject {
+  id?: string
+  name?: string
+  reportingTimezone?: string
 }
 
 interface LeadAwareSubmission {
@@ -85,6 +92,8 @@ export interface LeadCapturePayload {
   clientName?: string
   formId: string
   formName: string
+  projectId?: string
+  projectName?: string
   submissionId: string
   submittedAt: number
   submittedAtIso: string
@@ -342,6 +351,8 @@ export function buildLeadTemplateValues(
     clientName: payload.clientName,
     formId: payload.formId,
     formName: payload.formName,
+    projectId: payload.projectId,
+    projectName: payload.projectName,
     submissionId: payload.submissionId,
     submittedAt: payload.submittedAtIso,
     respondentName: payload.respondentName,
@@ -377,7 +388,8 @@ export function buildLeadTemplateValues(
 export function buildLeadCapturePayload(
   form: LeadAwareForm,
   submission: LeadAwareSubmission,
-  team?: LeadAwareTeam
+  team?: LeadAwareTeam,
+  project?: LeadAwareProject
 ): LeadCapturePayload {
   const settings = (form.settings || {}) as LeadFlowSettings
   const fieldMap = new Map((form.fields || []).map(field => [field.id, field]))
@@ -454,6 +466,8 @@ export function buildLeadCapturePayload(
     clientName: normalizeString(team?.clientName),
     formId: form.id || '',
     formName: form.name,
+    projectId: form.projectId || project?.id,
+    projectName: normalizeString(project?.name),
     submissionId: submission.id || '',
     submittedAt: submission.endAt || 0,
     submittedAtIso: new Date((submission.endAt || 0) * 1000).toISOString(),
@@ -475,7 +489,7 @@ export function buildLeadCapturePayload(
     variablesByName,
     answersPlain,
     answersHtml: answersToHtml(submission.answers),
-    reportingTimezone: normalizeString(team?.reportingTimezone)
+    reportingTimezone: normalizeString(project?.reportingTimezone || team?.reportingTimezone)
   }
 }
 
@@ -584,6 +598,14 @@ export function buildLeadSheetRow(payload: LeadCapturePayload) {
 
   if (helper.isValid(payload.clientName)) {
     row['Client Name'] = payload.clientName!
+  }
+
+  if (helper.isValid(payload.projectId)) {
+    row['Project ID'] = payload.projectId!
+  }
+
+  if (helper.isValid(payload.projectName)) {
+    row['Project Name'] = payload.projectName!
   }
 
   Object.entries(payload.answersByTitle).forEach(([key, value]) => {

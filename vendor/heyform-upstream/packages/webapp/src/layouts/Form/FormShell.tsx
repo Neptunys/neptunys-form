@@ -6,7 +6,7 @@ import { Trans, useTranslation } from 'react-i18next'
 import { NavLink } from 'react-router-dom'
 
 import { FormService } from '@/services'
-import { cn, timeFromNow, useParam, useRouter } from '@/utils'
+import { buildPublicFormUrl, cn, timeFromNow, useParam, useRouter } from '@/utils'
 
 import IconLink from '@/assets/link.svg?react'
 import IconMoveTo from '@/assets/move-to.svg?react'
@@ -284,7 +284,13 @@ export const FormShell: FC<ComponentProps> = ({ children }) => {
             <Button.Copy
               size="md"
               className="order-last sm:order-first"
-              text={`${sharingURLPrefix}/form/${formId}`}
+              text={buildPublicFormUrl({
+                sharingURLPrefix,
+                formId,
+                slug: form?.slug,
+                isDomainRoot: form?.isDomainRoot,
+                customDomain: workspace?.customDomain
+              })}
               label={t('form.copyLinkToShare')}
               icon={<IconLink className="h-5 w-5" />}
             />

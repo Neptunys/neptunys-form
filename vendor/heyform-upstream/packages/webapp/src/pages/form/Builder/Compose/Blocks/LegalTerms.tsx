@@ -1,4 +1,5 @@
-import type { CSSProperties, FC } from 'react'
+import { IconCheck } from '@tabler/icons-react'
+import type { FC } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { BlockProps } from './Block'
@@ -6,25 +7,18 @@ import { Block } from './Block'
 
 export const LegalTerms: FC<BlockProps> = ({ field, locale, ...restProps }) => {
   const { t } = useTranslation()
-  const cardStyle: CSSProperties = {
-    borderColor: 'var(--heyform-answer-opacity-30-color)',
-    backgroundColor: 'var(--heyform-answer-opacity-10-color)'
-  }
-  const checkboxStyle: CSSProperties = {
-    borderColor: 'var(--heyform-answer-opacity-60-color)'
-  }
   const consentText =
     field.properties?.consentText || 'I agree to the terms and privacy policy.'
+  const isDefaultChecked = field.properties?.defaultChecked === true
 
   return (
     <Block className="heyform-legal-terms" field={field} locale={locale} {...restProps}>
-      <div
-        className="flex w-full max-w-[28rem] items-start gap-3 rounded-lg border px-4 py-3"
-        style={cardStyle}
-      >
-        <div className="mt-0.5 flex h-5 w-5 shrink-0 rounded border" style={checkboxStyle} />
-        <div className="text-left text-base leading-6" style={{ color: 'var(--heyform-answer-color)' }}>
-          {consentText || t('I accept', { lng: locale })}
+      <div className="w-full max-w-[28rem]">
+        <div className={`heyform-consent-option${isDefaultChecked ? ' heyform-consent-option-selected' : ''}`}>
+          <span className="heyform-consent-box" aria-hidden="true">
+            <IconCheck className="heyform-consent-box-icon" />
+          </span>
+          <span className="heyform-consent-text">{consentText || t('I accept', { lng: locale })}</span>
         </div>
       </div>
     </Block>

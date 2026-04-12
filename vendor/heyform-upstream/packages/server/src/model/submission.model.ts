@@ -22,6 +22,9 @@ export class SubmissionModel extends Document {
   @Prop({ required: true, index: true })
   formId: string
 
+  @Prop({ index: true })
+  sessionId?: string
+
   @Prop({
     type: String,
     required: true,
@@ -48,6 +51,9 @@ export class SubmissionModel extends Document {
   @Prop()
   endAt?: number
 
+  @Prop({ type: Boolean, default: false, index: true })
+  isPartial?: boolean
+
   @Prop()
   ip: string
 
@@ -68,3 +74,5 @@ export class SubmissionModel extends Document {
 }
 
 export const SubmissionSchema = SchemaFactory.createForClass(SubmissionModel)
+
+SubmissionSchema.index({ formId: 1, sessionId: 1, isPartial: 1 })

@@ -22,6 +22,7 @@ export interface HiddenFieldAnswer extends HiddenField {
 export interface SubmissionModel {
   id: string
   formId: string
+  sessionId?: string
   category: SubmissionCategoryEnum
   title: string
   contact?: ContactModel
@@ -31,5 +32,6 @@ export interface SubmissionModel {
   variables?: Variable[]
   startAt?: number
   endAt?: number
+  isPartial?: boolean
   status: SubmissionStatusEnum
 }

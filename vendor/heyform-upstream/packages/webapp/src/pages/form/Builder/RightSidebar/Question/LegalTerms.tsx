@@ -1,6 +1,6 @@
 import { startTransition, useCallback } from 'react'
 
-import { Input } from '@/components'
+import { Input, Switch } from '@/components'
 
 import { useStoreContext } from '../../store'
 import { RequiredSettingsProps } from './Required'
@@ -48,6 +48,14 @@ export default function LegalTermsSettings({ field }: RequiredSettingsProps) {
           placeholder="Continue"
           value={field.properties?.buttonText}
           onChange={value => handleChange('buttonText', value)}
+        />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="text-sm/6">Checked by default</div>
+        <Switch
+          value={field.properties?.defaultChecked}
+          onChange={value => handleChange('defaultChecked', value)}
         />
       </div>
     </div>

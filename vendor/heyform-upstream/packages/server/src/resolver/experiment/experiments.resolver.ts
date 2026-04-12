@@ -143,6 +143,8 @@ export class ExperimentsResolver {
       endAt: experiment.endAt,
       winnerFormId: experiment.winnerFormId || winner.winnerFormId,
       promotedAt: experiment.promotedAt,
+      minimumSampleReached: winner.minimumSampleReached,
+      promotionBlockedReason: winner.promotionBlockedReason,
       metrics: winner.metrics
     }
   }

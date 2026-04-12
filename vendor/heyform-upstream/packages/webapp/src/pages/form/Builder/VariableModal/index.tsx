@@ -18,6 +18,7 @@ const VariableComponent = () => {
 
   const [kind, setKind] = useState<string>('number')
   const isEditing = useMemo(() => helper.isValid(state.selectedVariable), [state.selectedVariable])
+  const isScoreVariable = kind === 'number'
 
   const options = useMemo(
     () =>
@@ -76,6 +77,7 @@ const VariableComponent = () => {
       className="space-y-4"
       initialValues={{
         kind,
+        value: state.selectedVariable?.value ?? (isScoreVariable ? 0 : ''),
         ...state.selectedVariable
       }}
       submitProps={{
@@ -90,6 +92,12 @@ const VariableComponent = () => {
       submitOnChangedOnly
       onValuesChange={handleValuesChange}
     >
+      <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm/6 text-slate-700">
+        {isScoreVariable
+          ? 'Use a number variable for quiz scoring. Start it at 0, then add or subtract points in your answer rules.'
+          : 'Use a text variable for labels or outcomes such as pass/fail, recommendation tier, or routing state.'}
+      </div>
+
       <Form.Item
         name="kind"
         label={t('form.builder.logic.variable.type')}
@@ -102,14 +110,17 @@ const VariableComponent = () => {
         label={t('form.builder.logic.variable.name')}
         rules={[{ required: true }]}
       >
-        <Input />
+        <Input placeholder={isScoreVariable ? 'e.g. total_score' : 'e.g. result_label'} />
       </Form.Item>
       <Form.Item
         name="value"
-        label={t('form.builder.logic.variable.defaultValue')}
+        label={isScoreVariable ? 'Starting score' : t('form.builder.logic.variable.defaultValue')}
         rules={[{ required: true }]}
       >
-        <Input type={VARIABLE_INPUT_TYPES[kind]} />
+        <Input
+          type={VARIABLE_INPUT_TYPES[kind]}
+          placeholder={isScoreVariable ? '0' : 'e.g. qualified'}
+        />
       </Form.Item>
     </Form.Simple>
   )

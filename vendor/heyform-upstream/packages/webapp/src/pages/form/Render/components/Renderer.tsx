@@ -402,6 +402,39 @@ export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId, ex
     setIsPasswordChecked(true)
   }
 
+  function buildHiddenFieldAnswers(): HiddenFieldAnswer[] {
+    return (form.hiddenFields || [])
+      .map(field => {
+        const value = query[field.name]
+
+        if (helper.isValid(value)) {
+          return {
+            ...field,
+            value
+          }
+        }
+      })
+      .filter(Boolean) as HiddenFieldAnswer[]
+  }
+
+  async function handleLeadCapture(values: Record<string, any>) {
+    if (!openTokenRef.current) {
+      return
+    }
+
+    try {
+      await EndpointService.captureLeadSubmission({
+        formId: form.id,
+        answers: values,
+        hiddenFields: buildHiddenFieldAnswers(),
+        openToken: openTokenRef.current,
+        passwordToken: passwordTokenRef.current
+      })
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
   async function handleSubmit(values: Any, partialSubmission?: boolean, stripe?: Any) {
     try {
       flushActiveQuestion(true)
@@ -416,18 +449,7 @@ export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId, ex
 
       const file = await new Uploader(form, values).start()
 
-      const hiddenFields = (form!.hiddenFields || [])
-        .map(field => {
-          const value = query[field.name]
-
-          if (helper.isValid(value)) {
-            return {
-              ...field,
-              value
-            }
-          }
-        })
-        .filter(Boolean) as HiddenFieldAnswer[]
+      const hiddenFields = buildHiddenFieldAnswers()
 
       const { clientSecret } = await EndpointService.completeSubmission({
         formId: form.id,
@@ -539,6 +561,7 @@ export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId, ex
         enableQuestionList={form.settings?.enableQuestionList}
         enableNavigationArrows={form.settings?.enableNavigationArrows}
         onQuestionChange={handleQuestionChange}
+        onLeadCapture={handleLeadCapture}
         onSubmit={handleSubmit}
       />
 

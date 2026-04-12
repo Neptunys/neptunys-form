@@ -4,18 +4,19 @@ import { useMemo, useRef } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 
 import { FormService } from '@/services'
-import { useParam } from '@/utils'
+import { buildPublicFormUrl, normalizePublicFormSlug, useParam } from '@/utils'
 import { helper } from '@heyform-inc/utils'
 
 import OgIcon from '@/assets/og.svg?react'
-import { Button, Image, ImagePicker, ImagePickerRef, Input, Tooltip } from '@/components'
-import { useFormStore } from '@/store'
+import { Button, Image, ImagePicker, ImagePickerRef, Input, Switch, Tooltip } from '@/components'
+import { useFormStore, useWorkspaceStore } from '@/store'
 
 export default function LinkSettings() {
   const { t } = useTranslation()
 
   const { formId } = useParam()
-  const { form, updateSettings } = useFormStore()
+  const { workspace, sharingURLPrefix } = useWorkspaceStore()
+  const { form, updateForm, updateSettings } = useFormStore()
   const imagePickerRef = useRef<ImagePickerRef | null>(null)
 
   const { title, description } = useMemo(() => {
@@ -28,6 +29,18 @@ export default function LinkSettings() {
 
     return {}
   }, [form])
+
+  const publicUrl = useMemo(
+    () =>
+      buildPublicFormUrl({
+        sharingURLPrefix,
+        formId,
+        slug: form?.slug,
+        isDomainRoot: form?.isDomainRoot,
+        customDomain: workspace?.customDomain
+      }),
+    [form?.isDomainRoot, form?.slug, formId, sharingURLPrefix, workspace?.customDomain]
+  )
 
   const { run } = useRequest(
     async (name: string, value?: string | null) => {
@@ -45,8 +58,40 @@ export default function LinkSettings() {
     }
   )
 
+  const { run: updatePublicAccess, loading: publicAccessLoading } = useRequest(
+    async (updates: { slug?: string; isDomainRoot?: boolean }) => {
+      await FormService.update(formId, updates)
+      updateForm(updates)
+    },
+    {
+      debounceWait: 300,
+      manual: true,
+      refreshDeps: [formId]
+    }
+  )
+
   function handleUpload() {
     imagePickerRef.current?.open()
+  }
+
+  function handleSlugChange(value?: string) {
+    const slug = normalizePublicFormSlug(value)
+
+    updateForm({
+      slug
+    })
+
+    updatePublicAccess({
+      slug: slug || ''
+    })
+  }
+
+  function handleDomainRootChange(isDomainRoot: boolean) {
+    updateForm({
+      isDomainRoot
+    })
+
+    updatePublicAccess({ isDomainRoot })
   }
 
   return (
@@ -58,6 +103,52 @@ export default function LinkSettings() {
 
       <div className="mt-4 flex flex-col gap-4 sm:w-4/5 sm:flex-row sm:gap-10">
         <div className="w-full space-y-4 sm:w-96">
+          <div className="space-y-1">
+            <div>
+              <label
+                htmlFor="public-slug"
+                className="select-none text-base/6 font-medium sm:text-sm/6"
+              >
+                Public path
+              </label>
+            </div>
+            <Input
+              id="public-slug"
+              placeholder="offer-a"
+              value={form?.slug || ''}
+              onChange={handleSlugChange}
+              className="hf-card"
+            />
+            <p className="text-secondary text-sm/6">
+              {workspace?.customDomain
+                ? 'This becomes the short path on the workspace custom domain.'
+                : 'Set the short path now. It will go live as soon as the workspace custom domain is connected.'}
+            </p>
+          </div>
+
+          <div className="flex items-start justify-between gap-4 rounded-2xl border border-black/5 bg-white/70 px-4 py-3">
+            <div>
+              <div className="text-base/6 font-medium sm:text-sm/6">Use this form as the domain homepage</div>
+              <p className="text-secondary mt-1 text-sm/6">
+                When enabled, this form opens on the bare custom domain and all other forms stay on their own short paths.
+              </p>
+            </div>
+
+            <Switch
+              value={form?.isDomainRoot}
+              loading={publicAccessLoading}
+              onChange={handleDomainRootChange}
+            />
+          </div>
+
+          <div className="rounded-2xl border border-black/5 bg-white/70 px-4 py-3">
+            <div className="text-secondary text-xs uppercase tracking-[0.16em]">Live URL preview</div>
+            <div className="text-primary mt-2 break-all text-sm font-medium">{publicUrl}</div>
+            <div className="mt-3">
+              <Button.Copy text={publicUrl} label="Copy URL" size="sm" />
+            </div>
+          </div>
+
           <div className="space-y-1">
             <div>
               <label

@@ -9,7 +9,7 @@ import {
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { getDecoratedURL, useParam } from '@/utils'
+import { buildPublicFormUrl, getDecoratedURL, useParam } from '@/utils'
 
 import { Button, Tooltip } from '@/components'
 import { FORM_EMBED_OPTIONS } from '@/consts'
@@ -24,14 +24,24 @@ export default function FormShare() {
 
   const { formId } = useParam()
   const { openModal } = useAppStore()
-  const { sharingURLPrefix } = useWorkspaceStore()
+  const { sharingURLPrefix, workspace } = useWorkspaceStore()
   const { form, selectEmbedType } = useFormStore()
 
-  const shareLink = useMemo(() => sharingURLPrefix + '/form/' + formId, [formId, sharingURLPrefix])
+  const shareLink = useMemo(
+    () =>
+      buildPublicFormUrl({
+        sharingURLPrefix,
+        formId,
+        slug: form?.slug,
+        isDomainRoot: form?.isDomainRoot,
+        customDomain: workspace?.customDomain
+      }),
+    [form?.isDomainRoot, form?.slug, formId, sharingURLPrefix, workspace?.customDomain]
+  )
 
   function handleShareEmail() {
     const url = getDecoratedURL('mailto:', {
-      subject: 'Cold you take a moment to fill in this heyform?',
+      subject: 'Could you take a moment to fill in this NeptunysForm page?',
       body: `We would really appreciate it if you filled in this form: ${shareLink}. Thank you.`
     })
     window.open(url)

@@ -1,4 +1,4 @@
-import type { FC } from 'react'
+import type { CSSProperties, FC } from 'react'
 
 import { useTranslation } from '../utils'
 
@@ -8,6 +8,20 @@ import { useStore } from '../store'
 import type { BlockProps } from './Block'
 import { Block } from './Block'
 import { Form } from './Form'
+
+function getRatingStyle(optionSize?: number): CSSProperties | undefined {
+  if (typeof optionSize !== 'number' || Number.isNaN(optionSize)) {
+    return undefined
+  }
+
+  const desktopSize = Math.max(24, Math.min(96, Math.round(optionSize)))
+  const mobileSize = Math.max(24, Math.round(desktopSize * 0.86))
+
+  return {
+    ['--heyform-rating-icon-size' as string]: `${desktopSize}px`,
+    ['--heyform-rating-icon-size-mobile' as string]: `${mobileSize}px`
+  }
+}
 
 function getShape(shape?: string) {
   let name = 'star'
@@ -23,6 +37,8 @@ export const Rating: FC<BlockProps> = ({ field, ...restProps }) => {
   const { state } = useStore()
   const { t } = useTranslation()
   const shape = getShape(field.properties?.shape)
+  const isCentered = field.properties?.optionAlignment === 'center'
+  const style = getRatingStyle(field.properties?.optionSize)
 
   function getValues(values: any) {
     return values.input
@@ -38,7 +54,12 @@ export const Rating: FC<BlockProps> = ({ field, ...restProps }) => {
   }
 
   return (
-    <Block className="heyform-rating" field={field} {...restProps}>
+    <Block
+      className={`heyform-rating${isCentered ? ' heyform-options-center' : ''}`}
+      field={field}
+      style={style}
+      {...restProps}
+    >
       <Form
         initialValues={{
           input: state.values[field.id]

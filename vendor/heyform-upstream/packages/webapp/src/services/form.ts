@@ -36,6 +36,8 @@ import {
   OPEN_FORM_GQL,
   PUBLIC_EXPERIMENT_GQL,
   PUBLIC_FORM_GQL,
+  PUBLIC_FORM_BY_DOMAIN_GQL,
+  PUBLIC_ROUTE_BY_DOMAIN_GQL,
   PUBLISH_FORM_SQL,
   RESTORE_FORM_GQL,
   SEARCH_FORM_GQL,
@@ -71,6 +73,26 @@ function normalizeGraphQLEnumValue(
 }
 
 export class FormService {
+  static buildAnalyticInput(
+    formId: string,
+    range: string,
+    options: {
+      sourceChannel?: string
+      dedupeByIp?: boolean
+      startDate?: string
+      endDate?: string
+    } = {}
+  ) {
+    return {
+      formId,
+      range,
+      sourceChannel: options.sourceChannel && options.sourceChannel !== 'all' ? options.sourceChannel : undefined,
+      dedupeByIp: options.dedupeByIp === true ? true : undefined,
+      startDate: range === 'custom' && options.startDate ? options.startDate : undefined,
+      endDate: range === 'custom' && options.endDate ? options.endDate : undefined
+    }
+  }
+
   static async forms(projectId: string, status = FormStatusEnum.NORMAL) {
     return apollo.query({
       query: FORMS_GQL,
@@ -180,27 +202,39 @@ export class FormService {
     })
   }
 
-  static async analytic(formId: string, range: string) {
+  static async analytic(
+    formId: string,
+    range: string,
+    options: {
+      sourceChannel?: string
+      dedupeByIp?: boolean
+      startDate?: string
+      endDate?: string
+    } = {}
+  ) {
     return apollo.query({
       query: FORM_ANALYTIC_GQL,
       variables: {
-        input: {
-          formId,
-          range
-        }
+        input: this.buildAnalyticInput(formId, range, options)
       },
       fetchPolicy: 'network-only'
     })
   }
 
-  static async questionAnalytics(formId: string, range: string) {
+  static async questionAnalytics(
+    formId: string,
+    range: string,
+    options: {
+      sourceChannel?: string
+      dedupeByIp?: boolean
+      startDate?: string
+      endDate?: string
+    } = {}
+  ) {
     return apollo.query({
       query: FORM_QUESTION_ANALYTIC_GQL,
       variables: {
-        input: {
-          formId,
-          range
-        }
+        input: this.buildAnalyticInput(formId, range, options)
       },
       fetchPolicy: 'network-only'
     })
@@ -500,6 +534,32 @@ export class FormService {
       variables: {
         input: {
           formId
+        }
+      },
+      fetchPolicy: 'network-only'
+    })
+  }
+
+  static async publicFormByDomain(hostname: string, slug?: string) {
+    return apollo.query({
+      query: PUBLIC_FORM_BY_DOMAIN_GQL,
+      variables: {
+        input: {
+          hostname,
+          slug
+        }
+      },
+      fetchPolicy: 'network-only'
+    })
+  }
+
+  static async publicRouteByDomain(hostname: string, slug?: string) {
+    return apollo.query({
+      query: PUBLIC_ROUTE_BY_DOMAIN_GQL,
+      variables: {
+        input: {
+          hostname,
+          slug
         }
       },
       fetchPolicy: 'network-only'

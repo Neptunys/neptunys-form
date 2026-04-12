@@ -61,6 +61,7 @@ export const Block: FC<BlockProps> = ({
   const isLeaving = transitionState === 'leaving'
   const isActiveBlock = !isLeaving && (isStandaloneActive || field.id === activeFieldId)
   const transitionDirection = state.scrollTo === 'previous' ? 'previous' : 'next'
+  const showQuestionNumber = state.settings?.enableQuestionNumbers !== false
   const stepLabel = useMemo(() => {
     const numberedLabel = questionNumber(field.number, field.parent?.number)
 
@@ -265,7 +266,9 @@ export const Block: FC<BlockProps> = ({
                     <div className="heyform-block-header">
                       {field.title && (
                         <div className="heyform-block-title-row">
-                          {stepLabel && <span className="heyform-question-step-chip">{stepLabel}</span>}
+                          {showQuestionNumber && stepLabel && (
+                            <span className="heyform-question-step-chip">{stepLabel}</span>
+                          )}
                           <h1
                             className="heyform-block-title"
                             dangerouslySetInnerHTML={{ __html: removeHeading(field.title as string) }}

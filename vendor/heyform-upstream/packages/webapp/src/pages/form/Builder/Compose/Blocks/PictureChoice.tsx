@@ -17,6 +17,7 @@ import { clone, excludeObject, helper, nanoid } from '@heyform-inc/utils'
 
 import { ImagePicker, ImagePickerRef } from '@/components'
 
+import { LEAD_SCORE_OPTIONS, normalizeLeadScore } from '../../utils/lead-score'
 import { useStoreContext } from '../../store'
 import type { BlockProps } from './Block'
 import { Block } from './Block'
@@ -28,6 +29,7 @@ interface PictureChoiceItemProps {
   badge?: ChoiceBadgeEnum
   enableRemove?: boolean
   onLabelChange?: (id: string, label: string) => void
+  onScoreChange?: (id: string, score?: number) => void
   onSelectImage?: (id: string) => void
   onRemoveImage?: (id: string) => void
   onRemove: (id: string) => void
@@ -40,6 +42,7 @@ const PictureChoiceItem: FC<PictureChoiceItemProps> = ({
   badge = ChoiceBadgeEnum.LETTER,
   enableRemove,
   onLabelChange,
+  onScoreChange,
   onSelectImage,
   onRemoveImage,
   onRemove
@@ -53,6 +56,10 @@ const PictureChoiceItem: FC<PictureChoiceItemProps> = ({
 
   function handleLabelChange(value: any) {
     onLabelChange?.(choice.id, value)
+  }
+
+  function handleScoreChange(value: any) {
+    onScoreChange?.(choice.id, normalizeLeadScore(value))
   }
 
   function handleBlur() {
@@ -107,13 +114,28 @@ const PictureChoiceItem: FC<PictureChoiceItemProps> = ({
             {isOther ? (
               <div className="heyform-radio-label-other">{choice.label}</div>
             ) : (
-              <Input
-                value={choice.label}
-                placeholder={isFocused ? t('form.builder.compose.choicePlaceholder') : undefined}
-                onBlur={handleBlur}
-                onFocus={handleFocus}
-                onChange={handleLabelChange}
-              />
+              <div className="flex flex-col gap-2">
+                <Input
+                  value={choice.label}
+                  placeholder={isFocused ? t('form.builder.compose.choicePlaceholder') : undefined}
+                  onBlur={handleBlur}
+                  onFocus={handleFocus}
+                  onChange={handleLabelChange}
+                />
+                <div className="flex items-center gap-2">
+                  <span className="text-text-light min-w-10 text-[11px] font-medium uppercase tracking-[0.08em]">
+                    Score
+                  </span>
+                  <Select
+                    className="w-32"
+                    allowClear
+                    placeholder="0-3"
+                    options={LEAD_SCORE_OPTIONS}
+                    value={choice.score ?? ''}
+                    onChange={handleScoreChange}
+                  />
+                </div>
+              </div>
             )}
           </div>
           {enableRemove && (
@@ -240,6 +262,26 @@ export const PictureChoice: FC<BlockProps> = ({ field, locale, ...restProps }) =
     })
   }
 
+  function handleScoreChange(id: string, score?: number) {
+    const choices = clone(field.properties?.choices || [])
+    const index = choices.findIndex(c => c.id === id)
+
+    choices[index].score = normalizeLeadScore(score)
+
+    dispatch({
+      type: 'updateField',
+      payload: {
+        id: field.id,
+        updates: {
+          properties: {
+            ...field.properties,
+            choices
+          }
+        }
+      }
+    })
+  }
+
   function handleRemoveImage(cid: string) {
     const choices = clone(field.properties?.choices || [])
     const index = choices.findIndex(c => c.id === cid)
@@ -269,6 +311,7 @@ export const PictureChoice: FC<BlockProps> = ({ field, locale, ...restProps }) =
   const handleAddChoiceCallback = useCallback(handleAddChoice, [field.properties])
   const handleChoiceRemoveCallback = useCallback(handleChoiceRemove, [field.properties])
   const handleLabelChangeCallback = useCallback(handleLabelChange, [field.properties])
+  const handleScoreChangeCallback = useCallback(handleScoreChange, [field.properties])
   const handleSelectImageCallback = useCallback(handleSelectImage, [field.properties])
   const handleRemoveImageCallback = useCallback(handleRemoveImage, [field.properties])
   const handleImageChangeCallback = useCallback(handleImageChange, [field.properties, choiceId])
@@ -277,6 +320,7 @@ export const PictureChoice: FC<BlockProps> = ({ field, locale, ...restProps }) =
     () => (helper.isValidArray(field.properties?.choices) ? clone(field.properties!.choices!) : []),
     [field.properties]
   )
+  const isComparisonLayout = !field.properties?.allowOther && choices.length === 2
 
   const handleSetList = useCallback(
     (newChoices: Choice[], sortable: any) => {
@@ -299,9 +343,14 @@ export const PictureChoice: FC<BlockProps> = ({ field, locale, ...restProps }) =
   )
 
   return (
-    <Block className="heyform-picture-choice" field={field} locale={locale} {...restProps}>
+    <Block
+      className={cn('heyform-picture-choice', isComparisonLayout && 'heyform-picture-choice-compare')}
+      field={field}
+      locale={locale}
+      {...restProps}
+    >
       <ReactSortable
-        className="heyform-picture-choice-list"
+        className={cn('heyform-picture-choice-list', isComparisonLayout && 'heyform-picture-choice-list-compare')}
         ghostClass="heyform-multiple-choice-ghost"
         chosenClass="heyform-multiple-choice-chosen"
         dragClass="heyform-multiple-choice-dragging"
@@ -323,6 +372,7 @@ export const PictureChoice: FC<BlockProps> = ({ field, locale, ...restProps }) =
                 badge={field.properties!.badge}
                 enableRemove={field.properties!.choices!.length > 1}
                 onLabelChange={handleLabelChangeCallback}
+                onScoreChange={handleScoreChangeCallback}
                 onSelectImage={handleSelectImageCallback}
                 onRemoveImage={handleRemoveImageCallback}
                 onRemove={handleChoiceRemoveCallback}
@@ -355,6 +405,7 @@ export const PictureChoice: FC<BlockProps> = ({ field, locale, ...restProps }) =
                 badge={field.properties!.badge}
                 enableRemove={field.properties!.choices!.length > 1}
                 onLabelChange={handleLabelChangeCallback}
+                onScoreChange={handleScoreChangeCallback}
                 onSelectImage={handleSelectImageCallback}
                 onRemoveImage={handleRemoveImageCallback}
                 onRemove={handleChoiceRemoveCallback}

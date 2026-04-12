@@ -3,7 +3,7 @@ import 'reflect-metadata'
 
 process.env.FORM_ENCRYPTION_KEY = process.env.FORM_ENCRYPTION_KEY || 'analytics-e2e-secret'
 
-const { timestamp } = require('@heyform-inc/utils')
+const { date, timestamp } = require('@heyform-inc/utils')
 const { CaptchaKindEnum, FieldKindEnum } = require('@heyform-inc/shared-types-enums')
 
 const { FormAnalyticRangeEnum } = require('../src/model/form-analytic.model')
@@ -126,6 +126,10 @@ class FakeFormOpenHistoryModel {
 
   private filter(query: Record<string, any>) {
     return this.rows.filter(row => matchesQuery(row, query))
+  }
+
+  async find(query: Record<string, any>) {
+    return this.filter(query)
   }
 
   findOne(query: Record<string, any>) {
@@ -312,11 +316,16 @@ class FakeFormAnalyticModel {
   }
 }
 
-function createContext(anonymousId: string) {
+function createContext(anonymousId: string, clientIp = '127.0.0.1') {
   return {
     req: {
       get: (header: string) =>
-        header.toLowerCase() === 'x-anonymous-id' ? anonymousId : undefined
+        header.toLowerCase() === 'x-anonymous-id'
+          ? anonymousId
+          : header.toLowerCase() === 'x-forwarded-for'
+            ? clientIp
+            : undefined,
+      ip: clientIp
     }
   }
 }
@@ -542,6 +551,13 @@ async function testAnalyticsFlowFromOpenToSummary() {
   assert.strictEqual(questions[0].dropOffRate, 50)
   assert.strictEqual(questions[0].averageDuration, 1.9)
   assert.strictEqual(questions[0].frictionLevel, 'high')
+  assert.deepStrictEqual(overview.sourceBreakdown, [
+    {
+      channel: 'other',
+      totalVisits: 2,
+      submissionCount: 1
+    }
+  ])
 }
 
 async function testRefreshReuseExpiresAfterThirtyMinutes() {
@@ -569,9 +585,219 @@ async function testRefreshReuseExpiresAfterThirtyMinutes() {
   assert.strictEqual(harness.formAnalyticModel.rows[0]?.totalVisits, 2)
 }
 
+async function testAnalyticsCanFilterBySourceAndDedupeByIp() {
+  const harness = createHarness()
+
+  const metaOpenTokenA = await harness.openFormResolver.openForm(createContext('anon_meta_a', '10.0.0.1'), {
+    formId: harness.form.id,
+    utmSource: 'facebook',
+    referrer: 'https://m.facebook.com'
+  })
+  const metaPayloadA = harness.endpointService.decryptToken(metaOpenTokenA)
+
+  await harness.updateFormSessionResolver.updateFormSession({
+    formId: harness.form.id,
+    openToken: metaOpenTokenA,
+    metrics: [
+      {
+        questionId: 'question_1',
+        order: 1,
+        title: 'What is your call sign?',
+        views: 1,
+        totalDurationMs: 2200,
+        completed: true
+      }
+    ],
+    lastQuestionId: 'question_1',
+    lastQuestionOrder: 1
+  })
+
+  const metaSessionA = harness.formOpenHistoryModel.rows.find(row => row.id === metaPayloadA.sessionId)
+  assert.ok(metaSessionA)
+  metaSessionA.startAt = timestamp() - 10
+  metaSessionA.lastSeenAt = metaSessionA.startAt
+
+  await harness.completeSubmissionResolver.completeSubmission(
+    {
+      ip: '10.0.0.1',
+      userAgent: 'analytics-e2e-test'
+    },
+    {
+      formId: harness.form.id,
+      answers: {
+        question_1: 'Alpha'
+      },
+      hiddenFields: [],
+      openToken: metaOpenTokenA
+    }
+  )
+
+  const metaOpenTokenB = await harness.openFormResolver.openForm(createContext('anon_meta_b', '10.0.0.1'), {
+    formId: harness.form.id,
+    utmSource: 'facebook',
+    referrer: 'https://m.facebook.com'
+  })
+
+  await harness.updateFormSessionResolver.updateFormSession({
+    formId: harness.form.id,
+    openToken: metaOpenTokenB,
+    metrics: [
+      {
+        questionId: 'question_1',
+        order: 1,
+        title: 'What is your call sign?',
+        views: 1,
+        totalDurationMs: 900,
+        completed: false
+      }
+    ],
+    lastQuestionId: 'question_1',
+    lastQuestionOrder: 1
+  })
+
+  await harness.openFormResolver.openForm(createContext('anon_direct', '10.0.0.2'), {
+    formId: harness.form.id,
+    landingUrl: 'https://example.com/direct'
+  })
+
+  const metaOverview = await harness.formAnalyticResolver.formAnalytic({
+    formId: harness.form.id,
+    range: FormAnalyticRangeEnum.WEEK,
+    sourceChannel: 'meta',
+    dedupeByIp: true
+  })
+
+  assert.strictEqual(metaOverview.totalVisits.value, 1)
+  assert.strictEqual(metaOverview.submissionCount.value, 1)
+  assert.strictEqual(metaOverview.completeRate.value, 100)
+  assert.deepStrictEqual(metaOverview.sourceBreakdown, [
+    {
+      channel: 'meta',
+      totalVisits: 1,
+      submissionCount: 1
+    }
+  ])
+
+  const dedupedQuestions = await harness.formAnalyticResolver.formQuestionAnalytics({
+    formId: harness.form.id,
+    range: FormAnalyticRangeEnum.WEEK,
+    sourceChannel: 'meta',
+    dedupeByIp: true
+  })
+
+  assert.strictEqual(dedupedQuestions.length, 1)
+  assert.strictEqual(dedupedQuestions[0].reachCount, 1)
+  assert.strictEqual(dedupedQuestions[0].completedCount, 1)
+}
+
+async function testAnalyticsSupportsTodayAndCustomRanges() {
+  const harness = createHarness()
+
+  const todayOpenToken = await harness.openFormResolver.openForm(createContext('anon_today', '10.0.0.3'), {
+    formId: harness.form.id
+  })
+  const todayPayload = harness.endpointService.decryptToken(todayOpenToken)
+
+  await harness.updateFormSessionResolver.updateFormSession({
+    formId: harness.form.id,
+    openToken: todayOpenToken,
+    metrics: [
+      {
+        questionId: 'question_1',
+        order: 1,
+        title: 'What is your call sign?',
+        views: 1,
+        totalDurationMs: 2100,
+        completed: true
+      }
+    ],
+    lastQuestionId: 'question_1',
+    lastQuestionOrder: 1
+  })
+
+  const todaySession = harness.formOpenHistoryModel.rows.find(row => row.id === todayPayload.sessionId)
+  assert.ok(todaySession)
+  todaySession.startAt = timestamp() - 60
+  todaySession.lastSeenAt = todaySession.startAt
+
+  await harness.completeSubmissionResolver.completeSubmission(
+    {
+      ip: '10.0.0.3',
+      userAgent: 'analytics-e2e-test'
+    },
+    {
+      formId: harness.form.id,
+      answers: {
+        question_1: 'Bravo'
+      },
+      hiddenFields: [],
+      openToken: todayOpenToken
+    }
+  )
+
+  const customOpenToken = await harness.openFormResolver.openForm(createContext('anon_custom', '10.0.0.4'), {
+    formId: harness.form.id
+  })
+  const customPayload = harness.endpointService.decryptToken(customOpenToken)
+
+  await harness.updateFormSessionResolver.updateFormSession({
+    formId: harness.form.id,
+    openToken: customOpenToken,
+    metrics: [
+      {
+        questionId: 'question_1',
+        order: 1,
+        title: 'What is your call sign?',
+        views: 1,
+        totalDurationMs: 1800,
+        completed: false
+      }
+    ],
+    lastQuestionId: 'question_1',
+    lastQuestionOrder: 1
+  })
+
+  const customSession = harness.formOpenHistoryModel.rows.find(row => row.id === customPayload.sessionId)
+  assert.ok(customSession)
+  customSession.startAt = timestamp() - 3 * 24 * 60 * 60
+  customSession.lastSeenAt = customSession.startAt
+
+  const todayOverview = await harness.formAnalyticResolver.formAnalytic({
+    formId: harness.form.id,
+    range: FormAnalyticRangeEnum.TODAY
+  })
+
+  assert.strictEqual(todayOverview.totalVisits.value, 1)
+  assert.strictEqual(todayOverview.submissionCount.value, 1)
+  assert.strictEqual(todayOverview.completeRate.value, 100)
+
+  const customOverview = await harness.formAnalyticResolver.formAnalytic({
+    formId: harness.form.id,
+    range: FormAnalyticRangeEnum.CUSTOM,
+    startDate: date().subtract(4, 'days').format('YYYY-MM-DD'),
+    endDate: date().subtract(2, 'days').format('YYYY-MM-DD')
+  })
+
+  assert.strictEqual(customOverview.totalVisits.value, 1)
+  assert.strictEqual(customOverview.submissionCount.value, 0)
+
+  const customQuestions = await harness.formAnalyticResolver.formQuestionAnalytics({
+    formId: harness.form.id,
+    range: FormAnalyticRangeEnum.CUSTOM,
+    startDate: date().subtract(4, 'days').format('YYYY-MM-DD'),
+    endDate: date().subtract(2, 'days').format('YYYY-MM-DD')
+  })
+
+  assert.strictEqual(customQuestions.length, 1)
+  assert.strictEqual(customQuestions[0].reachCount, 1)
+  assert.strictEqual(customQuestions[0].completedCount, 0)
+}
+
 async function run() {
   await testAnalyticsFlowFromOpenToSummary()
   await testRefreshReuseExpiresAfterThirtyMinutes()
+  await testAnalyticsCanFilterBySourceAndDedupeByIp()
+  await testAnalyticsSupportsTodayAndCustomRanges()
 }
 
 if (require.main === module) {

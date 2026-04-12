@@ -60,8 +60,7 @@ export default function Action({
 
   const { openModal } = useAppStore()
 
-  const [value, setValue] = useState<Any>(rawValue!)
-  const [htmlType, setHtmlType] = useState<string>('text')
+  const [value, setValue] = useState<Any>(rawValue || {})
 
   const fields = useMemo(() => {
     const tmpFields = flattenFieldsWithGroups(rawFields)
@@ -69,6 +68,18 @@ export default function Action({
 
     return tmpFields.slice(index + 1)
   }, [rawFields, currentField])
+  const selectedVariable = useMemo(
+    () => variables.find(variable => variable.id === value?.variable),
+    [value?.variable, variables]
+  )
+  const operatorOptions = useMemo(() => {
+    if (selectedVariable?.kind === 'string') {
+      return OPERATORS.filter(operator => operator.value === 'assignment')
+    }
+
+    return OPERATORS
+  }, [selectedVariable?.kind])
+  const valueInputType = selectedVariable?.kind === 'number' ? 'number' : 'text'
 
   function handleKindChange(kind: any) {
     if (kind === ActionEnum.CALCULATE) {
@@ -78,8 +89,12 @@ export default function Action({
         variable = variables[0].id
       }
 
-      if (helper.isEmpty(operator)) {
-        operator = OPERATORS[0]
+      const nextVariable = variables.find(row => row.id === variable)
+
+      if (nextVariable?.kind === 'string') {
+        operator = 'assignment'
+      } else if (typeof operator !== 'string' || helper.isEmpty(operator)) {
+        operator = OPERATORS[0].value
       }
 
       handleChange({ ...value, kind, variable, operator })
@@ -96,7 +111,18 @@ export default function Action({
   }
 
   function handleVariableChange(variable: any) {
-    handleChange({ ...value, variable })
+    const nextVariable = variables.find(row => row.id === variable)
+
+    handleChange({
+      ...value,
+      variable,
+      operator:
+        nextVariable?.kind === 'string'
+          ? 'assignment'
+          : typeof value?.operator === 'string'
+            ? value.operator
+            : OPERATORS[0].value
+    })
   }
 
   function handleOperatorChange(operator: any) {
@@ -113,22 +139,25 @@ export default function Action({
   }
 
   useEffect(() => {
-    if (value?.kind === ActionEnum.CALCULATE && helper.isValidArray(variables)) {
-      const variable = variables.find(v => v.id === value.variable)
+    setValue(rawValue || {})
+  }, [rawValue])
 
-      if (variable) {
-        switch (variable.kind) {
-          case 'string':
-            setHtmlType('text')
-            break
-
-          case 'number':
-            setHtmlType('number')
-            break
-        }
-      }
+  useEffect(() => {
+    if (value?.kind !== ActionEnum.CALCULATE || !selectedVariable) {
+      return
     }
-  }, [value.kind, value.variable, variables])
+
+    const nextOperator =
+      selectedVariable.kind === 'string'
+        ? 'assignment'
+        : typeof value.operator === 'string'
+          ? value.operator
+          : OPERATORS[0].value
+
+    if (nextOperator !== value.operator) {
+      handleChange({ ...value, operator: nextOperator })
+    }
+  }, [selectedVariable, value])
 
   return (
     <div
@@ -148,32 +177,51 @@ export default function Action({
       {value.kind === ActionEnum.NAVIGATE ? (
         <QuestionSelect fields={fields} value={value.fieldId} onChange={handleFieldChange} />
       ) : helper.isValidArray(variables) ? (
-        <>
-          <Select
-            className="w-auto flex-1"
-            options={variables}
-            labelKey="name"
-            valueKey="id"
-            value={value.variable}
-            placeholder="Variable"
-            onChange={handleVariableChange}
-          />
-          <Select
-            className="w-auto flex-1"
-            options={OPERATORS}
-            value={value.operator}
-            placeholder="Operator"
-            multiLanguage
-            onChange={handleOperatorChange}
-          />
-          <Input
-            type={htmlType}
-            placeholder="Value"
-            className="flex-1"
-            value={value.value}
-            onChange={handleInputChange}
-          />
-        </>
+        <div className="rule-action-calculate-panel">
+          <div className="rule-action-calculate-grid">
+            <label className="rule-action-input-group">
+              <span className="rule-action-input-label">Variable</span>
+              <Select
+                className="w-full"
+                options={variables}
+                labelKey="name"
+                valueKey="id"
+                value={value.variable}
+                placeholder="Choose a variable"
+                onChange={handleVariableChange}
+              />
+            </label>
+            <label className="rule-action-input-group">
+              <span className="rule-action-input-label">Operation</span>
+              <Select
+                className="w-full"
+                options={operatorOptions}
+                value={value.operator}
+                placeholder="Choose an operation"
+                multiLanguage
+                onChange={handleOperatorChange}
+              />
+            </label>
+            <label className="rule-action-input-group">
+              <span className="rule-action-input-label">
+                {selectedVariable?.kind === 'number' ? 'Points' : 'Value'}
+              </span>
+              <Input
+                type={valueInputType}
+                placeholder={selectedVariable?.kind === 'number' ? 'e.g. 10' : 'e.g. qualified'}
+                className="w-full"
+                value={value.value}
+                onChange={handleInputChange}
+              />
+            </label>
+          </div>
+
+          <div className="rule-action-help">
+            {selectedVariable?.kind === 'number'
+              ? 'Quiz scoring works best with one number variable that starts at 0. Use Add to award points and Assign only when you want to replace the score.'
+              : 'Text variables are better for labels or outcomes. They only support Assign so the result stays predictable.'}
+          </div>
+        </div>
       ) : (
         <Button.Link onClick={() => openModal('VariableModal')}>
           <IconPlus />

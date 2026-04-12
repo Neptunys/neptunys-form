@@ -14,16 +14,20 @@ export const LegalTerms: FC<BlockProps> = ({ field, ...restProps }) => {
   const { t } = useTranslation()
   const consentText =
     field.properties?.consentText || 'I agree to the terms and privacy policy.'
+  const hasStoredValue = Object.prototype.hasOwnProperty.call(state.values, field.id)
+  const initialValue = hasStoredValue
+    ? helper.isTrue(state.values[field.id])
+    : helper.isTrue(field.properties?.defaultChecked)
 
   function getValues(values: any) {
-    return helper.isTrue(values.input) ? true : undefined
+    return helper.isTrue(values.input)
   }
 
   return (
     <Block className="heyform-legal-terms" field={field} {...restProps}>
       <Form
         initialValues={{
-          input: helper.isTrue(state.values[field.id])
+          input: initialValue
         }}
         isSubmitShow={true}
         field={field}

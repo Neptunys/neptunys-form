@@ -13,8 +13,10 @@ import { useTranslation } from 'react-i18next'
 import { ReactSortable } from 'react-sortablejs'
 
 import { cn, nextTick } from '@/utils'
+import { Select } from '@/components'
 import { clone, excludeObject, helper, nanoid } from '@heyform-inc/utils'
 
+import { LEAD_SCORE_OPTIONS, normalizeLeadScore } from '../../utils/lead-score'
 import { useStoreContext } from '../../store'
 import type { BlockProps } from './Block'
 import { Block } from './Block'
@@ -28,6 +30,7 @@ interface MultipleChoiceItemProps {
   enableRemove?: boolean
   onRemove: (id: string) => void
   onChange?: (id: string, label: string) => void
+  onScoreChange?: (id: string, score?: number) => void
   onEnter?: (id: string) => void
   onUp?: (id: string) => void
   onDown?: (id: string) => void
@@ -42,6 +45,7 @@ const MultipleChoiceItem: FC<MultipleChoiceItemProps> = ({
   enableRemove,
   onRemove,
   onChange,
+  onScoreChange,
   onEnter,
   onUp,
   onDown
@@ -55,6 +59,10 @@ const MultipleChoiceItem: FC<MultipleChoiceItemProps> = ({
 
   function handleChange(value: any) {
     onChange?.(choice.id, value)
+  }
+
+  function handleScoreChange(score: any) {
+    onScoreChange?.(choice.id, normalizeLeadScore(score))
   }
 
   function handleBlur() {
@@ -104,15 +112,30 @@ const MultipleChoiceItem: FC<MultipleChoiceItemProps> = ({
             {isOther ? (
               <div className="heyform-radio-label-other cursor-default">{choice.label}</div>
             ) : (
-              <AutoResizeTextarea
-                ref={ref}
-                value={choice.label}
-                placeholder={isFocused ? t('form.builder.compose.choicePlaceholder') : undefined}
-                onBlur={handleBlur}
-                onFocus={handleFocus}
-                onChange={handleChange}
-                onKeyDown={handleKeyDown}
-              />
+              <>
+                <AutoResizeTextarea
+                  ref={ref}
+                  value={choice.label}
+                  placeholder={isFocused ? t('form.builder.compose.choicePlaceholder') : undefined}
+                  onBlur={handleBlur}
+                  onFocus={handleFocus}
+                  onChange={handleChange}
+                  onKeyDown={handleKeyDown}
+                />
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-text-light min-w-10 text-[11px] font-medium uppercase tracking-[0.08em]">
+                    Score
+                  </span>
+                  <Select
+                    className="w-32"
+                    allowClear
+                    placeholder="0-3"
+                    options={LEAD_SCORE_OPTIONS}
+                    value={choice.score ?? ''}
+                    onChange={handleScoreChange}
+                  />
+                </div>
+              </>
             )}
           </div>
           {enableRemove && (
@@ -227,6 +250,26 @@ export const MultipleChoice: FC<BlockProps> = ({ field, locale, ...restProps }) 
     })
   }
 
+  function handleScoreChange(id: string, score?: number) {
+    const choices = clone(field.properties?.choices || [])
+    const index = findChoiceIndex(choices, id)
+
+    choices[index].score = normalizeLeadScore(score)
+
+    dispatch({
+      type: 'updateField',
+      payload: {
+        id: field.id,
+        updates: {
+          properties: {
+            ...field.properties,
+            choices
+          }
+        }
+      }
+    })
+  }
+
   function handleEnter(id: string) {
     const index = findChoiceIndex(field.properties?.choices, id)
 
@@ -254,6 +297,7 @@ export const MultipleChoice: FC<BlockProps> = ({ field, locale, ...restProps }) 
   const handleAddChoiceCallback = useCallback(handleAddChoice, [field.properties])
   const handleChoiceRemoveCallback = useCallback(handleChoiceRemove, [field.properties])
   const handleLabelChangeCallback = useCallback(handleLabelChange, [field.properties])
+  const handleScoreChangeCallback = useCallback(handleScoreChange, [field.properties])
   const handleEnterCallback = useCallback(handleEnter, [field.properties])
   const handleUpCallback = useCallback(handleUp, [field.properties])
   const handleDownCallback = useCallback(handleDown, [field.properties])
@@ -315,6 +359,7 @@ export const MultipleChoice: FC<BlockProps> = ({ field, locale, ...restProps }) 
                   enableRemove={choices.length > 1}
                   onRemove={handleChoiceRemoveCallback}
                   onChange={handleLabelChangeCallback}
+                  onScoreChange={handleScoreChangeCallback}
                   onEnter={handleEnterCallback}
                   onUp={handleUpCallback}
                   onDown={handleDownCallback}
@@ -346,6 +391,7 @@ export const MultipleChoice: FC<BlockProps> = ({ field, locale, ...restProps }) 
                 enableRemove={choices.length > 1}
                 onRemove={handleChoiceRemoveCallback}
                 onChange={handleLabelChangeCallback}
+                onScoreChange={handleScoreChangeCallback}
                 onEnter={handleEnterCallback}
                 onUp={handleUpCallback}
                 onDown={handleDownCallback}

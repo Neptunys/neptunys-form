@@ -94,7 +94,7 @@ export class CompleteSubmissionResolver {
     }
 
     // Start submit time
-    const { timestamp: startAt } = this.endpointService.decryptToken(input.openToken)
+    const { timestamp: startAt, sessionId } = this.endpointService.decryptToken(input.openToken)
 
     // Bot prevention check
     if (form.settings?.captchaKind !== CaptchaKindEnum.NONE) {
@@ -144,21 +144,33 @@ export class CompleteSubmissionResolver {
     }
 
     const endAt = timestamp()
+    const partialSubmission = helper.isValid(sessionId)
+      ? await this.submissionService.findPartialBySession(input.formId, sessionId)
+      : null
 
-    const submissionId = await this.submissionService.create({
-      teamId: form.teamId,
-      formId: form.id,
+    const submissionSnapshot = {
       category,
       title: form.name,
       answers,
       hiddenFields: input.hiddenFields,
       variables,
-      startAt,
       endAt,
       ip: client.ip,
       userAgent: client.userAgent,
-      status
-    })
+      status,
+      isPartial: false,
+      sessionId
+    }
+
+    const submissionId = partialSubmission
+      ? (await this.submissionService.updateSubmission(partialSubmission.id, submissionSnapshot),
+        partialSubmission.id)
+      : await this.submissionService.create({
+          teamId: form.teamId,
+          formId: form.id,
+          startAt,
+          ...submissionSnapshot
+        })
 
     // Payment
     const answer = answers.find(a => a.kind === FieldKindEnum.PAYMENT)
@@ -189,8 +201,6 @@ export class CompleteSubmissionResolver {
 
     // Integration Queue
     this.integrationService.addQueue(form, submissionId)
-
-    const { sessionId } = this.endpointService.decryptToken(input.openToken)
 
     if (helper.isValid(sessionId)) {
       await this.formSessionService.update({

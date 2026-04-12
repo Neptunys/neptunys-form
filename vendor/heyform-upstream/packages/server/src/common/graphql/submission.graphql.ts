@@ -146,6 +146,9 @@ export class SubmissionType {
   id: string
 
   @Field({ nullable: true })
+  isPartial?: boolean
+
+  @Field({ nullable: true })
   category: string
 
   @Field({ nullable: true })

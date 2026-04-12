@@ -3,6 +3,8 @@ import { FormField, FormModel } from '@heyform-inc/shared-types-enums'
 export type { SubmissionModel as SubmissionType } from '@heyform-inc/shared-types-enums'
 
 export interface FormType extends Omit<FormModel, 'fields'> {
+  slug?: string
+  isDomainRoot?: boolean
   drafts?: FormField[]
   version: number
   fieldsUpdatedAt: number

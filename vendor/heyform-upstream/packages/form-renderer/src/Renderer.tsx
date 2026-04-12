@@ -39,6 +39,7 @@ export interface FormRendererProps {
   ssr?: boolean
   onQuestionChange?: (question?: QuestionChangePayload) => void
   onSubmit?: (values: Record<string, any>, isPartial?: boolean, stripe?: IStripe) => Promise<void>
+  onLeadCapture?: (values: Record<string, any>, field: FormField) => Promise<void> | void
 }
 
 function initStore(
@@ -120,7 +121,8 @@ export const FormRenderer: FC<FormRendererProps> = ({
   enableNavigationArrows,
   ssr = false,
   onQuestionChange,
-  onSubmit
+  onSubmit,
+  onLeadCapture
 }) => {
   const [isAndroid, setAndroid] = useState(false)
 
@@ -156,6 +158,7 @@ export const FormRenderer: FC<FormRendererProps> = ({
       enableQuestionList: isQuestionListEnabled,
       enableNavigationArrows: isNavigationArrowsEnabled,
       onQuestionChange,
+      onLeadCapture,
       onSubmit,
       ...initStore(form, locale, autoSave, allowPayment, ssr),
       query
@@ -167,6 +170,7 @@ export const FormRenderer: FC<FormRendererProps> = ({
       isQuestionListEnabled,
       isNavigationArrowsEnabled,
       onQuestionChange,
+      onLeadCapture,
       onSubmit,
       form,
       locale,
@@ -188,6 +192,7 @@ export const FormRenderer: FC<FormRendererProps> = ({
         enableQuestionList: isQuestionListEnabled,
         enableNavigationArrows: isNavigationArrowsEnabled,
         onQuestionChange,
+        onLeadCapture,
         onSubmit,
         settings: form.settings,
         theme: getTheme(form.themeSettings?.theme),
@@ -204,6 +209,7 @@ export const FormRenderer: FC<FormRendererProps> = ({
     isNavigationArrowsEnabled,
     isQuestionListEnabled,
     onQuestionChange,
+    onLeadCapture,
     onSubmit,
     query,
     reportAbuseURL

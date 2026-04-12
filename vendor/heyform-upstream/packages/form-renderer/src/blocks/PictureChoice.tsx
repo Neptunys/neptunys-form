@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import { FC, useEffect, useState } from 'react'
 
 import { useTranslation } from '../utils'
@@ -27,6 +28,7 @@ export const PictureChoice: FC<BlockProps> = ({ field, ...restProps }) => {
     field.validations?.min,
     field.validations?.max
   )
+  const isComparisonLayout = !field.properties?.allowOther && field.properties?.choices?.length === 2
   const autoAdvanceSingleChoice = helper.isTrue(state.settings?.autoAdvanceSingleChoice)
   const singleSelectAutoSubmit = autoAdvanceSingleChoice && !allowMultiple
 
@@ -45,7 +47,13 @@ export const PictureChoice: FC<BlockProps> = ({ field, ...restProps }) => {
   }, [field.id, state.values])
 
   return (
-    <Block className="heyform-picture-choice" field={field} {...restProps}>
+    <Block
+      className={clsx('heyform-picture-choice', {
+        'heyform-picture-choice-compare': isComparisonLayout
+      })}
+      field={field}
+      {...restProps}
+    >
       <SelectHelper min={min} max={max} />
 
       <Form
@@ -97,6 +105,9 @@ export const PictureChoice: FC<BlockProps> = ({ field, ...restProps }) => {
           ]}
         >
           <ChoiceRadioGroup
+            className={clsx({
+              'heyform-picture-choice-list-compare': isComparisonLayout
+            })}
             options={options}
             allowMultiple={field.properties?.allowMultiple}
             allowOther={field.properties?.allowOther}

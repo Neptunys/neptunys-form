@@ -1,7 +1,9 @@
 import {
   Answer,
+  HiddenFieldAnswer,
   SubmissionCategoryEnum,
-  SubmissionStatusEnum
+  SubmissionStatusEnum,
+  Variable
 } from '@heyform-inc/shared-types-enums'
 import { Injectable } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
@@ -11,6 +13,7 @@ import { FormService } from './form.service'
 import { date, helper } from '@heyform-inc/utils'
 import { SubmissionModel } from '@model'
 import { getUpdateQuery } from '@utils'
+import { UserAgent } from '@utils'
 
 const { isValid } = helper
 
@@ -20,6 +23,7 @@ interface FindSubmissionOptions {
   labelId?: string
   page?: number
   limit?: number
+  includePartial?: boolean
 }
 
 interface UpdateCategoryOptions {
@@ -47,16 +51,27 @@ export class SubmissionService {
     })
   }
 
-  async findAll({
+  async findPartialBySession(formId: string, sessionId: string): Promise<SubmissionModel | null> {
+    return this.submissionModel.findOne({
+      formId,
+      sessionId,
+      isPartial: true
+    })
+  }
+
+  private buildConditions({
     formId,
     category,
     labelId,
-    page = 1,
-    limit = 30
-  }: FindSubmissionOptions): Promise<SubmissionModel[]> {
+    includePartial = false
+  }: FindSubmissionOptions): Record<string, any> {
     const conditions: Record<string, any> = {
       formId,
       status: SubmissionStatusEnum.PUBLIC
+    }
+
+    if (!includePartial) {
+      conditions.isPartial = { $ne: true }
     }
 
     if (helper.isValid(category)) {
@@ -66,6 +81,24 @@ export class SubmissionService {
     if (helper.isValid(labelId)) {
       conditions.labels = labelId
     }
+
+    return conditions
+  }
+
+  async findAll({
+    formId,
+    category,
+    labelId,
+    page = 1,
+    limit = 30,
+    includePartial = false
+  }: FindSubmissionOptions): Promise<SubmissionModel[]> {
+    const conditions = this.buildConditions({
+      formId,
+      category,
+      labelId,
+      includePartial
+    })
 
     return this.submissionModel
       .find(conditions)
@@ -80,6 +113,7 @@ export class SubmissionService {
     return this.submissionModel.countDocuments({
       formId,
       'answers.id': fieldId,
+      isPartial: { $ne: true },
       status: SubmissionStatusEnum.PUBLIC
     })
   }
@@ -103,6 +137,7 @@ export class SubmissionService {
     const conditions: Record<string, any> = {
       formId,
       answers,
+      isPartial: { $ne: true },
       status: SubmissionStatusEnum.PUBLIC
     }
 
@@ -160,25 +195,21 @@ export class SubmissionService {
     ])
   }
 
-  public async count({ formId, category, labelId }: FindSubmissionOptions): Promise<number> {
-    const conditions: Record<string, any> = {
+  public async count({ formId, category, labelId, includePartial = false }: FindSubmissionOptions): Promise<number> {
+    const conditions = this.buildConditions({
       formId,
-      status: SubmissionStatusEnum.PUBLIC
-    }
+      category,
+      labelId,
+      includePartial
+    })
 
-    if (helper.isValid(category)) {
-      conditions.category = category
-    }
-
-    if (helper.isValid(labelId)) {
-      conditions.labels = labelId
-    }
     return this.submissionModel.countDocuments(conditions)
   }
 
   public async countInForm(formId: string): Promise<number> {
     return this.submissionModel.countDocuments({
-      formId
+      formId,
+      isPartial: { $ne: true }
     })
   }
 
@@ -200,12 +231,18 @@ export class SubmissionService {
   }
 
   public countAll(formIds: string[], filters: Record<string, any> = {}): Promise<number> {
-    return this.submissionModel.countDocuments({
+    const conditions: Record<string, any> = {
       formId: {
         $in: formIds
       },
       ...filters
-    })
+    }
+
+    if (!Object.prototype.hasOwnProperty.call(conditions, 'isPartial')) {
+      conditions.isPartial = { $ne: true }
+    }
+
+    return this.submissionModel.countDocuments(conditions)
   }
 
   public async countInForms(formIds: string[]): Promise<any> {
@@ -215,6 +252,9 @@ export class SubmissionService {
           $match: {
             formId: {
               $in: formIds
+            },
+            isPartial: {
+              $ne: true
             }
           }
         },
@@ -237,6 +277,9 @@ export class SubmissionService {
           $match: {
             teamId: {
               $in: teamIds
+            },
+            isPartial: {
+              $ne: true
             }
           }
         },
@@ -255,6 +298,71 @@ export class SubmissionService {
   public async create(submission: SubmissionModel | any): Promise<string> {
     const result = await this.submissionModel.create(submission)
     return result.id
+  }
+
+  public async upsertPartialLeadSubmission(input: {
+    formId: string
+    sessionId: string
+    title: string
+    answers: Answer[]
+    hiddenFields?: HiddenFieldAnswer[]
+    variables?: Variable[]
+    startAt?: number
+    endAt?: number
+    ip?: string
+    userAgent?: UserAgent
+    category?: SubmissionCategoryEnum
+    status?: SubmissionStatusEnum
+  }): Promise<string> {
+    const result = await this.submissionModel.findOneAndUpdate(
+      {
+        formId: input.formId,
+        sessionId: input.sessionId,
+        isPartial: true
+      },
+      {
+        $set: {
+          title: input.title,
+          answers: input.answers,
+          hiddenFields: input.hiddenFields || [],
+          variables: input.variables || [],
+          endAt: input.endAt,
+          ip: input.ip,
+          userAgent: input.userAgent,
+          category: input.category || SubmissionCategoryEnum.INBOX,
+          status: input.status || SubmissionStatusEnum.PUBLIC,
+          isPartial: true
+        },
+        $setOnInsert: {
+          formId: input.formId,
+          sessionId: input.sessionId,
+          startAt: input.startAt
+        }
+      },
+      {
+        upsert: true,
+        new: true
+      }
+    )
+
+    return result.id
+  }
+
+  async updateSubmission(submissionId: string, updates: Record<string, any>): Promise<boolean> {
+    const sanitizedUpdates = Object.fromEntries(
+      Object.entries(updates).filter(([, value]) => !helper.isNil(value))
+    )
+
+    const result = await this.submissionModel.updateOne(
+      {
+        _id: submissionId
+      },
+      {
+        $set: sanitizedUpdates
+      }
+    )
+
+    return result.acknowledged
   }
 
   public async maskAsPrivate(formId: string, submissionIds?: string[]): Promise<boolean> {
@@ -382,6 +490,9 @@ export class SubmissionService {
         formId: {
           $in: formIds
         },
+        isPartial: {
+          $ne: true
+        },
         endAt: {
           $gte: startAt,
           $lte: endAt
@@ -433,6 +544,7 @@ export class SubmissionService {
       {
         $match: {
           formId: formId,
+          isPartial: { $ne: true },
           startAt: { $gte: startAt },
           endAt: { $lte: endAt }
         }
