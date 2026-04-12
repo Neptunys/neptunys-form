@@ -5,6 +5,7 @@ import { replaceHTML } from '../utils'
 
 import { useStore } from '../store'
 import { WelcomeBranding } from '../views/Branding'
+import { Header } from '../views/Header'
 import type { BlockProps } from './Block'
 import { EmptyState } from './EmptyState'
 
@@ -29,6 +30,7 @@ export const Welcome: FC<BlockProps> = ({ field, ...restProps }) => {
 
   return (
     <>
+      <Header showStatus={false} />
       <EmptyState
         {...restProps}
         className="heyform-welcome"

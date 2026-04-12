@@ -44,18 +44,24 @@ export const PhoneNumber: FC<BlockProps> = ({ field, ...restProps }) => {
               required: field.validations?.required,
               validator(rule, value) {
                 return new Promise<void>((resolve, reject) => {
-                  if (!rule.required && helper.isEmpty(value)) {
-                    return resolve()
+                  if (helper.isEmpty(value)) {
+                    if (rule.required) {
+                      reject(t('This field is required'))
+                    } else {
+                      resolve()
+                    }
+
+                    return
                   }
 
                   if (isValidPhoneNumber(value)) {
                     resolve()
                   } else {
-                    reject(rule.message)
+                    reject(t('Please enter a valid mobile phone number'))
                   }
                 })
               },
-              message: t('This field is required')
+              message: t('Please enter a valid mobile phone number')
             }
           ]}
         >

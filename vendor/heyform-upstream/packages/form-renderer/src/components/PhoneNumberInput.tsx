@@ -32,6 +32,34 @@ function parse(input: string, countryCode: string): PhoneNumber | undefined {
   } catch (_) {}
 }
 
+function normalizeLeadingZeroPhoneNumber(input: string, countryCode: string) {
+  const parsed = parse(input, countryCode)
+
+  if (parsed?.isValid()) {
+    return parsed
+  }
+
+  const trimmedInput = input.trim()
+
+  if (!trimmedInput || trimmedInput.startsWith('+') || !trimmedInput.startsWith('0')) {
+    return parsed
+  }
+
+  const digitsOnly = trimmedInput.replace(/\D/g, '')
+
+  if (digitsOnly.length <= 1 || !digitsOnly.startsWith('0')) {
+    return parsed
+  }
+
+  const normalized = parse(digitsOnly.slice(1), countryCode)
+
+  return normalized?.isValid() ? normalized : parsed
+}
+
+function getSubmittedValue(input: string, countryCode: string) {
+  return normalizeLeadingZeroPhoneNumber(input, countryCode)?.number || ''
+}
+
 export const PhoneNumberInput: FC<PhoneNumberInputProps> = ({
   defaultCountryCode = 'US',
   hideCountrySelect = false,
@@ -54,12 +82,11 @@ export const PhoneNumberInput: FC<PhoneNumberInputProps> = ({
   function handleCodeChange(newCountryCode: any) {
     setCountryCode(newCountryCode)
 
-    if (helper.isValid(value) && isValidPhoneNumber(value!, newCountryCode)) {
+    if (helper.isValid(value)) {
       const newValue = format(value!, newCountryCode)
       setValue(newValue)
 
-      const parsed = parse(newValue, newCountryCode)
-      onChange?.(parsed?.number || '')
+      onChange?.(getSubmittedValue(newValue, newCountryCode))
     }
   }
 
@@ -98,7 +125,7 @@ export const PhoneNumberInput: FC<PhoneNumberInputProps> = ({
     setValue(newValue)
 
     startTransition(() => {
-      onChange?.(parsed?.number || '')
+      onChange?.(getSubmittedValue(newValue, newCountryCode))
     })
   }
 

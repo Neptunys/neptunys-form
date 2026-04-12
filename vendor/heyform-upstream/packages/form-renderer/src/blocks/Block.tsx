@@ -172,6 +172,19 @@ export const Block: FC<BlockProps> = ({
           return
         }
 
+        const focusContainer = () => {
+          try {
+            container.focus({ preventScroll: true })
+          } catch {
+            container.focus()
+          }
+        }
+
+        if (window.heyform.device.mobile) {
+          focusContainer()
+          return
+        }
+
         const interactiveElement = container.querySelector<HTMLElement>(
           [
             '[data-heyform-focus-target]:not([disabled])',
@@ -193,11 +206,7 @@ export const Block: FC<BlockProps> = ({
           return
         }
 
-        try {
-          container.focus({ preventScroll: true })
-        } catch {
-          container.focus()
-        }
+        focusContainer()
       },
       isReducedMotion ? 0 : 1000
     )

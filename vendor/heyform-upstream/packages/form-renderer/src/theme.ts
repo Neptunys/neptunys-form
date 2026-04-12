@@ -1,6 +1,6 @@
 import type { FormTheme } from '@heyform-inc/shared-types-enums'
 
-import { alpha, helper, hexToRgb, isDarkColor } from '@heyform-inc/utils'
+import { alpha, helper, hexToRgb, isDarkColor, isHexColor } from '@heyform-inc/utils'
 
 type RendererFormTheme = FormTheme & {
   logoSize?: number
@@ -383,6 +383,15 @@ export function getThemeStyle(theme: RendererFormTheme, query?: Record<string, a
 
   const desktopBackgroundImage = normalizedTheme.desktopBackgroundImage
   const mobileBackgroundImage = normalizedTheme.mobileBackgroundImage
+  const rootColorScheme = isHexColor(normalizedTheme.backgroundColor || '')
+    ? isDarkColor(normalizedTheme.backgroundColor!)
+      ? 'dark'
+      : 'light'
+    : isHexColor(normalizedTheme.questionTextColor || '')
+      ? isDarkColor(normalizedTheme.questionTextColor!)
+        ? 'light'
+        : 'dark'
+      : 'light'
   const desktopBackgroundBrightness = getBackgroundBrightnessValue(normalizedTheme, 'desktop')
   const mobileBackgroundBrightness = getBackgroundBrightnessValue(normalizedTheme, 'mobile')
   const progressColor = normalizedTheme.progressColor || normalizedTheme.buttonBackground
@@ -453,6 +462,11 @@ export function getThemeStyle(theme: RendererFormTheme, query?: Record<string, a
   }
 
   return `
+  html, body, .heyform-render-root, .heyform-root {
+    background-color: ${normalizedTheme.backgroundColor};
+    color-scheme: ${rootColorScheme};
+  }
+
   html, .heyform-root {
     --heyform-font-family: ${normalizedTheme.fontFamily};
     --heyform-question-color: ${normalizedTheme.questionTextColor};

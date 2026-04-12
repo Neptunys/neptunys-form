@@ -7,6 +7,7 @@ import { isURL, useTranslation } from '../utils'
 
 import { useStore } from '../store'
 import { WelcomeBranding } from '../views/Branding'
+import { Header } from '../views/Header'
 import type { BlockProps } from './Block'
 import { Block } from './Block'
 
@@ -178,6 +179,7 @@ export const ThankYou: FC<BlockProps> = ({ field, className, children, ...restPr
 
   return (
     <>
+      <Header showStatus={false} />
       <Block
         className={clsx('heyform-empty-state heyform-thank-you', className)}
         field={field}
