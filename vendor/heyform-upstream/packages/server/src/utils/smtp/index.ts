@@ -14,6 +14,7 @@ export interface SmtpOptions {
 
 export interface SmtpMessage {
   from: string
+  sender?: string
   to: string
   subject: string
   html: string

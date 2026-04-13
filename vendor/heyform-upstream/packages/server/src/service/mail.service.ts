@@ -5,7 +5,7 @@ import { readFileSync, readdirSync } from 'fs'
 import { basename, extname, join } from 'path'
 
 import { SmtpOptionsFactory } from '@config'
-import { EMAIL_TEMPLATES_DIR, SMTP_FROM } from '@environments'
+import { EMAIL_TEMPLATES_DIR, SMTP_FROM, SMTP_USER } from '@environments'
 import { helper } from '@heyform-inc/utils'
 import { SmtpOptions, validateSmtpConfig } from '@utils'
 
@@ -73,6 +73,7 @@ interface RegistrationApprovedOptions {
 
 const HTML_EXT = '.html'
 const TEMPLATE_META_REGEX = /^---([\s\S]*?)---[\n\s\S]\n/
+const MAIL_JOB_TIMEOUT_MS = 5 * 60 * 1000
 
 @Injectable()
 export class MailService {
@@ -163,6 +164,7 @@ export class MailService {
         queueName: 'MailQueue',
         data: {
           from: SMTP_FROM,
+          sender: helper.isValid(SMTP_USER) ? SMTP_USER : undefined,
           to: recipients,
           subject: options.subject,
           html: options.html
@@ -264,6 +266,7 @@ export class MailService {
         queueName: 'MailQueue',
         data: {
           from: SMTP_FROM,
+          sender: helper.isValid(SMTP_USER) ? SMTP_USER : undefined,
           to,
           subject,
           html
@@ -283,7 +286,10 @@ export class MailService {
   }
 
   private async enqueue(data: Record<string, any>, options?: JobOptions, waitForCompletion = false) {
-    const job = await this.mailQueue.add(data, options)
+    const job = await this.mailQueue.add(data, {
+      timeout: MAIL_JOB_TIMEOUT_MS,
+      ...options
+    })
 
     if (waitForCompletion) {
       await job.finished()

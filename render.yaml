@@ -25,6 +25,8 @@ services:
         value: "false"
       - key: ADMIN_APPROVAL_EMAIL
         value: contact@neptunys.com
+      - key: BULL_JOB_TIMEOUT
+        value: 5m
       - key: SESSION_KEY
         generateValue: true
       - key: FORM_ENCRYPTION_KEY

@@ -40,6 +40,7 @@ The included Blueprint prompts for these values:
 - `REDIS_URL`
 - `SMTP_FROM`, `SMTP_HOST`, and `SMTP_PORT` if you want email delivery
 - `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_SERVERNAME`, `SMTP_SECURE`, and `SMTP_IGNORE_CERT` as needed by your mail provider
+- `BULL_JOB_TIMEOUT` if you need to raise the background mail queue timeout for slower SMTP providers
 - `S3_ENDPOINT`
 - `S3_REGION`
 - `S3_BUCKET`
@@ -62,6 +63,7 @@ The app now also supports:
 - `ADMIN_APPROVAL_EMAIL` to gate all new non-admin registrations behind email approval
 
 The Render blueprint now defaults `SMTP_FROM` to `NeptunysForm <noreplay@neptunys.com>`, and every system email in the app uses that sender value.
+The blueprint also defaults `BULL_JOB_TIMEOUT` to `5m` so mail jobs are not cut off at one minute.
 
 ## S3-Compatible Upload Notes
 
