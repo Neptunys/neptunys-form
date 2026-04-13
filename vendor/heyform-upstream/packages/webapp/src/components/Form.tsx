@@ -137,9 +137,13 @@ const SimpleForm: FC<SimpleFormProps> = ({
 
   async function handleFinish(values: any) {
     if (onFinish) {
-      onFinish(values)
+      await onFinish(values)
     } else {
-      await runAsync(values)
+      try {
+        await runAsync(values)
+      } catch {
+        return
+      }
     }
   }
 

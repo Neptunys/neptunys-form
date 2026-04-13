@@ -45,7 +45,7 @@ export class JoinTeamResolver {
 
     const teamOwner = await this.userService.findById(team.ownerId)
 
-    this.mailService.joinWorkspaceAlert(teamOwner.email, {
+    await this.mailService.joinWorkspaceAlert(teamOwner.email, {
       teamName: team.name,
       userName: `${user.name} (${user.email})`
     })

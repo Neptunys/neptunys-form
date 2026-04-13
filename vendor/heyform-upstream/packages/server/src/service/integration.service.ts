@@ -98,7 +98,7 @@ export class IntegrationService {
       (form.settings as any)?.enableRespondentNotification ||
       (form.settings as any)?.enableOperatorNotification
     ) {
-      this.submissionNotificationQueue.add({
+      await this.submissionNotificationQueue.add({
         formId: form.id,
         submissionId
       })

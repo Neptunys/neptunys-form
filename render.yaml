@@ -34,7 +34,7 @@ services:
       - key: REDIS_URL
         sync: false
       - key: SMTP_FROM
-        sync: false
+        value: NeptunysForm <noreplay@neptunys.com>
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT

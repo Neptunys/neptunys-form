@@ -36,7 +36,7 @@ export class UpdateUserPasswordResolver {
       password: await passwordHash(input.newPassword, BCRYPT_SALT)
     })
 
-    this.mailService.passwordChangeAlert(user.email)
+    await this.mailService.passwordChangeAlert(user.email)
     return result
   }
 }

@@ -85,7 +85,7 @@ export class MailService {
   }
 
   async accountDeletionAlert(to: string) {
-    await this.addQueue('account_deletion_alert', to)
+    await this.addQueue('account_deletion_alert', to, undefined, undefined, true)
   }
 
   async adminRegistrationApprovalRequest(
@@ -110,7 +110,7 @@ export class MailService {
   async formInvitation(to: string, link: string) {
     await this.addQueue('form_invitation', to, {
       link
-    })
+    }, undefined, true)
   }
 
   async joinWorkspaceAlert(to: string, options: JoinWorkspaceAlertOptions) {
@@ -141,10 +141,15 @@ export class MailService {
   }
 
   async submissionNotification(to: string, options: SubmissionNotificationOptions) {
-    await this.addQueue('submission_notification', to, options)
+    await this.addQueue('submission_notification', to, options, undefined, true)
   }
 
-  async sendDirect(to: string | string[], options: DirectMailOptions, jobOptions?: JobOptions) {
+  async sendDirect(
+    to: string | string[],
+    options: DirectMailOptions,
+    jobOptions?: JobOptions,
+    waitForCompletion = true
+  ) {
     const recipients = helper.isArray(to) ? to.filter(helper.isValid).join(',') : to
 
     if (!helper.isValid(recipients) || !helper.isValid(options.subject) || !helper.isValid(options.html)) {
@@ -163,14 +168,15 @@ export class MailService {
           html: options.html
         }
       },
-      jobOptions
+      jobOptions,
+      waitForCompletion
     )
   }
 
   async teamDataExportReady(to: string, link: string) {
     await this.addQueue('team_data_export_ready', to, {
       link
-    })
+    }, undefined, true)
   }
 
   async teamDeletionAlert(to: string, options: TeamDeletionAlertOptions) {
@@ -185,7 +191,7 @@ export class MailService {
     await this.addQueue('team_invitation', to, {
       ...options,
       email: to
-    })
+    }, undefined, true)
   }
 
   async userSecurityAlert(to: string, options: UserSecurityAlertOptions) {

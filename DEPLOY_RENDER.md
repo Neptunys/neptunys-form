@@ -61,6 +61,8 @@ The app now also supports:
 - `OPENAI_GPT_MODEL` if you want to override the default AI model
 - `ADMIN_APPROVAL_EMAIL` to gate all new non-admin registrations behind email approval
 
+The Render blueprint now defaults `SMTP_FROM` to `NeptunysForm <noreplay@neptunys.com>`, and every system email in the app uses that sender value.
+
 ## S3-Compatible Upload Notes
 
 For a free deployment, do not rely on the web service filesystem for uploads.

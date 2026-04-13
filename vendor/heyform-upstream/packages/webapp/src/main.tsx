@@ -52,6 +52,28 @@ function renderFatalScreen(message?: string) {
   `
 }
 
+function shouldIgnoreHandledRequestRejection(reason: any) {
+  const graphQLErrors = Array.isArray(reason?.graphQLErrors) ? reason.graphQLErrors : []
+
+  if (graphQLErrors.length > 0) {
+    return graphQLErrors.every(error => {
+      const code = error?.extensions?.code || error?.code
+      const status = Number(
+        error?.extensions?.status || error?.status || reason?.networkError?.statusCode || reason?.networkError?.status
+      )
+
+      if (code === 'INTERNAL_SERVER_ERROR' || status >= 500) {
+        return false
+      }
+
+      return true
+    })
+  }
+
+  const status = Number(reason?.networkError?.statusCode || reason?.networkError?.status || reason?.status)
+  return Number.isFinite(status) && status > 0 && status < 500
+}
+
 const Fallback = ({ error }: { error?: Error }) => {
   const { t } = useTranslation()
 
@@ -217,6 +239,12 @@ window.addEventListener('error', event => {
 
 window.addEventListener('unhandledrejection', event => {
   const reason = event.reason as any
+
+  if (shouldIgnoreHandledRequestRejection(reason)) {
+    event.preventDefault()
+    return
+  }
+
   renderFatalScreen(reason?.message || String(reason || 'Unhandled promise rejection'))
 })
 
