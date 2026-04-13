@@ -2,6 +2,7 @@ import { Transform } from 'class-transformer'
 import {
   IsIn,
   IsInt,
+  Matches,
   IsOptional,
   IsString,
   IsUrl,
@@ -79,4 +80,21 @@ export class ExportSubmissionsDto {
   @IsOptional()
   @IsIn(['csv', 'xlsx'])
   format?: 'csv' | 'xlsx'
+}
+
+export class ExportProjectReportDto {
+  @IsString()
+  projectId: string
+
+  @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  startDate: string
+
+  @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  endDate: string
+
+  @IsOptional()
+  @IsIn(['xlsx'])
+  format?: 'xlsx'
 }

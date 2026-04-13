@@ -1,4 +1,4 @@
-import { apollo } from '@/utils'
+import { apollo, downloadFile, getDecoratedURL } from '@/utils'
 
 import {
   ADD_PROJECT_MEMBER_GQL,
@@ -147,6 +147,27 @@ export class ProjectService {
       },
       fetchPolicy: 'network-only'
     })
+  }
+
+  static downloadReport(
+    projectId: string,
+    input: {
+      startDate: string
+      endDate: string
+      format?: 'xlsx'
+    }
+  ) {
+    const format = input.format || 'xlsx'
+
+    return downloadFile(
+      getDecoratedURL('/api/export/project-report', {
+        projectId,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        format
+      }),
+      `project-report-${input.startDate}-to-${input.endDate}.${format}`
+    )
   }
 
   static createExperiment(input: {

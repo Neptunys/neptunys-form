@@ -1,6 +1,6 @@
 import { Answer, SubmissionCategoryEnum } from '@heyform-inc/shared-types-enums'
 
-import { apollo } from '@/utils'
+import { apollo, downloadFile, getDecoratedURL } from '@/utils'
 
 import {
   DELETE_SUBMISSIONS_GQL,
@@ -13,6 +13,16 @@ import {
 import { SubmissionType } from '@/types'
 
 export class SubmissionService {
+  static export(formId: string, format: 'csv' | 'xlsx' = 'csv') {
+    return downloadFile(
+      getDecoratedURL('/api/export/submissions', {
+        formId,
+        format
+      }),
+      `submissions.${format}`
+    )
+  }
+
   static submissions(input: {
     formId: string
     category: string

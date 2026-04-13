@@ -28,20 +28,7 @@ export class PermissionGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const ctx = GqlExecutionContext.create(context)
-    let { req } = ctx.getContext()
-    let args = ctx.getArgs()
-
-    if (helper.isEmpty(req)) {
-      req = context.switchToHttp().getRequest()
-      args = {
-        input: {
-          teamId: requestParser(req, ['teamId', 'team_id']),
-          projectId: requestParser(req, ['projectId', 'project_id']),
-          formId: requestParser(req, ['formId', 'form_id'])
-        }
-      }
-    }
+    const { req, input } = this.resolveRequestContext(context)
 
     const user = req.user
     const scope = this.reflector.get<PermissionScopeEnum>('scope', context.getHandler())
@@ -50,10 +37,10 @@ export class PermissionGuard implements CanActivate {
       throw new UnauthorizedException('Unauthorized')
     }
 
-    let { teamId, projectId } = args.input
+    let { teamId, projectId } = input
 
     if (scope >= PermissionScopeEnum.form) {
-      const formId = args.input.formId
+      const formId = input.formId
       const form = await this.formService.findById(formId)
 
       if (!form) {
@@ -118,5 +105,36 @@ export class PermissionGuard implements CanActivate {
     })
 
     return true
+  }
+
+  private resolveRequestContext(context: ExecutionContext) {
+    if (context.getType<string>() === 'http') {
+      const req = context.switchToHttp().getRequest()
+
+      return {
+        req,
+        input: this.resolveHttpInput(req)
+      }
+    }
+
+    const ctx = GqlExecutionContext.create(context)
+    let { req } = ctx.getContext()
+
+    if (helper.isEmpty(req)) {
+      req = context.switchToHttp().getRequest()
+    }
+
+    return {
+      req,
+      input: ctx.getArgs()?.input || this.resolveHttpInput(req)
+    }
+  }
+
+  private resolveHttpInput(req: any) {
+    return {
+      teamId: requestParser(req, ['teamId', 'team_id']),
+      projectId: requestParser(req, ['projectId', 'project_id']),
+      formId: requestParser(req, ['formId', 'form_id'])
+    }
   }
 }

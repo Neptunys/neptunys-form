@@ -24,6 +24,22 @@ const LAUNCH_MODE_OPTIONS = [
   }
 ]
 
+function formatDateInput(value: Date) {
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
+function getDefaultReportStartDate() {
+  const value = new Date()
+
+  value.setDate(value.getDate() - 29)
+
+  return formatDateInput(value)
+}
+
 function normalizeProjectLaunchPath(value?: string) {
   if (!helper.isValid(value)) {
     return undefined
@@ -79,6 +95,9 @@ export default function ProjectForms() {
   const [experiments, setExperiments] = useState<ExperimentType[]>([])
   const [overview, setOverview] = useState<ProjectLaunchOverviewType>()
   const [draftValues, setDraftValues] = useState<AnyMap>({})
+  const [reportStartDate, setReportStartDate] = useState(getDefaultReportStartDate)
+  const [reportEndDate, setReportEndDate] = useState(() => formatDateInput(new Date()))
+  const [reportLoading, setReportLoading] = useState(false)
 
   const formOptions = useMemo(
     () =>
@@ -198,6 +217,40 @@ export default function ProjectForms() {
         ? 'The public launch route is now live.'
         : 'The launch destination was saved.'
     })
+  }
+
+  async function handleDownloadReport() {
+    if (!helper.isValid(reportStartDate) || !helper.isValid(reportEndDate)) {
+      toast({
+        title: t('components.error.title'),
+        message: 'Choose a valid start and end date for the report.'
+      })
+      return
+    }
+
+    if (reportStartDate > reportEndDate) {
+      toast({
+        title: t('components.error.title'),
+        message: 'The start date must be on or before the end date.'
+      })
+      return
+    }
+
+    setReportLoading(true)
+
+    try {
+      await ProjectService.downloadReport(projectId, {
+        startDate: reportStartDate,
+        endDate: reportEndDate
+      })
+    } catch (err: any) {
+      toast({
+        title: t('components.error.title'),
+        message: err.message || 'Unable to download the project report.'
+      })
+    } finally {
+      setReportLoading(false)
+    }
   }
 
   function handleChange(type: string, form: FormType) {
@@ -390,6 +443,39 @@ export default function ProjectForms() {
             </div>
 
           </Form.Simple>
+        </div>
+      </section>
+
+      <section className="hf-card p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="hf-section-title">Client report</h2>
+            <p className="text-secondary mt-1 max-w-3xl text-sm/6">
+              Download an XLSX workbook with project summary metrics, per-form totals, and every
+              captured lead inside the selected date range.
+            </p>
+          </div>
+
+          <Button size="md" loading={reportLoading} onClick={handleDownloadReport}>
+            Download XLSX report
+          </Button>
+        </div>
+
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,13rem)_minmax(0,13rem)_1fr]">
+          <label className="flex min-w-0 flex-col gap-1">
+            <span className="text-secondary text-xs font-medium uppercase tracking-wide">From</span>
+            <Input type="date" value={reportStartDate} disabled={reportLoading} onChange={setReportStartDate} />
+          </label>
+
+          <label className="flex min-w-0 flex-col gap-1">
+            <span className="text-secondary text-xs font-medium uppercase tracking-wide">To</span>
+            <Input type="date" value={reportEndDate} disabled={reportLoading} onChange={setReportEndDate} />
+          </label>
+
+          <div className="text-secondary border-accent-light rounded-2xl border px-4 py-4 text-sm/6">
+            The report includes a summary sheet, form performance sheet, and a full lead export with
+            answers, hidden fields, and variables for the selected window.
+          </div>
         </div>
       </section>
 

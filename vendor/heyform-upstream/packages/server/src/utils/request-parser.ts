@@ -5,8 +5,14 @@ export function requestParser(req: any, keys: string[]): any {
   let value: any
 
   for (const source of sources) {
+    const container = req?.[source]
+
+    if (helper.isEmpty(container)) {
+      continue
+    }
+
     for (const key of keys) {
-      const searchValue = req[source][key]
+      const searchValue = container[key]
 
       if (helper.isValid(searchValue)) {
         value = searchValue

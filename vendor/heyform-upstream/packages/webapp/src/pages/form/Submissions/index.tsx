@@ -34,7 +34,8 @@ import {
   TableFetchParams,
   TableRef,
   TableState,
-  Tooltip
+  Tooltip,
+  useToast
 } from '@/components'
 import { useAppStore, useFormStore } from '@/store'
 import { SubmissionType } from '@/types'
@@ -59,12 +60,14 @@ export default function FormSubmissions() {
   const { formId } = useParam()
   const { form } = useFormStore()
   const { openModal, closeModal } = useAppStore()
+  const toast = useToast()
 
   const tableRef = useRef<TableRef<SubmissionType> | null>(null)
 
   const [category, setCategory] = useState<string>(SubmissionCategoryEnum.INBOX)
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
   const [hiddenFieldIds, setHiddenFieldIds] = useState<string[]>([])
+  const [downloadingFormat, setDownloadingFormat] = useState<'csv' | 'xlsx' | null>(null)
   const [isMaximized, { toggle }] = useBoolean(false)
 
   const targetCategory = useMemo(
@@ -216,10 +219,23 @@ export default function FormSubmissions() {
     toggle()
   }
 
-  function handleDownload(format: 'csv' | 'xlsx' = 'csv') {
-    window.open(
-      `/api/export/submissions?formId=${encodeURIComponent(formId)}&format=${format}`
-    )
+  async function handleDownload(format: 'csv' | 'xlsx' = 'csv') {
+    if (downloadingFormat) {
+      return
+    }
+
+    setDownloadingFormat(format)
+
+    try {
+      await SubmissionService.export(formId, format)
+    } catch (err: any) {
+      toast({
+        title: t('components.error.title'),
+        message: err.message || 'Unable to download submissions.'
+      })
+    } finally {
+      setDownloadingFormat(null)
+    }
   }
 
   function handleClose() {
@@ -277,13 +293,22 @@ export default function FormSubmissions() {
 
           <div className="flex items-center gap-x-2.5">
             <Tooltip label={t('form.submissions.downloadCSV')}>
-              <Button.Ghost size="md" iconOnly onClick={() => handleDownload('csv')}>
+              <Button.Ghost
+                size="md"
+                iconOnly
+                loading={downloadingFormat === 'csv'}
+                onClick={() => handleDownload('csv')}
+              >
                 <IconDownload className="h-5 w-5" />
               </Button.Ghost>
             </Tooltip>
 
             <Tooltip label="Download Excel">
-              <Button.Ghost size="md" onClick={() => handleDownload('xlsx')}>
+              <Button.Ghost
+                size="md"
+                loading={downloadingFormat === 'xlsx'}
+                onClick={() => handleDownload('xlsx')}
+              >
                 <IconDownload className="h-5 w-5" />
                 <span className="hidden sm:block">XLSX</span>
               </Button.Ghost>
