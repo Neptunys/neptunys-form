@@ -2,7 +2,7 @@ import { Process, Processor } from '@nestjs/bull'
 import { Job } from 'bull'
 
 import { SmtpOptionsFactory } from '@config'
-import { SmtpMessage, SmtpOptions, smtpSendMail } from '@utils'
+import { SmtpMessage, SmtpOptions, smtpSendMail, validateSmtpConfig } from '@utils'
 
 import { BaseQueue } from './base.queue'
 
@@ -21,6 +21,12 @@ export class MailQueue extends BaseQueue {
 
   @Process()
   async process(job: Job<MailQueueJob>) {
+    const configError = validateSmtpConfig(this.options, job.data.data.from)
+
+    if (configError) {
+      throw new Error(configError)
+    }
+
     return smtpSendMail(this.options, job.data.data)
   }
 }

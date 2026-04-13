@@ -1,11 +1,13 @@
 import { InjectQueue } from '@nestjs/bull'
-import { Injectable } from '@nestjs/common'
+import { BadRequestException, Injectable } from '@nestjs/common'
 import { JobOptions, Queue } from 'bull'
 import { readFileSync, readdirSync } from 'fs'
 import { basename, extname, join } from 'path'
 
+import { SmtpOptionsFactory } from '@config'
 import { EMAIL_TEMPLATES_DIR, SMTP_FROM } from '@environments'
 import { helper } from '@heyform-inc/utils'
+import { SmtpOptions, validateSmtpConfig } from '@utils'
 
 interface JoinWorkspaceAlertOptions {
   teamName: string
@@ -75,8 +77,10 @@ const TEMPLATE_META_REGEX = /^---([\s\S]*?)---[\n\s\S]\n/
 @Injectable()
 export class MailService {
   private readonly emailTemplates: Record<string, { subject: string; html: string }> = {}
+  private readonly smtpOptions: SmtpOptions
 
   constructor(@InjectQueue('MailQueue') private readonly mailQueue: Queue) {
+    this.smtpOptions = SmtpOptionsFactory()
     this.init()
   }
 
@@ -88,19 +92,19 @@ export class MailService {
     to: string,
     options: AdminRegistrationApprovalRequestOptions
   ) {
-    await this.addQueue('admin_registration_approval_request', to, options)
+    await this.addQueue('admin_registration_approval_request', to, options, undefined, true)
   }
 
   async accountDeletionRequest(to: string, code: string) {
     await this.addQueue('account_deletion_request', to, {
       code
-    })
+    }, undefined, true)
   }
 
   async emailVerificationRequest(to: string, code: string) {
     await this.addQueue('email_verification_request', to, {
       code
-    })
+    }, undefined, true)
   }
 
   async formInvitation(to: string, link: string) {
@@ -122,11 +126,11 @@ export class MailService {
   }
 
   async projectDeletionRequest(to: string, options: ProjectDeletionRequestOptions) {
-    await this.addQueue('project_deletion_request', to, options)
+    await this.addQueue('project_deletion_request', to, options, undefined, true)
   }
 
   async registrationApproved(to: string, options: RegistrationApprovedOptions) {
-    await this.addQueue('registration_approved', to, options)
+    await this.addQueue('registration_approved', to, options, undefined, true)
   }
 
   async scheduleAccountDeletionAlert(to: string, fullName: string) {
@@ -147,7 +151,9 @@ export class MailService {
       return
     }
 
-    await this.mailQueue.add(
+    await this.assertMailDeliveryConfigured()
+
+    await this.enqueue(
       {
         queueName: 'MailQueue',
         data: {
@@ -172,7 +178,7 @@ export class MailService {
   }
 
   async teamDeletionRequest(to: string, options: TeamDeletionRequestOptions) {
-    await this.addQueue('team_deletion_request', to, options)
+    await this.addQueue('team_deletion_request', to, options, undefined, true)
   }
 
   async teamInvitation(to: string, options: TeamInvitationOptions) {
@@ -223,12 +229,13 @@ export class MailService {
     templateName: string,
     to: string,
     replacements?: Record<string, any>,
-    options?: JobOptions
+    options?: JobOptions,
+    waitForCompletion = false
   ) {
     const result = this.emailTemplates[templateName]
 
     if (helper.isEmpty(result)) {
-      return
+      throw new BadRequestException('Email delivery template is unavailable on this server.')
     }
 
     let subject = result!.subject
@@ -244,7 +251,9 @@ export class MailService {
       })
     }
 
-    await this.mailQueue.add(
+    await this.assertMailDeliveryConfigured()
+
+    await this.enqueue(
       {
         queueName: 'MailQueue',
         data: {
@@ -254,7 +263,24 @@ export class MailService {
           html
         }
       },
-      options
+      options,
+      waitForCompletion
     )
+  }
+
+  private async assertMailDeliveryConfigured() {
+    const configError = validateSmtpConfig(this.smtpOptions, SMTP_FROM)
+
+    if (configError) {
+      throw new BadRequestException(configError)
+    }
+  }
+
+  private async enqueue(data: Record<string, any>, options?: JobOptions, waitForCompletion = false) {
+    const job = await this.mailQueue.add(data, options)
+
+    if (waitForCompletion) {
+      await job.finished()
+    }
   }
 }

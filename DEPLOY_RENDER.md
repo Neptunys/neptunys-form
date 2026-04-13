@@ -38,6 +38,8 @@ The included Blueprint prompts for these values:
 
 - `MONGO_URI`
 - `REDIS_URL`
+- `SMTP_FROM`, `SMTP_HOST`, and `SMTP_PORT` if you want email delivery
+- `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_SERVERNAME`, `SMTP_SECURE`, and `SMTP_IGNORE_CERT` as needed by your mail provider
 - `S3_ENDPOINT`
 - `S3_REGION`
 - `S3_BUCKET`
@@ -57,6 +59,7 @@ The app now also supports:
 - `RENDER_EXTERNAL_URL` as the default homepage URL
 - a single `REDIS_URL`, including TLS `rediss://` URLs from providers like Upstash
 - `OPENAI_GPT_MODEL` if you want to override the default AI model
+- `ADMIN_APPROVAL_EMAIL` to gate all new non-admin registrations behind email approval
 
 ## S3-Compatible Upload Notes
 
@@ -88,6 +91,6 @@ Example for Cloudflare R2:
 
 ## Optional Later Work
 
-- Add SMTP if you want email verification, password reset, or email notifications.
+- Add SMTP if you want email verification, password reset, approval emails, deletion codes, or other email notifications.
 - Add a custom domain and set `APP_HOMEPAGE_URL` explicitly if you do not want to rely on the Render default external URL.
 - Add a Vercel frontend later only if you specifically want a split frontend/backend setup.

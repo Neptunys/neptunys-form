@@ -19,6 +19,25 @@ export interface SmtpMessage {
   html: string
 }
 
+function hasConfigValue(value?: string): boolean {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
+export function validateSmtpConfig(options: SmtpOptions, from?: string): string | null {
+  if (!hasConfigValue(from) || !hasConfigValue(options.host) || !Number.isFinite(options.port) || options.port <= 0) {
+    return 'Email delivery is not configured on this server. Ask the administrator to set SMTP_FROM, SMTP_HOST, and SMTP_PORT.'
+  }
+
+  const hasUser = hasConfigValue(options.user)
+  const hasPassword = hasConfigValue(options.password)
+
+  if (hasUser !== hasPassword) {
+    return 'Email delivery SMTP credentials are incomplete. Set both SMTP_USER and SMTP_PASSWORD.'
+  }
+
+  return null
+}
+
 export async function smtpSendMail(
   options: SmtpOptions,
   message: SmtpMessage
@@ -33,7 +52,7 @@ export async function smtpSendMail(
     },
     tls: {
       servername: options.servername,
-      rejectUnauthorized: options.ignoreCert
+      rejectUnauthorized: !options.ignoreCert
     },
     pool: options.pool,
     logger: options.logger

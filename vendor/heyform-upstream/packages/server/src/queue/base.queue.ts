@@ -28,12 +28,13 @@ export class BaseQueue {
 
   @OnQueueFailed()
   async onFailed(job: Job) {
+    const attempts = job.opts.attempts || 1
     const reason = job.failedReason ? `, reason: ${job.failedReason}` : ''
-    this.logger.info(
-      `${job.queue.name}#${job.id} failed, attempts ${job.attemptsMade} of ${job.opts.attempts} times${reason}`
+    this.logger.error(
+      `${job.queue.name}#${job.id} failed, attempts ${job.attemptsMade} of ${attempts} times${reason}`
     )
 
-    if (job.attemptsMade >= job.opts.attempts) {
+    if (job.attemptsMade >= attempts) {
       await job.discard()
     }
   }

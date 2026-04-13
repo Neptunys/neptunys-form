@@ -23,6 +23,8 @@ services:
         value: "false"
       - key: VERIFY_USER_EMAIL
         value: "false"
+      - key: ADMIN_APPROVAL_EMAIL
+        value: contact@neptunys.com
       - key: SESSION_KEY
         generateValue: true
       - key: FORM_ENCRYPTION_KEY
@@ -30,6 +32,22 @@ services:
       - key: MONGO_URI
         sync: false
       - key: REDIS_URL
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_SERVERNAME
+        sync: false
+      - key: SMTP_SECURE
+        sync: false
+      - key: SMTP_IGNORE_CERT
         sync: false
       - key: S3_ENDPOINT
         sync: false
