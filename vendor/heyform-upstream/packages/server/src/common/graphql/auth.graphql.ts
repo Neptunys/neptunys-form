@@ -1,6 +1,6 @@
 import { IsEmail, IsOptional, Length, Matches } from 'class-validator'
 
-import { Field, InputType } from '@nestjs/graphql'
+import { Field, InputType, ObjectType } from '@nestjs/graphql'
 import { LowerCase } from '@utils'
 
 @InputType()
@@ -60,4 +60,16 @@ export class ResetPasswordInput extends SendResetPasswordEmailInput {
     message: 'Invalid password'
   })
   password: string
+}
+
+@ObjectType()
+export class SignUpResult {
+  @Field()
+  success: boolean
+
+  @Field()
+  requiresAdminApproval: boolean
+
+  @Field()
+  requiresEmailVerification: boolean
 }

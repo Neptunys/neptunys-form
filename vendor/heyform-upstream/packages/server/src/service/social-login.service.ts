@@ -18,6 +18,8 @@ import { helper } from '@heyform-inc/utils'
 import { UserSocialAccountModel } from '@model'
 import { UserInfo, appleLoginUrl, appleUserInfo, googleLoginUrl, googleUserInfo } from '@utils'
 
+import { PendingUserRegistrationService } from './pending-user-registration.service'
+
 const appleOptions = {
   webClientId: APPLE_LOGIN_WEB_CLIENT_ID,
   teamId: APPLE_LOGIN_TEAM_ID,
@@ -35,7 +37,8 @@ export class SocialLoginService {
   constructor(
     @InjectModel(UserSocialAccountModel.name)
     private readonly userSocialAccountModel: Model<UserSocialAccountModel>,
-    private readonly userService: UserService
+    private readonly userService: UserService,
+    private readonly pendingUserRegistrationService: PendingUserRegistrationService
   ) {}
 
   private static callbackUrl(kind: SocialLoginTypeEnum): string {
@@ -140,6 +143,29 @@ export class SocialLoginService {
       if (!userId) {
         if (APP_DISABLE_REGISTRATION) {
           throw new BadRequestException('Error: Registration is disabled')
+        }
+
+        if (this.pendingUserRegistrationService.isApprovalRequired(userInfo!.user.email)) {
+          if (helper.isEmpty(userInfo!.user.email)) {
+            throw new BadRequestException({
+              code: 'REGISTRATION_APPROVAL_EMAIL_REQUIRED'
+            })
+          }
+
+          await this.pendingUserRegistrationService.requestApproval({
+            name: userInfo!.user.name,
+            email: userInfo!.user.email,
+            avatar: userInfo!.user.avatar,
+            lang: userInfo!.user.lang,
+            socialKind: kind,
+            socialOpenId: userInfo!.openId,
+            isEmailVerified: true
+          })
+
+          throw new BadRequestException({
+            code: 'REGISTRATION_PENDING_APPROVAL',
+            email: userInfo!.user.email
+          })
         }
 
         if (userInfo!.user.email) {

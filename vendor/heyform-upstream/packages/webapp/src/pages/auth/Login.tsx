@@ -2,7 +2,7 @@ import { Trans, useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 import { AuthService } from '@/services'
-import { useRouter } from '@/utils'
+import { useQuery, useRouter } from '@/utils'
 
 import { Form, Input } from '@/components'
 import { isRegistrationDisabled } from '@/consts'
@@ -11,7 +11,35 @@ import SocialLogin from './SocialLogin'
 
 const Login = () => {
   const { t } = useTranslation()
+  const query = useQuery()
   const router = useRouter()
+
+  const approval = typeof query.approval === 'string' ? query.approval : undefined
+  const email = typeof query.email === 'string' ? query.email : undefined
+
+  let notice: string | undefined
+  let noticeClassName = 'border-blue-500/20 bg-blue-500/10 text-blue-200'
+
+  switch (approval) {
+    case 'pending':
+      notice = 'Your account request has been sent to the administrator and is waiting for approval.'
+      break
+
+    case 'approved':
+      notice = 'Your account has been approved. Sign in to continue.'
+      noticeClassName = 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200'
+      break
+
+    case 'invalid':
+      notice = 'This approval link is invalid or has already been used.'
+      noticeClassName = 'border-amber-500/20 bg-amber-500/10 text-amber-200'
+      break
+
+    case 'email-required':
+      notice = 'This social login provider did not return a usable email address, so the account request could not be sent for approval.'
+      noticeClassName = 'border-amber-500/20 bg-amber-500/10 text-amber-200'
+      break
+  }
 
   async function fetch(values: any) {
     await AuthService.login(values)
@@ -41,11 +69,16 @@ const Login = () => {
         )}
       </div>
 
+      {notice && (
+        <div className={`rounded-lg border px-3 py-2 text-sm ${noticeClassName}`}>{notice}</div>
+      )}
+
       <SocialLogin />
 
       <Form.Simple
         className="space-y-4"
         fetch={fetch}
+        initialValues={email ? { email } : undefined}
         submitProps={{
           label: t('login.title'),
           className: 'w-full'

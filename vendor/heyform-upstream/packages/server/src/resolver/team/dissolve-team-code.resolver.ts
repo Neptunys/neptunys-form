@@ -28,7 +28,7 @@ export class DissolveTeamCodeResolver {
     const key = `verify_dissolve_team:${team.id}`
     const code = await this.authService.getVerificationCode(key)
 
-    this.mailService.teamDeletionRequest(user.email, {
+    await this.mailService.teamDeletionRequest(user.email, {
       teamName: team.name,
       code
     })

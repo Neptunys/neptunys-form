@@ -1,6 +1,7 @@
 import { SocialLoginTypeEnum } from '@heyform-inc/shared-types-enums'
 import { Controller, Get, Param, Post, Query, Req, Res } from '@nestjs/common'
 
+import { APP_HOMEPAGE_URL } from '@environments'
 import { helper } from '@heyform-inc/utils'
 import { AuthService, RedisService, SocialLoginService } from '@service'
 import { Logger } from '@utils'
@@ -120,6 +121,20 @@ export class SocialLoginController {
       })
     } catch (err) {
       this.logger.error(err)
+
+      const response = (err as any)?.response
+
+      if (response?.code === 'REGISTRATION_PENDING_APPROVAL') {
+        const approvalEmail = helper.isValid(response.email)
+          ? `&email=${encodeURIComponent(response.email)}`
+          : ''
+
+        return res.redirect(302, `${APP_HOMEPAGE_URL}/login?approval=pending${approvalEmail}`)
+      }
+
+      if (response?.code === 'REGISTRATION_APPROVAL_EMAIL_REQUIRED') {
+        return res.redirect(302, `${APP_HOMEPAGE_URL}/login?approval=email-required`)
+      }
 
       res.render('index', {
         data: {

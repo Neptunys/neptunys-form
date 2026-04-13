@@ -36,7 +36,7 @@ export class DeleteProjectResolver {
 
     await this.projectService.delete(input.projectId)
 
-    this.mailService.projectDeletionAlert(user.email, {
+    await this.mailService.projectDeletionAlert(user.email, {
       teamName: team.name,
       projectName: project.name,
       userName: user.name

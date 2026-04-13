@@ -26,9 +26,21 @@ const SignUp = () => {
   }
 
   async function fetch(values: any) {
-    await AuthService.signUp(values)
+    const response = await AuthService.signUp(values)
+    const result = response.data?.signUp
 
-    if (VERIFY_USER_EMAIL) {
+    if (result?.requiresAdminApproval) {
+      router.replace('/login', {
+        extend: false,
+        query: {
+          approval: 'pending',
+          email: values.email
+        }
+      })
+      return
+    }
+
+    if (result?.requiresEmailVerification ?? VERIFY_USER_EMAIL) {
       setTemporaryEmail(values.email)
       setVerifyEmailSentAt(Date.now())
       router.replace('/verify-email')

@@ -6,7 +6,7 @@ import { DeviceIdGuard } from '@guard'
 import { date, helper } from '@heyform-inc/utils'
 import { UserActivityKindEnum } from '@model'
 import { Args, Query, Resolver } from '@nestjs/graphql'
-import { AuthService, MailService, UserService } from '@service'
+import { AuthService, MailService, PendingUserRegistrationService, UserService } from '@service'
 import { ClientInfo, GqlClient, comparePassword } from '@utils'
 
 @Resolver()
@@ -14,6 +14,7 @@ import { ClientInfo, GqlClient, comparePassword } from '@utils'
 export class LoginResolver {
   constructor(
     private readonly authService: AuthService,
+    private readonly pendingUserRegistrationService: PendingUserRegistrationService,
     private readonly userService: UserService,
     private readonly mailService: MailService
   ) {}
@@ -28,6 +29,12 @@ export class LoginResolver {
     const user = await this.userService.findByEmail(input.email)
 
     if (helper.isEmpty(user)) {
+      const pendingRegistration = await this.pendingUserRegistrationService.findByEmail(input.email)
+
+      if (pendingRegistration) {
+        throw new BadRequestException('Your access request is awaiting admin approval.')
+      }
+
       throw new BadRequestException('Incorrect email or password.')
     }
 
@@ -48,14 +55,14 @@ export class LoginResolver {
     const devices = await this.authService.devices(user.id)
 
     if (helper.isValid(devices) && !devices.includes(client.deviceId)) {
-      this.mailService.userSecurityAlert(user.email, {
+      await this.mailService.userSecurityAlert(user.email, {
         deviceModel: `${client.userAgent.browser.name} on ${client.userAgent.os.name}`,
         ip: client.ip,
         loginAt: date().format('YYYY-MM-DD HH:mm:ss')
       })
     }
 
-    this.authService.createUserActivity({
+    await this.authService.createUserActivity({
       kind: UserActivityKindEnum.LOGIN,
       userId: user.id,
       ...client

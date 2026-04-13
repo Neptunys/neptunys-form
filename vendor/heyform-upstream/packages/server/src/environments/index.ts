@@ -37,6 +37,7 @@ export const APP_HOMEPAGE_URL: string =
   RENDER_EXTERNAL_URL ||
   `http://${APP_LISTEN_HOSTNAME}:${APP_LISTEN_PORT}`
 export const APP_DISABLE_REGISTRATION: boolean = helper.isTrue(process.env.APP_DISABLE_REGISTRATION)
+export const ADMIN_APPROVAL_EMAIL: string = (process.env.ADMIN_APPROVAL_EMAIL || '').toLowerCase()
 export const ENABLE_GOOGLE_FONTS: boolean =
   process.env.ENABLE_GOOGLE_FONTS === undefined
     ? true

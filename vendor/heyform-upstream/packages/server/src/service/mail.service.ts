@@ -35,6 +35,13 @@ interface DirectMailOptions {
   html: string
 }
 
+interface AdminRegistrationApprovalRequestOptions {
+  approvalLink: string
+  requestedEmail: string
+  requestedName: string
+  signInMethod: string
+}
+
 interface TeamDeletionAlertOptions {
   teamName: string
   userName: string
@@ -57,6 +64,11 @@ interface UserSecurityAlertOptions {
   loginAt: string
 }
 
+interface RegistrationApprovedOptions {
+  fullName: string
+  loginLink: string
+}
+
 const HTML_EXT = '.html'
 const TEMPLATE_META_REGEX = /^---([\s\S]*?)---[\n\s\S]\n/
 
@@ -70,6 +82,13 @@ export class MailService {
 
   async accountDeletionAlert(to: string) {
     await this.addQueue('account_deletion_alert', to)
+  }
+
+  async adminRegistrationApprovalRequest(
+    to: string,
+    options: AdminRegistrationApprovalRequestOptions
+  ) {
+    await this.addQueue('admin_registration_approval_request', to, options)
   }
 
   async accountDeletionRequest(to: string, code: string) {
@@ -104,6 +123,10 @@ export class MailService {
 
   async projectDeletionRequest(to: string, options: ProjectDeletionRequestOptions) {
     await this.addQueue('project_deletion_request', to, options)
+  }
+
+  async registrationApproved(to: string, options: RegistrationApprovedOptions) {
+    await this.addQueue('registration_approved', to, options)
   }
 
   async scheduleAccountDeletionAlert(to: string, fullName: string) {

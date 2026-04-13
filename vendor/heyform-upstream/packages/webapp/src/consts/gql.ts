@@ -8,7 +8,11 @@ export const LOGIN_GQL = gql`
 
 export const SIGN_UP_GQL = gql`
   mutation signUp($input: SignUpInput!) {
-    signUp(input: $input)
+    signUp(input: $input) {
+      success
+      requiresAdminApproval
+      requiresEmailVerification
+    }
   }
 `
 
