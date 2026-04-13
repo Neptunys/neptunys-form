@@ -100,19 +100,31 @@ export default function ProjectSettings() {
     }
   )
 
-  const forms = data?.forms || []
-  const experiments = data?.experiments || []
-  const formOptions = forms.map(form => ({
-    label: form.name || 'Untitled form',
-    value: form.id
-  }))
-  const experimentOptions = experiments.map(experiment => ({
-    label: experiment.name || 'Untitled experiment',
-    value: experiment.id
-  }))
-  const formNameMap = new Map(forms.map(form => [form.id, form.name || 'Untitled form']))
-  const experimentNameMap = new Map(
-    experiments.map(experiment => [experiment.id, experiment.name || 'Untitled experiment'])
+  const forms = useMemo(() => data?.forms ?? [], [data?.forms])
+  const experiments = useMemo(() => data?.experiments ?? [], [data?.experiments])
+  const formOptions = useMemo(
+    () =>
+      forms.map(form => ({
+        label: form.name || 'Untitled form',
+        value: form.id
+      })),
+    [forms]
+  )
+  const experimentOptions = useMemo(
+    () =>
+      experiments.map(experiment => ({
+        label: experiment.name || 'Untitled experiment',
+        value: experiment.id
+      })),
+    [experiments]
+  )
+  const formNameMap = useMemo(
+    () => new Map(forms.map(form => [form.id, form.name || 'Untitled form'])),
+    [forms]
+  )
+  const experimentNameMap = useMemo(
+    () => new Map(experiments.map(experiment => [experiment.id, experiment.name || 'Untitled experiment'])),
+    [experiments]
   )
   const normalizedDomain = normalizeCustomDomain(workspace?.customDomain)
 
@@ -127,20 +139,33 @@ export default function ProjectSettings() {
 
   const workspaceDefaultRangeDays = workspace?.leadReportRangeDays ?? 30
   const workspaceDefaultTimezone = workspace?.reportingTimezone ?? getTimeZone()
+  const projectLeadNotificationEmailsText = (project?.leadNotificationEmails || []).join('\n')
 
   const initialValues = useMemo(
     () => ({
       enableLeadReport: Boolean(project?.enableLeadReport),
       leadReportRangeDays: project?.leadReportRangeDays,
       reportingTimezone: project?.reportingTimezone,
-      leadNotificationEmailsText: (project?.leadNotificationEmails || []).join('\n'),
+      leadNotificationEmailsText: projectLeadNotificationEmailsText,
       launchPath: project?.launchPath ?? '',
       launchMode: project?.launchMode ?? (experiments.length > 0 ? 'experiment' : 'form'),
       launchFormId: project?.launchFormId ?? forms[0]?.id,
       launchExperimentId: project?.launchExperimentId ?? experiments[0]?.id
     }),
-    [experiments, forms, project]
+    [
+      experiments,
+      forms,
+      project?.enableLeadReport,
+      project?.leadReportRangeDays,
+      project?.reportingTimezone,
+      projectLeadNotificationEmailsText,
+      project?.launchPath,
+      project?.launchMode,
+      project?.launchFormId,
+      project?.launchExperimentId
+    ]
   )
+  const initialValuesKey = useMemo(() => JSON.stringify(initialValues), [initialValues])
 
   const selectedLaunchMode = draftValues.launchMode || initialValues.launchMode || 'form'
   const selectedLaunchFormId = draftValues.launchFormId || initialValues.launchFormId
@@ -160,7 +185,7 @@ export default function ProjectSettings() {
 
   useEffect(() => {
     setDraftValues(initialValues)
-  }, [initialValues])
+  }, [initialValuesKey])
 
   async function saveProjectSettings(values: AnyMap) {
     const notificationEmails = parseEmailList(values.leadNotificationEmailsText)
@@ -265,7 +290,7 @@ export default function ProjectSettings() {
 
         <div className="mt-6 max-w-3xl">
           <Form.Simple
-            key={`${projectId}:${JSON.stringify(initialValues)}`}
+            key={`${projectId}:${initialValuesKey}`}
             form={settingsForm}
             className="space-y-6"
             initialValues={initialValues}
