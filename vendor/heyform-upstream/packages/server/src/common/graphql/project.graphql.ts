@@ -1,4 +1,5 @@
 import { IsArray, IsBoolean, IsIn, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator'
+import { GraphQLJSONObject } from 'graphql-type-json'
 
 import { TeamDetailInput } from './team.graphql'
 import { Field, InputType, ObjectType } from '@nestjs/graphql'
@@ -79,6 +80,15 @@ export class UpdateProjectInput extends ProjectDetailInput {
   @IsOptional()
   @IsString()
   reportingTimezone?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsBoolean()
+  enableGoogleSheetsLeadSync?: boolean
+
+  @Field(type => GraphQLJSONObject, { nullable: true })
+  @IsOptional()
+  googleSheetsLeadConfig?: Record<string, any>
 }
 
 @InputType()
@@ -160,6 +170,21 @@ export class ProjectType {
 
   @Field({ nullable: true })
   reportingTimezone?: string
+
+  @Field({ nullable: true })
+  enableGoogleSheetsLeadSync?: boolean
+
+  @Field(type => GraphQLJSONObject, { nullable: true })
+  googleSheetsLeadConfig?: Record<string, any>
+
+  @Field({ nullable: true })
+  googleSheetsLeadLastDeliveryAt?: number
+
+  @Field({ nullable: true })
+  googleSheetsLeadLastDeliveryStatus?: string
+
+  @Field({ nullable: true })
+  googleSheetsLeadLastDeliveryMessage?: string
 }
 
 @ObjectType()

@@ -52,6 +52,21 @@ export class ProjectModel extends Document {
   @Prop()
   reportingTimezone?: string
 
+  @Prop()
+  enableGoogleSheetsLeadSync?: boolean
+
+  @Prop({ type: Object })
+  googleSheetsLeadConfig?: Record<string, any>
+
+  @Prop()
+  googleSheetsLeadLastDeliveryAt?: number
+
+  @Prop()
+  googleSheetsLeadLastDeliveryStatus?: string
+
+  @Prop()
+  googleSheetsLeadLastDeliveryMessage?: string
+
   /**
    * Attach references to the project model for easy query,
    * will not be used as a column in the project schema

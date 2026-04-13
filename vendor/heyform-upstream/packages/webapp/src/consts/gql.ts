@@ -105,6 +105,11 @@ export const WORKSPACES_GQL = gql`
         leadReportRangeDays
         leadReportLastSentAt
         reportingTimezone
+        enableGoogleSheetsLeadSync
+        googleSheetsLeadConfig
+        googleSheetsLeadLastDeliveryAt
+        googleSheetsLeadLastDeliveryStatus
+        googleSheetsLeadLastDeliveryMessage
         members
         formCount
         isOwner

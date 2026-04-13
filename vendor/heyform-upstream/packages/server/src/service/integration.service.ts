@@ -8,6 +8,7 @@ import * as apps from 'src/apps'
 import { helper } from '@heyform-inc/utils'
 import { FormModel, IntegrationModel, IntegrationStatusEnum } from '@model'
 
+import { ProjectService } from './project.service'
 import { TeamService } from './team.service'
 
 @Injectable()
@@ -17,6 +18,7 @@ export class IntegrationService {
     private readonly integrationModel: Model<IntegrationModel>,
     @InjectQueue('IntegrationQueue') private readonly integrationQueue: Queue,
     @InjectQueue('SubmissionNotificationQueue') private readonly submissionNotificationQueue: Queue,
+    private readonly projectService: ProjectService,
     private readonly teamService: TeamService
   ) {}
 
@@ -104,11 +106,12 @@ export class IntegrationService {
       })
     }
 
-    const [integrations, team] = await Promise.all([
+    const [integrations, project, team] = await Promise.all([
       this.integrationModel.find({
         formId: form.id,
         status: IntegrationStatusEnum.ACTIVE
       }),
+      form.projectId ? this.projectService.findById(form.projectId) : Promise.resolve(null),
       this.teamService.findById(form.teamId)
     ])
 
@@ -121,6 +124,25 @@ export class IntegrationService {
           formId: form.id,
           integrationId: integration.id,
           submissionId
+        })
+      }
+    }
+
+    if (
+      project?.enableGoogleSheetsLeadSync &&
+      helper.isObject(project.googleSheetsLeadConfig) &&
+      !helper.isEmpty(project.googleSheetsLeadConfig)
+    ) {
+      const app = apps.googlesheets
+
+      if (app && typeof app.run === 'function') {
+        this.integrationQueue.add({
+          appId: app.id,
+          formId: form.id,
+          submissionId,
+          projectId: project.id,
+          config: project.googleSheetsLeadConfig,
+          deliveryTarget: 'project-google-sheets'
         })
       }
     }

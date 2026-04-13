@@ -1,7 +1,7 @@
 import { Process, Processor } from '@nestjs/bull'
 import { Job } from 'bull'
 
-import { AppService, FormService, IntegrationService, SubmissionService, TeamService } from '@service'
+import { AppService, FormService, IntegrationService, ProjectService, SubmissionService, TeamService } from '@service'
 import { mapToObject } from '@utils'
 
 import { BaseQueue } from './base.queue'
@@ -12,8 +12,9 @@ export interface IntegrationQueueJob {
   formId: string
   submissionId: string
   teamId?: string
+  projectId?: string
   config?: Record<string, any>
-  deliveryTarget?: 'integration' | 'workspace-google-sheets'
+  deliveryTarget?: 'integration' | 'project-google-sheets' | 'workspace-google-sheets'
 }
 
 @Processor('IntegrationQueue')
@@ -23,6 +24,7 @@ export class IntegrationQueue extends BaseQueue {
     private readonly integrationService: IntegrationService,
     private readonly submissionService: SubmissionService,
     private readonly formService: FormService,
+    private readonly projectService: ProjectService,
     private readonly teamService: TeamService
   ) {
     super()
@@ -30,7 +32,7 @@ export class IntegrationQueue extends BaseQueue {
 
   @Process()
   async process(job: Job<IntegrationQueueJob>) {
-    const { appId, config: rawConfig, deliveryTarget, formId, integrationId, submissionId, teamId } = job.data
+    const { appId, config: rawConfig, deliveryTarget, formId, integrationId, projectId, submissionId, teamId } = job.data
     const app = this.appService.findById(appId)
 
     if (app) {
@@ -67,6 +69,16 @@ export class IntegrationQueue extends BaseQueue {
               googleSheetsLeadLastDeliveryMessage: ''
             })
           }
+
+          if (deliveryTarget === 'project-google-sheets' && projectId) {
+            await this.projectService.update(projectId, {
+              $set: {
+                googleSheetsLeadLastDeliveryAt: Math.floor(Date.now() / 1000),
+                googleSheetsLeadLastDeliveryStatus: 'success',
+                googleSheetsLeadLastDeliveryMessage: ''
+              }
+            })
+          }
         } catch (error: any) {
           if (integration) {
             await this.integrationService.update(integration.id, {
@@ -82,6 +94,17 @@ export class IntegrationQueue extends BaseQueue {
               googleSheetsLeadLastDeliveryStatus: 'error',
               googleSheetsLeadLastDeliveryMessage:
                 error?.message || 'Workspace Google Sheets delivery failed'
+            })
+          }
+
+          if (deliveryTarget === 'project-google-sheets' && projectId) {
+            await this.projectService.update(projectId, {
+              $set: {
+                googleSheetsLeadLastDeliveryAt: Math.floor(Date.now() / 1000),
+                googleSheetsLeadLastDeliveryStatus: 'error',
+                googleSheetsLeadLastDeliveryMessage:
+                  error?.message || 'Project Google Sheets delivery failed'
+              }
             })
           }
 

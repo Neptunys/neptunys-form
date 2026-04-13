@@ -19,6 +19,11 @@ export interface ProjectType {
   leadReportRangeDays?: number
   leadReportLastSentAt?: number
   reportingTimezone?: string
+  enableGoogleSheetsLeadSync?: boolean
+  googleSheetsLeadConfig?: AnyMap
+  googleSheetsLeadLastDeliveryAt?: number
+  googleSheetsLeadLastDeliveryStatus?: string
+  googleSheetsLeadLastDeliveryMessage?: string
   formCount: number
   isOwner?: boolean
   members: string[]

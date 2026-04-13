@@ -19,6 +19,7 @@ import FormShare from '@/pages/form/Share'
 import FormSubmissions from '@/pages/form/Submissions'
 import ProjectExperiments from '@/pages/project/Experiments'
 import ProjectForms from '@/pages/project/Forms'
+import ProjectGoogleSheets from '@/pages/project/GoogleSheets'
 import ProjectSettings from '@/pages/project/Settings'
 import ProjectTrash from '@/pages/project/Trash'
 import CreateWorkspace from '@/pages/workspace/Create'
@@ -151,6 +152,16 @@ const routes = [
       projectShell: true,
       loginRequired: true,
       title: 'Settings'
+    }
+  },
+  {
+    path: '/workspace/:workspaceId/project/:projectId/google-sheets',
+    layout: WorkspaceLayout,
+    component: ProjectGoogleSheets,
+    options: {
+      projectShell: true,
+      loginRequired: true,
+      title: 'Google Sheets'
     }
   },
   {

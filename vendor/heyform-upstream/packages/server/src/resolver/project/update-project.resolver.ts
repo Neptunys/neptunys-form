@@ -52,6 +52,16 @@ export class UpdateProjectResolver {
         : null
     }
 
+    if (Object.prototype.hasOwnProperty.call(input, 'enableGoogleSheetsLeadSync')) {
+      updates.enableGoogleSheetsLeadSync = input.enableGoogleSheetsLeadSync
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, 'googleSheetsLeadConfig')) {
+      updates.googleSheetsLeadConfig = helper.isObject(input.googleSheetsLeadConfig)
+        ? input.googleSheetsLeadConfig
+        : null
+    }
+
     const tasks = [] as Array<Promise<boolean>>
 
     if (Object.keys(updates).length > 0) {
