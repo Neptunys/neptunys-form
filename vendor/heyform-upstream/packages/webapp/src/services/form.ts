@@ -10,7 +10,7 @@ import {
   Variable
 } from '@heyform-inc/shared-types-enums'
 
-import { apollo } from '@/utils'
+import { apollo, downloadFile, getDecoratedURL } from '@/utils'
 
 import {
   COMPLETE_SUBMISSION_GQL,
@@ -91,6 +91,31 @@ export class FormService {
       startDate: range === 'custom' && options.startDate ? options.startDate : undefined,
       endDate: range === 'custom' && options.endDate ? options.endDate : undefined
     }
+  }
+
+  static downloadAnalytics(
+    formId: string,
+    range: string,
+    options: {
+      sourceChannel?: string
+      dedupeByIp?: boolean
+      startDate?: string
+      endDate?: string
+    } = {}
+  ) {
+    const input = this.buildAnalyticInput(formId, range, options)
+    const rangeLabel =
+      range === 'custom' && input.startDate && input.endDate
+        ? `${input.startDate}-to-${input.endDate}`
+        : range
+
+    return downloadFile(
+      getDecoratedURL('/api/export/form-analytics', {
+        ...input,
+        format: 'xlsx'
+      }),
+      `form-analytics-${rangeLabel}.xlsx`
+    )
   }
 
   static async forms(projectId: string, status = FormStatusEnum.NORMAL) {

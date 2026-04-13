@@ -140,7 +140,7 @@ const routes = [
     options: {
       projectShell: true,
       loginRequired: true,
-      title: 'Launch'
+      title: 'Forms'
     }
   },
   {

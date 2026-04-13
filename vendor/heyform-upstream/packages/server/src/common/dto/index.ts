@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer'
 import {
+  IsBoolean,
   IsIn,
   IsInt,
   Matches,
@@ -93,6 +94,37 @@ export class ExportProjectReportDto {
   @IsString()
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
   endDate: string
+
+  @IsOptional()
+  @IsIn(['xlsx'])
+  format?: 'xlsx'
+}
+
+export class ExportFormAnalyticsDto {
+  @IsString()
+  formId: string
+
+  @IsIn(['today', '7d', '1m', '3m', '6m', '1y', 'custom'])
+  range: 'today' | '7d' | '1m' | '3m' | '6m' | '1y' | 'custom'
+
+  @IsOptional()
+  @IsString()
+  sourceChannel?: string
+
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsOptional()
+  @IsBoolean()
+  dedupeByIp?: boolean
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  startDate?: string
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  endDate?: string
 
   @IsOptional()
   @IsIn(['xlsx'])

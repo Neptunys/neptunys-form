@@ -10,17 +10,44 @@ import { parseAsync } from 'json2csv'
 import * as XLSX from 'xlsx'
 
 import { htmlUtils, parsePlainAnswer } from '@heyform-inc/answer-utils'
-import { helper, unixDate } from '@heyform-inc/utils'
+import { helper, toDuration, toFixed, unixDate } from '@heyform-inc/utils'
 import { FormModel, ProjectModel, SubmissionModel } from '@model'
 import { buildLeadCapturePayload } from '@utils'
 
-const FIELD_ID_KEY = '#'
-const START_DATE_KEY = 'Start Date (UTC)'
-const SUBMIT_DATE_KEY = 'Submit Date (UTC)'
+const SUBMISSION_ID_KEY = 'Submission ID'
+const STARTED_AT_KEY = 'Started At (UTC)'
+const SUBMITTED_AT_KEY = 'Submitted At (UTC)'
+const HIDDEN_FIELD_PREFIX = 'Hidden field: '
+const CALCULATED_FIELD_PREFIX = 'Calculated field: '
 
 interface ExportDataset {
   fields: string[]
   records: Record<string, any>[]
+}
+
+function humanizeSourceChannel(channel?: string) {
+  switch (channel) {
+    case 'direct':
+      return 'Direct link'
+    case 'meta':
+      return 'Meta'
+    case 'google':
+      return 'Google'
+    case 'linkedin':
+      return 'LinkedIn'
+    case 'x':
+      return 'X'
+    case 'youtube':
+      return 'YouTube'
+    case 'tiktok':
+      return 'TikTok'
+    case 'email':
+      return 'Email'
+    case 'other':
+      return 'Other'
+    default:
+      return 'All sources'
+  }
 }
 
 @Injectable()
@@ -44,7 +71,7 @@ export class ExportFileService {
   ): Promise<Buffer> {
     const { records } = this.buildDataset(formFields, selectedHiddenFields, submissions)
     const workbook = XLSX.utils.book_new()
-    const worksheet = XLSX.utils.json_to_sheet(records)
+    const worksheet = this.jsonToSheet(records, 'No submissions were found for this form.')
 
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Submissions')
 
@@ -118,12 +145,14 @@ export class ExportFileService {
 
     const formRows = forms.map(form => {
       const stats = formStats.get(form.id)
+      const leadCount = stats?.leadCount || 0
 
       return {
         Form: form.name,
         'Form ID': form.id,
         Status: form.settings?.active && !form.suspended ? 'Published' : 'Inactive',
-        'Leads in Range': stats?.leadCount || 0,
+        'Leads in range': leadCount,
+        'Lead share %': leads.length > 0 ? toFixed((leadCount / leads.length) * 100) : '0.0',
         'High Priority Leads': stats?.highPriorityLeadCount || 0,
         'Last Lead At (UTC)': stats?.lastLeadAt
           ? new Date(stats.lastLeadAt * 1000).toISOString()
@@ -138,14 +167,15 @@ export class ExportFileService {
         'Form ID': lead.formId,
         'Submission ID': lead.submissionId,
         'Submitted At (UTC)': lead.submittedAtIso,
-        'Respondent Name': lead.respondentName || '',
-        'Respondent Email': lead.respondentEmail || '',
-        'Respondent Phone': lead.respondentPhone || '',
-        'Lead Score': helper.isNil(lead.leadScore) ? '' : lead.leadScore,
-        'Lead Level': lead.leadLevel || '',
-        'Lead Quality': lead.leadQuality || '',
-        'Lead Priority': lead.leadPriority || '',
-        'Answer Summary': lead.answersPlain
+        Respondent: lead.respondentName || '',
+        Email: lead.respondentEmail || '',
+        Phone: lead.respondentPhone || '',
+        Score: helper.isNil(lead.leadScore) ? '' : lead.leadScore,
+        'Score band': lead.leadLevel || '',
+        Grade: lead.leadQuality || '',
+        Priority: lead.leadPriority || '',
+        'Score source': lead.leadScoreVariableName || '',
+        Summary: lead.answersPlain
       }
 
       answerColumns.forEach(column => {
@@ -153,11 +183,11 @@ export class ExportFileService {
       })
 
       hiddenFieldColumns.forEach(column => {
-        row[`Hidden: ${column}`] = lead.hiddenFieldsByName[column] || ''
+        row[`${HIDDEN_FIELD_PREFIX}${column}`] = lead.hiddenFieldsByName[column] || ''
       })
 
       variableColumns.forEach(column => {
-        row[`Variable: ${column}`] = helper.isNil(lead.variablesByName[column])
+        row[`${CALCULATED_FIELD_PREFIX}${column}`] = helper.isNil(lead.variablesByName[column])
           ? ''
           : lead.variablesByName[column]
       })
@@ -167,20 +197,117 @@ export class ExportFileService {
 
     XLSX.utils.book_append_sheet(
       workbook,
-      XLSX.utils.aoa_to_sheet(
-        this.buildProjectSummaryRows(project, options, leads, formRows)
-      ),
+      this.aoaToSheet(this.buildProjectSummaryRows(project, options, leads, formRows)),
       'Summary'
     )
     XLSX.utils.book_append_sheet(
       workbook,
       this.jsonToSheet(formRows, 'No forms were found for this project.'),
-      'Forms'
+      'Form Performance'
     )
     XLSX.utils.book_append_sheet(
       workbook,
       this.jsonToSheet(leadRows, 'No leads were found for the selected date range.'),
-      'Leads'
+      'Lead Log'
+    )
+
+    return XLSX.write(workbook, {
+      type: 'buffer',
+      bookType: 'xlsx'
+    }) as Buffer
+  }
+
+  async formAnalyticsXlsx(
+    form: Pick<FormModel, 'id' | 'name'>,
+    options: {
+      range: string
+      startDate?: string
+      endDate?: string
+      sourceChannel?: string
+      dedupeByIp?: boolean
+      startAt: Date
+      endAt: Date
+      summary: {
+        avgTotalVisits: number
+        avgSubmissionCount: number
+        avgAverageTime: number
+        sourceBreakdown: Array<{
+          channel: string
+          totalVisits: number
+          submissionCount: number
+        }>
+      }
+      questions: Array<{
+        order: number
+        title?: string
+        reachCount: number
+        reachRate: number
+        completedCount: number
+        dropOffCount: number
+        dropOffRate: number
+        averageDuration: number
+        frictionScore: number
+        frictionLevel: string
+      }>
+    }
+  ): Promise<Buffer> {
+    const workbook = XLSX.utils.book_new()
+    const completionRate =
+      options.summary.avgTotalVisits > 0
+        ? (options.summary.avgSubmissionCount / options.summary.avgTotalVisits) * 100
+        : 0
+    const rangeLabel =
+      options.range === 'custom' && options.startDate && options.endDate
+        ? `${options.startDate} to ${options.endDate}`
+        : options.range
+    const summaryRows = [
+      ['Form analytics export'],
+      ['Form', form.name],
+      ['Form ID', form.id],
+      ['Range', rangeLabel],
+      ['From (UTC)', options.startAt.toISOString()],
+      ['To (UTC)', options.endAt.toISOString()],
+      ['Source filter', humanizeSourceChannel(options.sourceChannel)],
+      [
+        'Counting mode',
+        options.dedupeByIp ? 'One visit and one submission per IP' : 'Every visit and submission'
+      ],
+      ['Generated at (UTC)', new Date().toISOString()],
+      [],
+      ['Metric', 'Value'],
+      ['Visits', String(options.summary.avgTotalVisits || 0)],
+      ['Submissions', String(options.summary.avgSubmissionCount || 0)],
+      ['Completion rate', `${toFixed(completionRate)}%`],
+      ['Average completion time', toDuration(Math.round(options.summary.avgAverageTime || 0))]
+    ]
+    const sourceRows = (options.summary.sourceBreakdown || []).map(row => ({
+      Channel: humanizeSourceChannel(row.channel),
+      Visits: row.totalVisits,
+      Submissions: row.submissionCount
+    }))
+    const questionRows = (options.questions || []).map(question => ({
+      Step: question.order,
+      Question: question.title || `Question ${question.order}`,
+      Reached: question.reachCount,
+      'Reach rate %': toFixed(question.reachRate || 0),
+      Completed: question.completedCount,
+      'Drop-off count': question.dropOffCount,
+      'Drop-off rate %': toFixed(question.dropOffRate || 0),
+      'Average time': toDuration(Math.round(question.averageDuration || 0)),
+      Friction: question.frictionLevel,
+      'Friction score': question.frictionScore
+    }))
+
+    XLSX.utils.book_append_sheet(workbook, this.aoaToSheet(summaryRows), 'Summary')
+    XLSX.utils.book_append_sheet(
+      workbook,
+      this.jsonToSheet(sourceRows, 'No source data was recorded for the selected range.'),
+      'Source Mix'
+    )
+    XLSX.utils.book_append_sheet(
+      workbook,
+      this.jsonToSheet(questionRows, 'No question analytics were recorded for the selected range.'),
+      'Question Journey'
     )
 
     return XLSX.write(workbook, {
@@ -217,17 +344,19 @@ export class ExportFileService {
     )
 
     const fields: string[] = [
-      FIELD_ID_KEY,
+      SUBMISSION_ID_KEY,
+      STARTED_AT_KEY,
+      SUBMITTED_AT_KEY,
       ...selectedFormFields.map(field => field.title),
-      ...selectedHiddenFields.map(hiddenField => hiddenField.name),
-      ...variableNames.map(name => `Variable: ${name}`),
-      START_DATE_KEY,
-      SUBMIT_DATE_KEY
+      ...selectedHiddenFields.map(hiddenField => `${HIDDEN_FIELD_PREFIX}${hiddenField.name}`),
+      ...variableNames.map(name => `${CALCULATED_FIELD_PREFIX}${name}`)
     ]
 
     for (const submission of submissions) {
       const record: Record<string, any> = {
-        [FIELD_ID_KEY]: submission.id
+        [SUBMISSION_ID_KEY]: submission.id,
+        [STARTED_AT_KEY]: submission.startAt ? unixDate(submission.startAt).toISOString() : '',
+        [SUBMITTED_AT_KEY]: submission.endAt ? unixDate(submission.endAt).toISOString() : ''
       }
 
       for (const field of selectedFormFields) {
@@ -247,17 +376,16 @@ export class ExportFileService {
           hiddenField => hiddenField.id === selectedHiddenField.id
         )?.value
 
-        record[selectedHiddenField.name] = hiddenFieldValue
+        record[`${HIDDEN_FIELD_PREFIX}${selectedHiddenField.name}`] = hiddenFieldValue
       }
 
       for (const variableName of variableNames) {
         const variableValue = submission.variables.find(variable => variable.name === variableName)?.value
 
-        record[`Variable: ${variableName}`] = helper.isNil(variableValue) ? '' : variableValue
+        record[`${CALCULATED_FIELD_PREFIX}${variableName}`] = helper.isNil(variableValue)
+          ? ''
+          : variableValue
       }
-
-      record[START_DATE_KEY] = submission.startAt ? unixDate(submission.startAt!).toISOString() : ''
-      record[SUBMIT_DATE_KEY] = submission.startAt ? unixDate(submission.endAt!).toISOString() : ''
 
       records.push(record)
     }
@@ -290,7 +418,18 @@ export class ExportFileService {
   }
 
   private jsonToSheet(rows: Record<string, any>[], emptyMessage: string) {
-    return XLSX.utils.json_to_sheet(rows.length > 0 ? rows : [{ Notice: emptyMessage }])
+    const normalizedRows = rows.length > 0 ? rows : [{ Notice: emptyMessage }]
+    const sheet = XLSX.utils.json_to_sheet(normalizedRows)
+
+    this.applyJsonSheetColumnWidths(sheet, normalizedRows)
+    return sheet
+  }
+
+  private aoaToSheet(rows: Array<Array<string | number>>) {
+    const sheet = XLSX.utils.aoa_to_sheet(rows)
+
+    this.applyAoaSheetColumnWidths(sheet, rows)
+    return sheet
   }
 
   private makeUniqueExportFieldTitle(
@@ -329,9 +468,15 @@ export class ExportFileService {
       .slice(0, 10)
     const earliestLead = leads[leads.length - 1]
     const latestLead = leads[0]
+    const scoredLeads = leads.filter(lead => helper.isValid(lead.leadScore))
+    const averageScore = scoredLeads.length
+      ? toFixed(
+          scoredLeads.reduce((sum, lead) => sum + (lead.leadScore || 0), 0) / scoredLeads.length
+        )
+      : '0.0'
 
     return [
-      ['Project report'],
+      ['Client report'],
       ['Project', project.name],
       ['Project ID', project.id],
       ['Date range', `${options.startDate} to ${options.endDate}`],
@@ -342,14 +487,52 @@ export class ExportFileService {
       ['Forms included', formRows.length],
       ['Forms with leads', formsWithLeads],
       ['Leads in range', leads.length],
+      ['Average score', averageScore],
       ['High priority leads', highPriorityLeads],
       ['First lead at (UTC)', earliestLead?.submittedAtIso || ''],
       ['Last lead at (UTC)', latestLead?.submittedAtIso || ''],
       [],
-      ['Top forms', 'Leads'],
+      ['Top forms', 'Leads in range'],
       ...(topForms.length > 0
-        ? topForms.map(row => [row.Form, row['Leads in Range']])
+        ? topForms.map(row => [row.Form, row['Leads in range']])
         : [['No leads in the selected range', 0]])
     ]
+  }
+
+  private applyJsonSheetColumnWidths(worksheet: XLSX.WorkSheet, rows: Record<string, any>[]) {
+    const headers = rows.length > 0 ? Object.keys(rows[0]) : []
+
+    worksheet['!cols'] = headers.map(header => {
+      const valueWidth = rows.reduce((max, row) => {
+        const cellValue = String(row[header] ?? '')
+        const lineWidth = cellValue.split(/\r?\n/).reduce((lineMax, line) => {
+          return Math.max(lineMax, line.length)
+        }, 0)
+
+        return Math.max(max, lineWidth)
+      }, header.length)
+
+      return {
+        wch: Math.max(12, Math.min(56, valueWidth + 2))
+      }
+    })
+  }
+
+  private applyAoaSheetColumnWidths(
+    worksheet: XLSX.WorkSheet,
+    rows: Array<Array<string | number>>
+  ) {
+    const widths: number[] = []
+
+    rows.forEach(row => {
+      row.forEach((value, index) => {
+        const nextWidth = String(value ?? '').length + 2
+        widths[index] = Math.max(widths[index] || 12, Math.min(56, nextWidth))
+      })
+    })
+
+    worksheet['!cols'] = widths.map(width => ({
+      wch: Math.max(12, width)
+    }))
   }
 }

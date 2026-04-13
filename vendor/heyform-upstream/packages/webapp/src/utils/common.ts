@@ -153,12 +153,26 @@ function getDownloadFilename(contentDisposition: string | null, fallbackFilename
   const quotedMatch = contentDisposition!.match(/filename="([^"]+)"/i)
 
   if (quotedMatch?.[1]) {
-    return quotedMatch[1]
+    try {
+      return decodeURIComponent(quotedMatch[1])
+    } catch {
+      return quotedMatch[1]
+    }
   }
 
   const plainMatch = contentDisposition!.match(/filename=([^;]+)/i)
 
-  return plainMatch?.[1]?.trim() || fallbackFilename
+  const plainFilename = plainMatch?.[1]?.trim()
+
+  if (!plainFilename) {
+    return fallbackFilename
+  }
+
+  try {
+    return decodeURIComponent(plainFilename)
+  } catch {
+    return plainFilename
+  }
 }
 
 async function getDownloadErrorMessage(response: Response) {

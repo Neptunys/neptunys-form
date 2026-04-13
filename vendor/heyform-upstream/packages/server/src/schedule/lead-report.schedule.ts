@@ -2,9 +2,16 @@ import { Process, Processor } from '@nestjs/bull'
 
 import { APP_HOMEPAGE_URL } from '@environments'
 import { FormStatusEnum } from '@heyform-inc/shared-types-enums'
-import { date, helper, timestamp } from '@heyform-inc/utils'
+import { date, helper, timestamp, toFixed } from '@heyform-inc/utils'
 import { ProjectModel, TeamModel } from '@model'
-import { FormService, MailService, ProjectService, SubmissionService, TeamService } from '@service'
+import {
+  ExperimentService,
+  FormService,
+  MailService,
+  ProjectService,
+  SubmissionService,
+  TeamService
+} from '@service'
 import { buildLeadCapturePayload, escapeHtml } from '@utils'
 
 import { BaseQueue } from '../queue/base.queue'
@@ -229,10 +236,37 @@ function renderRecentLeads(
   `
 }
 
+function renderActivityLog(
+  items: Array<{
+    title: string
+    body: string
+    tone?: 'info' | 'success' | 'warning'
+  }>
+) {
+  if (!items.length) {
+    return '<p style="margin:0;color:#6b7280;font-size:14px;line-height:1.6;">No routing, experiment, or volume changes were logged for this period.</p>'
+  }
+
+  return items
+    .map(item => {
+      const accentColor =
+        item.tone === 'success' ? '#16a34a' : item.tone === 'warning' ? '#d97706' : '#2563eb'
+
+      return `
+        <div style="margin-top:12px;border:1px solid #e5e7eb;border-left:4px solid ${accentColor};border-radius:14px;padding:16px 16px 16px 18px;background:#ffffff;">
+          <div style="color:#111827;font-size:15px;line-height:1.5;font-weight:600;">${escapeHtml(item.title)}</div>
+          <div style="margin-top:6px;color:#4b5563;font-size:14px;line-height:1.6;">${escapeHtml(item.body)}</div>
+        </div>
+      `
+    })
+    .join('')
+}
+
 function renderLeadReportEmail(options: {
   title: string
   subtitle: string
   metricGrid: string
+  activityLogHtml?: string
   topFormsTable: string
   recentLeadsTable: string
   workspaceUrl: string
@@ -241,18 +275,22 @@ function renderLeadReportEmail(options: {
     <div style="font-family:Arial,sans-serif;background:#f6f8fb;padding:24px;">
       <div style="max-width:880px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:18px;overflow:hidden;">
         <div style="padding:28px 28px 20px;border-bottom:1px solid #eef2f7;">
-          <div style="font-size:12px;line-height:1.4;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;">Monthly lead report</div>
+          <div style="font-size:12px;line-height:1.4;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;">Monthly client report</div>
           <h1 style="margin:10px 0 0;font-size:28px;line-height:1.2;color:#111827;">${escapeHtml(options.title)}</h1>
           <p style="margin:10px 0 0;color:#4b5563;font-size:14px;line-height:1.6;">${escapeHtml(options.subtitle)}</p>
         </div>
         <div style="padding:28px;">
           ${options.metricGrid}
           <div style="margin-top:28px;">
-            <h2 style="margin:0 0 14px;color:#111827;font-size:18px;line-height:1.4;">Top forms</h2>
+            <h2 style="margin:0 0 14px;color:#111827;font-size:18px;line-height:1.4;">Activity log</h2>
+            ${options.activityLogHtml || '<p style="margin:0;color:#6b7280;font-size:14px;line-height:1.6;">No changes were logged in this period.</p>'}
+          </div>
+          <div style="margin-top:28px;">
+            <h2 style="margin:0 0 14px;color:#111827;font-size:18px;line-height:1.4;">Form performance</h2>
             ${options.topFormsTable}
           </div>
           <div style="margin-top:28px;">
-            <h2 style="margin:0 0 14px;color:#111827;font-size:18px;line-height:1.4;">Recent leads</h2>
+            <h2 style="margin:0 0 14px;color:#111827;font-size:18px;line-height:1.4;">Recent lead log</h2>
             ${options.recentLeadsTable}
           </div>
           <div style="margin-top:28px;">
@@ -269,6 +307,7 @@ export class LeadReportSchedule extends BaseQueue {
   constructor(
     private readonly teamService: TeamService,
     private readonly projectService: ProjectService,
+    private readonly experimentService: ExperimentService,
     private readonly formService: FormService,
     private readonly submissionService: SubmissionService,
     private readonly mailService: MailService
@@ -415,6 +454,25 @@ export class LeadReportSchedule extends BaseQueue {
     const workspaceLabel = helper.isValid(team.clientName) ? team.clientName! : team.name
     const dateRangeLabel = `${formatTimestamp(startAt, timeZone)} - ${formatTimestamp(endAt, timeZone)}`
     const workspaceUrl = `${APP_HOMEPAGE_URL}/workspace/${team.id}`
+    const formsWithLeadsCount = new Set(submissions.map(submission => submission.formId)).size
+    const workspaceActivityLog = renderActivityLog([
+      formsWithLeadsCount > 1
+        ? {
+            title: 'Multiple forms generated leads',
+            body: `${formsWithLeadsCount} forms produced submissions in this window. Top contributors: ${topForms
+              .slice(0, 3)
+              .map(form => `${form.name} (${form.count})`)
+              .join(', ')}.`,
+            tone: 'info' as const
+          }
+        : topForms[0]
+          ? {
+              title: 'One form drove the reporting period',
+              body: `${topForms[0].name} generated ${topForms[0].count} submissions in this window.`,
+              tone: 'info' as const
+            }
+          : undefined
+    ].filter(Boolean) as Array<{ title: string; body: string; tone?: 'info' | 'success' | 'warning' }>)
 
     await this.mailService.sendDirect(recipients, {
       subject: `${workspaceLabel} monthly lead report - ${dateRangeLabel}`,
@@ -422,6 +480,7 @@ export class LeadReportSchedule extends BaseQueue {
         title: workspaceLabel,
         subtitle: `${dateRangeLabel} | Timezone ${timeZone}`,
         metricGrid,
+        activityLogHtml: workspaceActivityLog,
         topFormsTable: renderTopForms(topForms),
         recentLeadsTable: renderRecentLeads(recentLeads, timeZone),
         workspaceUrl
@@ -517,6 +576,75 @@ export class LeadReportSchedule extends BaseQueue {
     const projectLabel = helper.isValid(project.name) ? project.name : 'Untitled project'
     const dateRangeLabel = `${formatTimestamp(startAt, timeZone)} - ${formatTimestamp(endAt, timeZone)}`
     const workspaceUrl = `${APP_HOMEPAGE_URL}/workspace/${team.id}/project/${project.id}`
+    const formsWithLeadsCount = new Set(submissions.map(submission => submission.formId)).size
+    const reportStartMs = startAt * 1000
+    const reportEndMs = endAt * 1000
+    const relevantExperiments = (await this.experimentService.findAllInProject(project.id)).filter(
+      experiment => experiment.startAt <= reportEndMs && experiment.endAt >= reportStartMs
+    )
+    const experimentEntries = await Promise.all(
+      relevantExperiments.slice(0, 3).map(async experiment => {
+        const evaluation = await this.experimentService.evaluateWinner(experiment)
+        const rankedMetrics = [...evaluation.metrics].sort((left, right) => {
+          if (right.conversionRate !== left.conversionRate) {
+            return right.conversionRate - left.conversionRate
+          }
+
+          if (right.submissions !== left.submissions) {
+            return right.submissions - left.submissions
+          }
+
+          return left.averageTime - right.averageTime
+        })
+        const leader = rankedMetrics[0]
+        const leaderName = leader ? formMap.get(leader.formId)?.name || leader.formId : 'No leading form yet'
+
+        if (evaluation.winnerFormId && leader) {
+          return {
+            title: `A/B result: ${experiment.name}`,
+            body: `${leaderName} led with ${toFixed(leader.conversionRate)}% conversion from ${leader.visits} visits and ${leader.submissions} submissions.`,
+            tone: 'success' as const
+          }
+        }
+
+        if (experiment.status === 'running' && leader) {
+          return {
+            title: `A/B test still running: ${experiment.name}`,
+            body: `Traffic is still split across ${rankedMetrics.length} variants. Current leader: ${leaderName} at ${toFixed(leader.conversionRate)}% conversion from ${leader.visits} visits.`,
+            tone: 'info' as const
+          }
+        }
+
+        return {
+          title: `A/B test completed: ${experiment.name}`,
+          body:
+            evaluation.promotionBlockedReason ||
+            'The test window closed without a promotable winner in this reporting period.',
+          tone: 'warning' as const
+        }
+      })
+    )
+    const activityLog = renderActivityLog(
+      [
+        formsWithLeadsCount > 1
+          ? {
+              title: 'Multiple forms were live in this reporting window',
+              body: `${formsWithLeadsCount} forms captured leads between ${dateRangeLabel}. Top contributors: ${topForms
+                .slice(0, 3)
+                .map(form => `${form.name} (${form.count})`)
+                .join(', ')}.`,
+              tone: 'info' as const
+            }
+          : topForms[0]
+            ? {
+                title: 'One form drove the campaign window',
+                body: `${topForms[0].name} generated ${topForms[0].count} submissions in this reporting window.`,
+                tone: 'info' as const
+              }
+            : undefined,
+        ...experimentEntries
+      ].filter(Boolean) as Array<{ title: string; body: string; tone?: 'info' | 'success' | 'warning' }>
+    )
 
     await this.mailService.sendDirect(recipients, {
       subject: `${workspaceLabel} - ${projectLabel} monthly lead report - ${dateRangeLabel}`,
@@ -524,6 +652,7 @@ export class LeadReportSchedule extends BaseQueue {
         title: projectLabel,
         subtitle: `${workspaceLabel} | ${dateRangeLabel} | Timezone ${timeZone}`,
         metricGrid,
+        activityLogHtml: activityLog,
         topFormsTable: renderTopForms(topForms),
         recentLeadsTable: renderRecentLeads(recentLeads, timeZone),
         workspaceUrl

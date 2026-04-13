@@ -374,6 +374,23 @@ function createHarness() {
 
       return id
     },
+    findPartialBySession: async (formId: string, sessionId: string) =>
+      createdSubmissions.find(
+        submission =>
+          submission.formId === formId &&
+          submission.sessionId === sessionId &&
+          submission.isPartial === true
+      ) || null,
+    updateSubmission: async (submissionId: string, payload: Record<string, any>) => {
+      const submission = createdSubmissions.find(row => row.id === submissionId)
+
+      if (!submission) {
+        return false
+      }
+
+      Object.assign(submission, payload)
+      return true
+    },
     countInForm: async (formId: string) =>
       createdSubmissions.filter(submission => submission.formId === formId).length,
     analytic: async () => [],

@@ -2,12 +2,43 @@ import { BadRequestException, Controller, Get, Query, Res } from '@nestjs/common
 import { Response } from 'express'
 
 import { Auth, FormGuard, Project, ProjectGuard } from '@decorator'
-import { ExportProjectReportDto, ExportSubmissionsDto } from '@dto'
+import {
+  ExportFormAnalyticsDto,
+  ExportProjectReportDto,
+  ExportSubmissionsDto
+} from '@dto'
 import { flattenFields } from '@heyform-inc/answer-utils'
 import { FormStatusEnum } from '@heyform-inc/shared-types-enums'
 import { date } from '@heyform-inc/utils'
-import { ProjectModel } from '@model'
-import { ExportFileService, FormService, SubmissionService } from '@service'
+import { FormAnalyticRangeEnum, ProjectModel } from '@model'
+import { ExportFileService, FormAnalyticService, FormService, SubmissionService } from '@service'
+
+function sanitizeFilenamePart(value: string | undefined, fallback: string) {
+  const normalized = (value || '')
+    .normalize('NFKD')
+    .replace(/[^\x20-\x7E]/g, '')
+    .replace(/[<>:"/\\|?*]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[. ]+$/g, '')
+
+  return normalized || fallback
+}
+
+function buildContentDisposition(filename: string) {
+  const quotedFilename = filename.replace(/["\\]/g, '')
+  const encodedFilename = encodeURIComponent(filename)
+
+  return `attachment; filename="${quotedFilename}"; filename*=UTF-8''${encodedFilename}`
+}
+
+function buildAnalyticsRangeLabel(input: ExportFormAnalyticsDto) {
+  if (input.range === FormAnalyticRangeEnum.CUSTOM && input.startDate && input.endDate) {
+    return `${input.startDate}-to-${input.endDate}`
+  }
+
+  return input.range
+}
 
 @Controller()
 @Auth()
@@ -15,7 +46,8 @@ export class ExportSubmissionsController {
   constructor(
     private readonly submissionService: SubmissionService,
     private readonly formService: FormService,
-    private readonly exportFileService: ExportFileService
+    private readonly exportFileService: ExportFileService,
+    private readonly formAnalyticService: FormAnalyticService
   ) {}
 
   @Get('/api/export/submissions')
@@ -37,14 +69,14 @@ export class ExportSubmissionsController {
     const format = input.format || 'csv'
     const fields = flattenFields(form.fields)
     const dateStr = date().format('YYYY-MM-DD')
-    const filename = `${encodeURIComponent(form.name)}-${dateStr}.${format}`
+    const filename = `${sanitizeFilenamePart(form.name, 'form-submissions')}-${dateStr}.${format}`
 
     const data =
       format === 'xlsx'
         ? await this.exportFileService.xlsx(fields, form.hiddenFields, submissions)
         : await this.exportFileService.csv(fields, form.hiddenFields, submissions)
 
-    res.header('Content-Disposition', `attachment; filename="${filename}"`)
+    res.header('Content-Disposition', buildContentDisposition(filename))
     if (format === 'xlsx') {
       res.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     } else {
@@ -67,13 +99,64 @@ export class ExportSubmissionsController {
       startAt,
       endAt
     )
-    const filename = `${encodeURIComponent(project.name)}-report-${input.startDate}-to-${input.endDate}.xlsx`
+    const filename = `${sanitizeFilenamePart(project.name, 'project')}-client-report-${input.startDate}-to-${input.endDate}.xlsx`
     const data = await this.exportFileService.projectReportXlsx(project, forms, submissions, {
       startDate: input.startDate,
       endDate: input.endDate
     })
 
-    res.header('Content-Disposition', `attachment; filename="${filename}"`)
+    res.header('Content-Disposition', buildContentDisposition(filename))
+    res.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    res.send(data)
+  }
+
+  @Get('/api/export/form-analytics')
+  @FormGuard()
+  async exportFormAnalytics(
+    @Query() input: ExportFormAnalyticsDto,
+    @Res() res: Response
+  ): Promise<void> {
+    const form = await this.formService.findById(input.formId)
+
+    if (!form) {
+      throw new BadRequestException('The form does not exist')
+    }
+
+    const { startAt, endAt } = this.resolveAnalyticRange(input)
+    const [summary, questions] = await Promise.all([
+      this.formAnalyticService.summary({
+        formId: input.formId,
+        startAt,
+        endAt,
+        isNext: true,
+        sourceChannel: input.sourceChannel,
+        dedupeByIp: input.dedupeByIp
+      }),
+      this.formAnalyticService.questionAnalytics(input.formId, startAt, endAt, {
+        sourceChannel: input.sourceChannel,
+        dedupeByIp: input.dedupeByIp
+      })
+    ])
+    const filename = `${sanitizeFilenamePart(form.name, 'form')}-analytics-${buildAnalyticsRangeLabel(input)}.xlsx`
+    const data = await this.exportFileService.formAnalyticsXlsx(
+      {
+        id: form.id,
+        name: form.name
+      },
+      {
+        range: input.range,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        sourceChannel: input.sourceChannel,
+        dedupeByIp: input.dedupeByIp,
+        startAt,
+        endAt,
+        summary,
+        questions
+      }
+    )
+
+    res.header('Content-Disposition', buildContentDisposition(filename))
     res.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     res.send(data)
   }
@@ -89,6 +172,66 @@ export class ExportSubmissionsController {
     return {
       startAt,
       endAt
+    }
+  }
+
+  private resolveAnalyticRange(input: ExportFormAnalyticsDto) {
+    const now = date()
+    let startAt = now.startOf('day')
+    let endAt = now.endOf('day')
+
+    switch (input.range) {
+      case FormAnalyticRangeEnum.TODAY:
+        break
+
+      case FormAnalyticRangeEnum.WEEK:
+        startAt = now.subtract(7, 'days').startOf('day')
+        endAt = now.endOf('day')
+        break
+
+      case FormAnalyticRangeEnum.MONTH:
+        startAt = now.subtract(1, 'months').startOf('day')
+        endAt = now.endOf('day')
+        break
+
+      case FormAnalyticRangeEnum.THREE_MONTH:
+        startAt = now.subtract(3, 'months').startOf('day')
+        endAt = now.endOf('day')
+        break
+
+      case FormAnalyticRangeEnum.SIX_MONTH:
+        startAt = now.subtract(6, 'months').startOf('day')
+        endAt = now.endOf('day')
+        break
+
+      case FormAnalyticRangeEnum.YEAR:
+        startAt = now.subtract(1, 'years').startOf('day')
+        endAt = now.endOf('day')
+        break
+
+      case FormAnalyticRangeEnum.CUSTOM: {
+        if (!input.startDate || !input.endDate) {
+          throw new BadRequestException('Custom analytics exports require both startDate and endDate')
+        }
+
+        const rawStart = date(input.startDate)
+        const rawEnd = date(input.endDate)
+        const normalizedStart = rawEnd.isBefore(rawStart)
+          ? rawEnd.startOf('day')
+          : rawStart.startOf('day')
+        const normalizedEnd = rawEnd.isBefore(rawStart)
+          ? rawStart.endOf('day')
+          : rawEnd.endOf('day')
+
+        startAt = normalizedStart
+        endAt = normalizedEnd
+        break
+      }
+    }
+
+    return {
+      startAt: startAt.toDate(),
+      endAt: endAt.toDate()
     }
   }
 

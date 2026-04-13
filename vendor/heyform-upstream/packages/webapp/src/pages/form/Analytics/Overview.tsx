@@ -7,7 +7,7 @@ import { FormService } from '@/services'
 import { useParam } from '@/utils'
 import { date, helper, toDuration, toFixed } from '@heyform-inc/utils'
 
-import { Checkbox, Input, Select, Skeleton } from '@/components'
+import { Button, Checkbox, Input, Select, Skeleton, useToast } from '@/components'
 
 interface TrendIndicatorProps {
   change?: number | null
@@ -103,6 +103,7 @@ export default function FormAnalyticsOverview() {
   const { t } = useTranslation()
 
   const { formId } = useParam()
+  const toast = useToast()
   const defaultCustomEnd = date().format('YYYY-MM-DD')
   const defaultCustomStart = date().subtract(6, 'days').format('YYYY-MM-DD')
   const [range, setRange] = useState('7d')
@@ -110,6 +111,7 @@ export default function FormAnalyticsOverview() {
   const [dedupeByIp, setDedupeByIp] = useState(false)
   const [startDate, setStartDate] = useState(defaultCustomStart)
   const [endDate, setEndDate] = useState(defaultCustomEnd)
+  const [downloadLoading, setDownloadLoading] = useState(false)
   const isCustomRange = range === 'custom'
   const analyticRanges = useMemo(
     () => [
@@ -177,6 +179,42 @@ export default function FormAnalyticsOverview() {
   const isInitialLoading = loading && !data
   const isRefreshing = loading && !!data
 
+  async function handleDownloadAnalytics() {
+    if (isCustomRange && (!helper.isValid(startDate) || !helper.isValid(endDate))) {
+      toast({
+        title: t('components.error.title'),
+        message: 'Choose a valid custom date range before downloading analytics.'
+      })
+      return
+    }
+
+    if (isCustomRange && startDate > endDate) {
+      toast({
+        title: t('components.error.title'),
+        message: 'The custom start date must be on or before the end date.'
+      })
+      return
+    }
+
+    setDownloadLoading(true)
+
+    try {
+      await FormService.downloadAnalytics(formId, range, {
+        sourceChannel,
+        dedupeByIp,
+        startDate,
+        endDate
+      })
+    } catch (error: any) {
+      toast({
+        title: t('components.error.title'),
+        message: error.message || 'Unable to download the analytics workbook.'
+      })
+    } finally {
+      setDownloadLoading(false)
+    }
+  }
+
   return (
     <>
       <div className="mt-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -210,6 +248,9 @@ export default function FormAnalyticsOverview() {
               onChange={setRange}
             />
           </div>
+          <Button size="sm" loading={downloadLoading} disabled={isInitialLoading} onClick={handleDownloadAnalytics}>
+            Download XLSX
+          </Button>
           {isCustomRange && (
             <div className="grid w-full gap-2 sm:grid-cols-2">
               <label className="flex min-w-0 flex-col gap-1">

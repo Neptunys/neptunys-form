@@ -38,7 +38,7 @@ export default function FormSettingsEmailNotification() {
     }))
 
   const templateFooter =
-    'Supported tokens: {formName}, {respondentName}, {respondentEmail}, {respondentPhone}, {leadScore}, {leadQuality}, {leadPriority}, {submittedAt}, {submissionId}.'
+    'Supported tokens: {formName}, {respondentName}, {respondentEmail}, {respondentPhone}, {leadScore}, {leadQuality}, {leadPriority}, {submittedAt}, {submissionId}. {leadQuality} follows your configured grade labels and {leadPriority} follows your configured priority labels.'
 
   return (
     <section id="emailNotification" className="pt-10">
@@ -59,8 +59,8 @@ export default function FormSettingsEmailNotification() {
           <Form.Item
             className="md:col-span-2 [&_[data-slot=content]]:pt-1.5"
             name="enableLeadScoring"
-            label="Lead scoring"
-            description="Use a numeric submission variable as the lead score source for emails, Google Sheets, and downstream automations."
+            label="Scoring and grading"
+            description="Use a numeric submission variable as the score source for exports, emails, Google Sheets, and downstream automations."
             isInline
           >
             <Switch />
@@ -89,6 +89,42 @@ export default function FormSettingsEmailNotification() {
 
             <Form.Item name="leadHighThreshold" label="High threshold">
               <Input type="number" placeholder="80" />
+            </Form.Item>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3 md:col-span-2">
+            <Form.Item
+              name="leadQualityLowLabel"
+              label="Low grade label"
+              footer="Used in exports, monthly reports, and notification templates via {leadQuality}."
+            >
+              <Input placeholder="Low fit" />
+            </Form.Item>
+
+            <Form.Item name="leadQualityMediumLabel" label="Medium grade label">
+              <Input placeholder="Review" />
+            </Form.Item>
+
+            <Form.Item name="leadQualityHighLabel" label="High grade label">
+              <Input placeholder="Qualified" />
+            </Form.Item>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3 md:col-span-2">
+            <Form.Item
+              name="leadPriorityLowLabel"
+              label="Low priority label"
+              footer="Used in exports, monthly reports, and notification templates via {leadPriority}."
+            >
+              <Input placeholder="Cold" />
+            </Form.Item>
+
+            <Form.Item name="leadPriorityMediumLabel" label="Medium priority label">
+              <Input placeholder="Warm" />
+            </Form.Item>
+
+            <Form.Item name="leadPriorityHighLabel" label="High priority label">
+              <Input placeholder="Hot" />
             </Form.Item>
           </div>
         </div>
