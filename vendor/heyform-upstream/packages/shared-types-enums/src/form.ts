@@ -160,6 +160,17 @@ export interface Property {
 
   // Full Name
   fullNameMode?: 'both' | 'first' | 'last'
+  showFirstName?: boolean
+  showLastName?: boolean
+  firstNameRequired?: boolean
+  lastNameRequired?: boolean
+  showPhoneNumber?: boolean
+  phoneNumberRequired?: boolean
+  showEmail?: boolean
+  emailRequired?: boolean
+  showCompany?: boolean
+  companyRequired?: boolean
+  mapToContacts?: boolean
 
   // PhoneNumber
   defaultCountryCode?: string
@@ -354,9 +365,12 @@ export interface FullNameValue {
 }
 
 export interface ContactInfoValue {
+  firstName?: string
+  lastName?: string
   fullName?: FullNameValue
   email?: string
   phoneNumber?: string
+  company?: string
   address?: AddressValue
 }
 

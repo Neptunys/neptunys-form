@@ -605,27 +605,38 @@ export class FormSessionService {
         ...(session.questionMetrics || []).map(metric => metric.order || 0)
       )
 
-      return Math.max(
+      const progress = Math.max(
         session.lastQuestionOrder || 0,
         metricProgress,
         session.status === FormSessionStatusEnum.COMPLETED ? questionCount : 0
       )
+
+      return {
+        progress,
+        averageQuestionDuration:
+          progress > 0 && helper.isNumber(session.totalDurationMs)
+            ? Math.max(0, session.totalDurationMs / progress)
+            : 0
+      }
     })
 
-    if (!progressBySession.some(progress => progress > 0)) {
+    if (!progressBySession.some(session => session.progress > 0)) {
       return []
     }
 
-    return orderedQuestions
+    const questionsWithFallbackDuration = orderedQuestions
       .map((question, index) => {
-        const reachCount = progressBySession.filter(progress => progress >= question.order).length
+        const reachedSessions = progressBySession.filter(session => session.progress >= question.order)
+        const reachCount = reachedSessions.length
         const nextReach = index < orderedQuestions.length - 1
-          ? progressBySession.filter(progress => progress >= orderedQuestions[index + 1].order).length
+          ? progressBySession.filter(session => session.progress >= orderedQuestions[index + 1].order).length
           : completedSessions
         const completedCount = Math.min(reachCount, nextReach)
         const dropOffCount = Math.max(0, reachCount - nextReach)
         const dropOffRate = reachCount > 0 ? (dropOffCount / reachCount) * 100 : 0
-        const frictionScore = Math.round(dropOffRate)
+        const averageDuration = reachCount > 0
+          ? reachedSessions.reduce((sum, session) => sum + session.averageQuestionDuration, 0) / reachCount
+          : 0
 
         return {
           questionId: question.questionId,
@@ -633,16 +644,29 @@ export class FormSessionService {
           title: question.title,
           reachCount,
           reachRate: totalVisits > 0 ? (reachCount / totalVisits) * 100 : 0,
-          averageDuration: 0,
+          averageDuration,
           completedCount,
           dropOffCount,
-          dropOffRate,
-          frictionScore,
-          frictionLevel:
-            frictionScore >= 55 ? 'high' : frictionScore >= 30 ? 'medium' : 'low'
+          dropOffRate
         }
       })
       .filter(question => question.reachCount > 0)
+
+    const durationCeiling = questionsWithFallbackDuration.reduce((max: number, row: any) => {
+      return Math.max(max, row.averageDuration || 0)
+    }, 0)
+
+    return questionsWithFallbackDuration.map((row: any) => {
+      const durationWeight = durationCeiling > 0 ? (row.averageDuration / durationCeiling) * 100 : 0
+      const frictionScore = Math.round(row.dropOffRate * 0.7 + durationWeight * 0.3)
+
+      return {
+        ...row,
+        frictionScore,
+        frictionLevel:
+          frictionScore >= 55 ? 'high' : frictionScore >= 30 ? 'medium' : 'low'
+      }
+    })
   }
 
   async getExperimentMetrics(experimentId: string, startAt?: number, endAt?: number) {

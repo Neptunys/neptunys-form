@@ -166,6 +166,50 @@ class SharedPropertyInput {
   fullNameMode?: string
 
   @Field({ nullable: true })
+  @IsOptional()
+  showFirstName?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
+  showLastName?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
+  firstNameRequired?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
+  lastNameRequired?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
+  showPhoneNumber?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
+  phoneNumberRequired?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
+  showEmail?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
+  emailRequired?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
+  showCompany?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
+  companyRequired?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
+  mapToContacts?: boolean
+
+  @Field({ nullable: true })
   defaultCountryCode?: string
 
   @Field({ nullable: true })
@@ -1238,7 +1282,46 @@ export class PropertyType {
   rightLabel?: string
 
   @Field({ nullable: true })
+  fullNameMode?: string
+
+  @Field({ nullable: true })
+  showFirstName?: boolean
+
+  @Field({ nullable: true })
+  showLastName?: boolean
+
+  @Field({ nullable: true })
+  firstNameRequired?: boolean
+
+  @Field({ nullable: true })
+  lastNameRequired?: boolean
+
+  @Field({ nullable: true })
+  showPhoneNumber?: boolean
+
+  @Field({ nullable: true })
+  phoneNumberRequired?: boolean
+
+  @Field({ nullable: true })
+  showEmail?: boolean
+
+  @Field({ nullable: true })
+  emailRequired?: boolean
+
+  @Field({ nullable: true })
+  showCompany?: boolean
+
+  @Field({ nullable: true })
+  companyRequired?: boolean
+
+  @Field({ nullable: true })
+  mapToContacts?: boolean
+
+  @Field({ nullable: true })
   defaultCountryCode?: string
+
+  @Field({ nullable: true })
+  hideCountrySelect?: boolean
 
   @Field({ nullable: true })
   currency?: string

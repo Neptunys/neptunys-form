@@ -244,7 +244,12 @@ function getSampleAnswerValue(field: FormField, index: number, leadLevel: LeadLe
     case FieldKindEnum.PHONE_NUMBER:
       return persona.respondentPhone
     case FieldKindEnum.CONTACT_INFO:
-      return [persona.respondentName, persona.respondentEmail, persona.respondentPhone, persona.address]
+      return [
+        persona.respondentName,
+        persona.respondentEmail,
+        persona.respondentPhone,
+        `${persona.answerTone} Company`
+      ]
         .filter(Boolean)
         .join('\n')
     case FieldKindEnum.URL:
@@ -437,7 +442,12 @@ function getRespondentName(answer?: Answer) {
 
   if (contactInfo) {
     return normalizeString(
-      [contactInfo.fullName?.firstName, contactInfo.fullName?.lastName].filter(Boolean).join(' ')
+      [
+        contactInfo.firstName ?? contactInfo.fullName?.firstName,
+        contactInfo.lastName ?? contactInfo.fullName?.lastName
+      ]
+        .filter(Boolean)
+        .join(' ')
     )
   }
 

@@ -171,13 +171,10 @@ export default function FormAnalyticsOverview() {
     },
     {
       refreshDeps: [dedupeByIp, endDate, formId, range, sourceChannel, startDate],
-      pollingInterval: 10_000,
-      pollingWhenHidden: false,
-      refreshOnWindowFocus: true
+      refreshOnWindowFocus: false
     }
   )
   const isInitialLoading = loading && !data
-  const isRefreshing = loading && !!data
 
   async function handleDownloadAnalytics() {
     if (isCustomRange && (!helper.isValid(startDate) || !helper.isValid(endDate))) {
@@ -220,12 +217,6 @@ export default function FormAnalyticsOverview() {
       <div className="mt-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <h2 className="hf-section-title ml-6">{t('dashboard.overview')}</h2>
         <div className="mr-6 flex w-full flex-col gap-2 sm:w-auto sm:items-end">
-          <div className="text-secondary flex items-center gap-2 text-sm/6">
-            <span
-              className={`h-2 w-2 rounded-full ${isRefreshing ? 'bg-amber-500' : 'bg-emerald-500'}`}
-            />
-            <span>{isRefreshing ? 'Refreshing live analytics...' : 'Live updates every 10s'}</span>
-          </div>
           <label className="text-secondary flex items-center gap-2 text-sm/6">
             <Checkbox value={dedupeByIp} disabled={isInitialLoading} onChange={setDedupeByIp} />
             <span>Count one visit and one submission per IP</span>

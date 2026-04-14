@@ -164,12 +164,28 @@ export function getPropertiesFromKind(properties: Property, newKind: FieldKindEn
       break
 
     case FieldKindEnum.CONTACT_INFO:
-      if (!props.fullNameMode) {
-        props.fullNameMode = 'both'
-      }
+      props.showFirstName = props.showFirstName ?? props.fullNameMode !== 'last'
+      props.showLastName = props.showLastName ?? props.fullNameMode !== 'first'
+      props.firstNameRequired = props.firstNameRequired ?? true
+      props.lastNameRequired = props.lastNameRequired ?? true
+      props.showPhoneNumber = props.showPhoneNumber ?? true
+      props.phoneNumberRequired = props.phoneNumberRequired ?? true
+      props.showEmail = props.showEmail ?? true
+      props.emailRequired = props.emailRequired ?? true
+      props.showCompany = props.showCompany ?? true
+      props.companyRequired = props.companyRequired ?? false
+      props.mapToContacts = props.mapToContacts ?? false
+      props.fullNameMode = props.showFirstName && props.showLastName
+        ? 'both'
+        : props.showFirstName
+          ? 'first'
+          : props.showLastName
+            ? 'last'
+            : 'both'
       if (!props.defaultCountryCode) {
         props.defaultCountryCode = 'US'
       }
+      props.hideCountrySelect = props.hideCountrySelect ?? false
       break
 
     case FieldKindEnum.INPUT_TABLE:
@@ -267,9 +283,21 @@ export function getFieldFromKind(kind: FieldKindEnum | string): FormFieldType {
       break
 
     case FieldKindEnum.CONTACT_INFO:
-      field.validations!.required = true
+      field.validations!.required = false
       field.properties!.fullNameMode = 'both'
+      field.properties!.showFirstName = true
+      field.properties!.showLastName = true
+      field.properties!.firstNameRequired = true
+      field.properties!.lastNameRequired = true
+      field.properties!.showPhoneNumber = true
+      field.properties!.phoneNumberRequired = true
+      field.properties!.showEmail = true
+      field.properties!.emailRequired = true
+      field.properties!.showCompany = true
+      field.properties!.companyRequired = false
+      field.properties!.mapToContacts = false
       field.properties!.defaultCountryCode = 'US'
+      field.properties!.hideCountrySelect = false
       break
 
     case FieldKindEnum.INPUT_TABLE:

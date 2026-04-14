@@ -548,19 +548,15 @@ function validatePayment(rule: FieldsToValidateRules, value: AnswerValue) {
 
 function hasContactInfoValue(value: any) {
   const fullName = value?.fullName || {}
-  const address = value?.address || {}
 
   return [
+    value?.firstName,
+    value?.lastName,
     fullName.firstName,
     fullName.lastName,
     value?.email,
     value?.phoneNumber,
-    address.address1,
-    address.address2,
-    address.city,
-    address.state,
-    address.zip,
-    address.country
+    value?.company
   ].some(helper.isValid)
 }
 
@@ -579,21 +575,38 @@ function validateContactInfo(rule: FieldsToValidateRules, value: AnswerValue) {
   }
 
   const fullName = value.fullName || {}
-  const address = value.address || {}
-  const fullNameMode = rule.fullNameMode || 'both'
-  const showFirstName = fullNameMode !== 'last'
-  const showLastName = fullNameMode !== 'first'
+  const firstName = value.firstName ?? fullName.firstName
+  const lastName = value.lastName ?? fullName.lastName
+  const showFirstName = rule.properties?.showFirstName ?? rule.properties?.fullNameMode !== 'last'
+  const showLastName = rule.properties?.showLastName ?? rule.properties?.fullNameMode !== 'first'
+  const showPhoneNumber = rule.properties?.showPhoneNumber ?? true
+  const showEmail = rule.properties?.showEmail ?? true
+  const showCompany = rule.properties?.showCompany ?? true
+  const firstNameRequired = showFirstName && (rule.properties?.firstNameRequired ?? rule.required)
+  const lastNameRequired = showLastName && (rule.properties?.lastNameRequired ?? rule.required)
+  const phoneNumberRequired = showPhoneNumber && (rule.properties?.phoneNumberRequired ?? rule.required)
+  const emailRequired = showEmail && (rule.properties?.emailRequired ?? rule.required)
+  const companyRequired = showCompany && (rule.properties?.companyRequired ?? false)
 
-  if ((showFirstName && helper.isEmpty(fullName.firstName)) || (showLastName && helper.isEmpty(fullName.lastName))) {
+  if (firstNameRequired && helper.isEmpty(firstName)) {
     throw new ValidateError({
       id: rule.id,
       kind: rule.kind,
       title: rule.title,
-      message: 'Please enter your name'
+      message: 'Please enter first name'
     })
   }
 
-  if (!helper.isString(value.email) || !helper.isEmail(value.email)) {
+  if (lastNameRequired && helper.isEmpty(lastName)) {
+    throw new ValidateError({
+      id: rule.id,
+      kind: rule.kind,
+      title: rule.title,
+      message: 'Please enter last name'
+    })
+  }
+
+  if (showEmail && helper.isValid(value.email) && (!helper.isString(value.email) || !helper.isEmail(value.email))) {
     throw new ValidateError({
       id: rule.id,
       kind: rule.kind,
@@ -602,7 +615,16 @@ function validateContactInfo(rule: FieldsToValidateRules, value: AnswerValue) {
     })
   }
 
-  if (!isMobilePhone(value.phoneNumber)) {
+  if (emailRequired && helper.isEmpty(value.email)) {
+    throw new ValidateError({
+      id: rule.id,
+      kind: rule.kind,
+      title: rule.title,
+      message: 'Please enter a valid email address'
+    })
+  }
+
+  if (showPhoneNumber && helper.isValid(value.phoneNumber) && !isMobilePhone(value.phoneNumber)) {
     throw new ValidateError({
       id: rule.id,
       kind: rule.kind,
@@ -611,18 +633,21 @@ function validateContactInfo(rule: FieldsToValidateRules, value: AnswerValue) {
     })
   }
 
-  if (
-    helper.isEmpty(address.address1) ||
-    helper.isEmpty(address.city) ||
-    helper.isEmpty(address.state) ||
-    helper.isEmpty(address.zip) ||
-    helper.isEmpty(address.country)
-  ) {
+  if (phoneNumberRequired && helper.isEmpty(value.phoneNumber)) {
     throw new ValidateError({
       id: rule.id,
       kind: rule.kind,
       title: rule.title,
-      message: 'Please complete your address'
+      message: 'Please enter a valid mobile phone number'
+    })
+  }
+
+  if (companyRequired && helper.isEmpty(value.company)) {
+    throw new ValidateError({
+      id: rule.id,
+      kind: rule.kind,
+      title: rule.title,
+      message: 'Please enter company'
     })
   }
 }

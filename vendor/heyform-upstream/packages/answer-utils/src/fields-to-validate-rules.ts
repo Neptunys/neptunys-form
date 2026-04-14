@@ -69,6 +69,19 @@ function convert(field: FormField): FieldsToValidateRules {
   }
 
   if (
+    field.kind === FieldKindEnum.CONTACT_INFO &&
+    [
+      field.properties?.firstNameRequired,
+      field.properties?.lastNameRequired,
+      field.properties?.phoneNumberRequired,
+      field.properties?.emailRequired,
+      field.properties?.companyRequired
+    ].some(value => value === true)
+  ) {
+    rule.required = true
+  }
+
+  if (
     helper.isValid(field.validations?.min) &&
     helper.isNumeric(String(field.validations?.min), { no_symbols: true })
   ) {

@@ -6,27 +6,33 @@ import { useMemo, useState } from 'react'
 import { initialValue, useTranslation } from '../utils'
 import { helper } from '@heyform-inc/utils'
 
-import { CountrySelect, FormField, Input, PhoneNumberInput } from '../components'
+import { FormField, Input, PhoneNumberInput } from '../components'
 import { useStore } from '../store'
 import type { BlockProps } from './Block'
 import { Block } from './Block'
 import { Form } from './Form'
 
+function normalizeContactInfoValue(value: any) {
+  if (!helper.isObject(value)) {
+    return {}
+  }
+
+  return {
+    ...value,
+    firstName: value?.firstName ?? value?.fullName?.firstName,
+    lastName: value?.lastName ?? value?.fullName?.lastName
+  }
+}
+
 function hasFilled(values: any) {
-  const fullName = values?.fullName || {}
-  const address = values?.address || {}
+  const normalizedValue = normalizeContactInfoValue(values)
 
   return [
-    fullName.firstName,
-    fullName.lastName,
-    values?.email,
-    values?.phoneNumber,
-    address.address1,
-    address.address2,
-    address.city,
-    address.state,
-    address.zip,
-    address.country
+    normalizedValue.firstName,
+    normalizedValue.lastName,
+    normalizedValue.email,
+    normalizedValue.phoneNumber,
+    normalizedValue.company
   ].some(helper.isValid)
 }
 
@@ -34,13 +40,23 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
   const { state, dispatch } = useStore()
   const { t } = useTranslation()
   const [isDropdownShown, setIsDropdownShown] = useState(false)
-  const fullNameMode = field.properties?.fullNameMode || 'both'
-  const showFirstName = fullNameMode !== 'last'
-  const showLastName = fullNameMode !== 'first'
+  const showFirstName = field.properties?.showFirstName ?? field.properties?.fullNameMode !== 'last'
+  const showLastName = field.properties?.showLastName ?? field.properties?.fullNameMode !== 'first'
   const showBothNameFields = showFirstName && showLastName
+  const showPhoneNumber = field.properties?.showPhoneNumber ?? true
+  const showEmail = field.properties?.showEmail ?? true
+  const showCompany = field.properties?.showCompany ?? true
+  const legacyRequired = Boolean(field.validations?.required)
+  const firstNameRequired = showFirstName && (field.properties?.firstNameRequired ?? legacyRequired)
+  const lastNameRequired = showLastName && (field.properties?.lastNameRequired ?? legacyRequired)
+  const phoneNumberRequired = showPhoneNumber && (field.properties?.phoneNumberRequired ?? legacyRequired)
+  const emailRequired = showEmail && (field.properties?.emailRequired ?? legacyRequired)
+  const companyRequired = showCompany && (field.properties?.companyRequired ?? false)
+  const hasRequiredFields =
+    firstNameRequired || lastNameRequired || phoneNumberRequired || emailRequired || companyRequired
 
   const isRequired = useMemo(() => {
-    if (field.validations?.required) {
+    if (hasRequiredFields || field.validations?.required) {
       return true
     }
 
@@ -49,14 +65,17 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
     }
 
     return false
-  }, [field.id, field.validations?.required, state.errorFieldId, state.values])
+  }, [field.id, field.validations?.required, hasRequiredFields, state.errorFieldId, state.values])
 
   function getValues(values: any) {
-    return hasFilled(values) ? values : undefined
+    const normalizedValue = normalizeContactInfoValue(values)
+    return hasFilled(normalizedValue) ? normalizedValue : undefined
   }
 
   function handleValuesChange(_: any, values: any) {
-    if (!field.validations?.required && !hasFilled(values)) {
+    const normalizedValue = normalizeContactInfoValue(values)
+
+    if (!field.validations?.required && !hasFilled(normalizedValue)) {
       dispatch({
         type: 'setValues',
         payload: {
@@ -78,7 +97,7 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
       {...restProps}
     >
       <Form
-        initialValues={initialValue(state.values[field.id])}
+        initialValues={initialValue(normalizeContactInfoValue(state.values[field.id]))}
         field={field}
         getValues={getValues}
         onValuesChange={handleValuesChange}
@@ -88,10 +107,10 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
             {showFirstName && (
               <FormField
                 className={showBothNameFields ? 'w-full sm:flex-1' : 'w-full'}
-                name={['fullName', 'firstName']}
+                name="firstName"
                 rules={[
                   {
-                    required: Boolean(isRequired && showFirstName),
+                    required: Boolean(isRequired && firstNameRequired),
                     message: t('This field is required')
                   }
                 ]}
@@ -103,10 +122,10 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
             {showLastName && (
               <FormField
                 className={showBothNameFields ? 'w-full sm:flex-1' : 'w-full'}
-                name={['fullName', 'lastName']}
+                name="lastName"
                 rules={[
                   {
-                    required: Boolean(isRequired && showLastName),
+                    required: Boolean(isRequired && lastNameRequired),
                     message: t('This field is required')
                   }
                 ]}
@@ -116,42 +135,50 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
             )}
           </div>
 
-          <FormField
-            name="email"
-            rules={[
-              {
-                required: Boolean(isRequired),
-                validator(rule, value) {
-                  return new Promise<void>((resolve, reject) => {
-                    if (helper.isEmpty(value)) {
-                      if (rule.required) {
-                        reject(t('This field is required'))
-                      } else {
-                        resolve()
-                      }
+          {showPhoneNumber && (
+            <div className="heyform-phone-number">
+              <FormField
+                name="phoneNumber"
+                rules={[
+                  {
+                    required: Boolean(isRequired && phoneNumberRequired),
+                    validator(rule, value) {
+                      return new Promise<void>((resolve, reject) => {
+                        if (helper.isEmpty(value)) {
+                          if (rule.required) {
+                            reject(t('This field is required'))
+                          } else {
+                            resolve()
+                          }
 
-                      return
+                          return
+                        }
+
+                        if (isValidPhoneNumber(value)) {
+                          resolve()
+                        } else {
+                          reject(t('Please enter a valid mobile phone number'))
+                        }
+                      })
                     }
+                  }
+                ]}
+              >
+                <PhoneNumberInput
+                  defaultCountryCode={field.properties?.defaultCountryCode}
+                  hideCountrySelect={field.properties?.hideCountrySelect ?? false}
+                  onDropdownVisibleChange={setIsDropdownShown}
+                />
+              </FormField>
+            </div>
+          )}
 
-                    if (helper.isEmail(value)) {
-                      resolve()
-                    } else {
-                      reject(t('Please enter a valid email address'))
-                    }
-                  })
-                }
-              }
-            ]}
-          >
-            <Input type="email" placeholder="email@example.com" />
-          </FormField>
-
-          <div className="heyform-phone-number">
+          {showEmail && (
             <FormField
-              name="phoneNumber"
+              name="email"
               rules={[
                 {
-                  required: Boolean(isRequired),
+                  required: Boolean(isRequired && emailRequired),
                   validator(rule, value) {
                     return new Promise<void>((resolve, reject) => {
                       if (helper.isEmpty(value)) {
@@ -164,95 +191,33 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
                         return
                       }
 
-                      if (isValidPhoneNumber(value)) {
+                      if (helper.isEmail(value)) {
                         resolve()
                       } else {
-                        reject(t('Please enter a valid mobile phone number'))
+                        reject(t('Please enter a valid email address'))
                       }
                     })
                   }
                 }
               ]}
             >
-              <PhoneNumberInput
-                defaultCountryCode={field.properties?.defaultCountryCode}
-                hideCountrySelect={field.properties?.hideCountrySelect}
-                onDropdownVisibleChange={setIsDropdownShown}
-              />
+              <Input type="email" placeholder="email@example.com" />
             </FormField>
-          </div>
+          )}
 
-          <FormField
-            name={['address', 'address1']}
-            rules={[
-              {
-                required: Boolean(isRequired),
-                message: t('This field is required')
-              }
-            ]}
-          >
-            <Input placeholder={t('Address Line 1')} />
-          </FormField>
-
-          <FormField name={['address', 'address2']}>
-            <Input placeholder={t('Address Line 2 (optional)')} />
-          </FormField>
-
-          <div className="flex w-full flex-col items-start justify-items-stretch gap-4 sm:flex-row">
+          {showCompany && (
             <FormField
-              className="w-full sm:flex-1"
-              name={['address', 'city']}
+              name="company"
               rules={[
                 {
-                  required: Boolean(isRequired),
+                  required: Boolean(isRequired && companyRequired),
                   message: t('This field is required')
                 }
               ]}
             >
-              <Input placeholder={t('City')} />
+              <Input placeholder={t('Company')} />
             </FormField>
-
-            <FormField
-              className="w-full sm:flex-1"
-              name={['address', 'state']}
-              rules={[
-                {
-                  required: Boolean(isRequired),
-                  message: t('This field is required')
-                }
-              ]}
-            >
-              <Input placeholder={t('State/Province')} />
-            </FormField>
-          </div>
-
-          <div className="flex w-full flex-col items-start justify-items-stretch gap-4 sm:flex-row">
-            <FormField
-              className="w-full sm:flex-1"
-              name={['address', 'zip']}
-              rules={[
-                {
-                  required: Boolean(isRequired),
-                  message: t('This field is required')
-                }
-              ]}
-            >
-              <Input placeholder={t('Zip/Postal Code')} />
-            </FormField>
-
-            <FormField
-              className="w-full sm:flex-1"
-              name={['address', 'country']}
-              rules={[
-                {
-                  required: Boolean(isRequired),
-                  message: t('This field is required')
-                }
-              ]}
-            >
-              <CountrySelect placeholder={t('Country')} onDropdownVisibleChange={setIsDropdownShown} />
-            </FormField>
-          </div>
+          )}
         </div>
       </Form>
     </Block>

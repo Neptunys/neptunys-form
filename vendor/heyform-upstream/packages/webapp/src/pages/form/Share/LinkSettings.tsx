@@ -4,10 +4,9 @@ import { useMemo, useRef } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 
 import { FormService } from '@/services'
-import { buildPublicFormUrl, normalizePublicFormSlug, useParam } from '@/utils'
+import { normalizePublicFormSlug, useParam } from '@/utils'
 import { helper } from '@heyform-inc/utils'
 
-import OgIcon from '@/assets/og.svg?react'
 import { Button, Image, ImagePicker, ImagePickerRef, Input, Switch, Tooltip } from '@/components'
 import { useFormStore, useWorkspaceStore } from '@/store'
 
@@ -15,7 +14,7 @@ export default function LinkSettings() {
   const { t } = useTranslation()
 
   const { formId } = useParam()
-  const { workspace, sharingURLPrefix } = useWorkspaceStore()
+  const { workspace } = useWorkspaceStore()
   const { form, updateForm, updateSettings } = useFormStore()
   const imagePickerRef = useRef<ImagePickerRef | null>(null)
 
@@ -29,18 +28,6 @@ export default function LinkSettings() {
 
     return {}
   }, [form])
-
-  const publicUrl = useMemo(
-    () =>
-      buildPublicFormUrl({
-        sharingURLPrefix,
-        formId,
-        slug: form?.slug,
-        isDomainRoot: form?.isDomainRoot,
-        customDomain: workspace?.customDomain
-      }),
-    [form?.isDomainRoot, form?.slug, formId, sharingURLPrefix, workspace?.customDomain]
-  )
 
   const { run } = useRequest(
     async (name: string, value?: string | null) => {
@@ -141,14 +128,6 @@ export default function LinkSettings() {
             />
           </div>
 
-          <div className="hf-card rounded-2xl px-4 py-3">
-            <div className="text-secondary text-xs uppercase tracking-[0.16em]">Live URL preview</div>
-            <div className="text-primary mt-2 break-all text-sm font-medium">{publicUrl}</div>
-            <div className="mt-3">
-              <Button.Copy text={publicUrl} label="Copy URL" size="sm" />
-            </div>
-          </div>
-
           <div className="space-y-1">
             <div>
               <label
@@ -237,27 +216,23 @@ export default function LinkSettings() {
                   </div>
                 </div>
               ) : (
-                <div className="relative aspect-[1200/630] select-none rounded-lg bg-white">
-                  <OgIcon className="h-full w-full rounded-lg" />
+                <div className="relative aspect-[1200/630] select-none overflow-hidden rounded-lg bg-foreground text-background">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.14),transparent_42%)]" />
 
-                  <div className="absolute inset-0 text-black">
-                    <div className="mx-[28px] flex h-[130px] flex-col justify-center gap-2">
-                      <div
-                        className="text-[22px] font-bold leading-[26px]"
-                        style={{
-                          lineClamp: 2
-                        }}
-                      >
+                  <div className="relative flex h-full flex-col justify-between p-7">
+                    <div className="max-w-[78%]">
+                      <div className="overflow-hidden text-[22px] font-bold leading-[26px] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
                         {title}
                       </div>
-                      <div
-                        className="text-sm leading-5 opacity-85"
-                        style={{
-                          lineClamp: 2
-                        }}
-                      >
-                        {description}
-                      </div>
+                      {!!description && (
+                        <div className="mt-3 overflow-hidden text-sm/6 text-background/70 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
+                          {description}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-background/60">
+                      NeptunysForm
                     </div>
                   </div>
                 </div>

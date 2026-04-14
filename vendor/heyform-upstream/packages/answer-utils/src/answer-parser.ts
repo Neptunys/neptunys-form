@@ -48,16 +48,11 @@ function fullName(answer: Answer): FullNameValue {
 
 function contactInfo(answer: Answer): string {
   const value = answer.value || {}
-  const fullNameValue = value.fullName || {}
-  const fullNameText = [fullNameValue.firstName, fullNameValue.lastName].filter(Boolean).join(' ')
-  const addressText = helper.isValid(value.address)
-    ? address({
-        ...answer,
-        value: value.address
-      } as Answer)
-    : ''
+  const fullNameText = [value.firstName ?? value.fullName?.firstName, value.lastName ?? value.fullName?.lastName]
+    .filter(Boolean)
+    .join(' ')
 
-  return [fullNameText, value.email, value.phoneNumber, addressText]
+  return [fullNameText, value.email, value.phoneNumber, value.company]
     .filter(helper.isValid)
     .join('\n')
 }

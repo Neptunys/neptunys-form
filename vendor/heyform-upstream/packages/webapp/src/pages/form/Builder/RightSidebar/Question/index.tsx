@@ -65,7 +65,7 @@ const Settings = ({ field }: RequiredSettingsProps) => {
 
   return (
     <div className="mt-3 space-y-2">
-      <RequiredSettings field={field} />
+      {field.kind !== FieldKindEnum.CONTACT_INFO && <RequiredSettings field={field} />}
       {children}
     </div>
   )
@@ -91,7 +91,7 @@ export default function Question() {
       </div>
 
       {/* Cover layout */}
-      <CoverAndLayout />
+      {state.currentField.kind !== FieldKindEnum.CONTACT_INFO && <CoverAndLayout />}
     </div>
   )
 }

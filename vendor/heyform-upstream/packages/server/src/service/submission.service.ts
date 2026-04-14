@@ -579,50 +579,45 @@ export class SubmissionService {
 
     const orderedQuestions = [...questions].sort((left, right) => left.order - right.order)
     const questionIds = orderedQuestions.map(question => question.questionId)
-
-    const [result] = await this.submissionModel.aggregate([
-      {
-        $match: {
-          formId,
-          status: SubmissionStatusEnum.PUBLIC,
-          isPartial: { $ne: true },
-          startAt: { $gte: startAt },
-          endAt: { $lte: endAt }
-        }
-      },
-      {
-        $facet: {
-          totals: [{ $count: 'submissionCount' }],
-          answers: [
-            {
-              $unwind: '$answers'
-            },
-            {
-              $match: {
-                'answers.id': {
-                  $in: questionIds
-                }
-              }
-            },
-            {
-              $group: {
-                _id: '$answers.id',
-                reachCount: { $sum: 1 }
-              }
-            }
-          ]
-        }
-      }
-    ])
-
-    const submissionCount = result?.totals?.[0]?.submissionCount || 0
+    const questionIdSet = new Set(questionIds)
     const answerCounts = new Map<string, number>()
+    const durationTotals = new Map<string, number>()
 
-    ;(result?.answers || []).forEach((row: { _id: string; reachCount: number }) => {
-      answerCounts.set(row._id, row.reachCount || 0)
+    const submissions = await this.submissionModel
+      .find({
+        formId,
+        status: SubmissionStatusEnum.PUBLIC,
+        isPartial: { $ne: true },
+        startAt: { $gte: startAt },
+        endAt: { $lte: endAt }
+      })
+      .select({ answers: 1, startAt: 1, endAt: 1 })
+      .lean()
+
+    const submissionCount = submissions.length
+
+    submissions.forEach((submission: any) => {
+      const answeredQuestionIds = new Set<string>()
+
+      ;(submission.answers || []).forEach((answer: any) => {
+        if (questionIdSet.has(answer.id)) {
+          answeredQuestionIds.add(answer.id)
+        }
+      })
+
+      const answeredCount = answeredQuestionIds.size
+      const totalDuration = helper.isNumber(submission.startAt) && helper.isNumber(submission.endAt)
+        ? Math.max(0, submission.endAt - submission.startAt)
+        : 0
+      const averageQuestionDuration = answeredCount > 0 ? totalDuration / answeredCount : 0
+
+      answeredQuestionIds.forEach(questionId => {
+        answerCounts.set(questionId, (answerCounts.get(questionId) || 0) + 1)
+        durationTotals.set(questionId, (durationTotals.get(questionId) || 0) + averageQuestionDuration)
+      })
     })
 
-    return orderedQuestions
+    const rows = orderedQuestions
       .map((question, index) => {
         const reachCount = answerCounts.get(question.questionId) || 0
         const nextReach = index < orderedQuestions.length - 1
@@ -631,7 +626,7 @@ export class SubmissionService {
         const completedCount = Math.min(reachCount, nextReach)
         const dropOffCount = Math.max(0, reachCount - nextReach)
         const dropOffRate = reachCount > 0 ? (dropOffCount / reachCount) * 100 : 0
-        const frictionScore = Math.round(dropOffRate)
+        const averageDuration = reachCount > 0 ? (durationTotals.get(question.questionId) || 0) / reachCount : 0
 
         return {
           questionId: question.questionId,
@@ -639,15 +634,28 @@ export class SubmissionService {
           title: question.title,
           reachCount,
           reachRate: submissionCount > 0 ? (reachCount / submissionCount) * 100 : 0,
-          averageDuration: 0,
+          averageDuration,
           completedCount,
           dropOffCount,
-          dropOffRate,
-          frictionScore,
-          frictionLevel:
-            frictionScore >= 55 ? 'high' : frictionScore >= 30 ? 'medium' : 'low'
+          dropOffRate
         }
       })
       .filter(question => question.reachCount > 0)
+
+    const durationCeiling = rows.reduce((max: number, row: any) => {
+      return Math.max(max, row.averageDuration || 0)
+    }, 0)
+
+    return rows.map((row: any) => {
+      const durationWeight = durationCeiling > 0 ? (row.averageDuration / durationCeiling) * 100 : 0
+      const frictionScore = Math.round(row.dropOffRate * 0.7 + durationWeight * 0.3)
+
+      return {
+        ...row,
+        frictionScore,
+        frictionLevel:
+          frictionScore >= 55 ? 'high' : frictionScore >= 30 ? 'medium' : 'low'
+      }
+    })
   }
 }
