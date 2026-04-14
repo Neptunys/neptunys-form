@@ -51,6 +51,13 @@ function parseJsonAnswer(answer: Answer, plain = false): any {
       }
       break
 
+    case FieldKindEnum.CONTACT_INFO:
+      value = answer.value
+      if (plain) {
+        value = parser.contactInfo(answer)
+      }
+      break
+
     case FieldKindEnum.ADDRESS:
       value = answer.value
       if (plain) {

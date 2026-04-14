@@ -35,6 +35,12 @@ interface SourceBreakdownItem {
   submissionCount: number
 }
 
+interface QuestionAnalyticsSeed {
+  questionId: string
+  order: number
+  title?: string
+}
+
 interface AnalyticsSession {
   id?: string
   _id?: string
@@ -567,6 +573,76 @@ export class FormSessionService {
           frictionScore >= 55 ? 'high' : frictionScore >= 30 ? 'medium' : 'low'
       }
     })
+  }
+
+  async getQuestionAnalyticsFallback(
+    formId: string,
+    startAt: number,
+    endAt: number,
+    questions: QuestionAnalyticsSeed[],
+    filters: AnalyticsFilterOptions = {}
+  ) {
+    const orderedQuestions = [...questions].sort((left, right) => left.order - right.order)
+
+    if (!helper.isValidArray(orderedQuestions)) {
+      return []
+    }
+
+    const sessions = await this.getAnalyticsSessions(formId, startAt, endAt, filters)
+    const totalVisits = sessions.length
+    const completedSessions = sessions.filter(
+      session => session.status === FormSessionStatusEnum.COMPLETED
+    ).length
+
+    if (totalVisits < 1) {
+      return []
+    }
+
+    const questionCount = orderedQuestions.length
+    const progressBySession = sessions.map(session => {
+      const metricProgress = Math.max(
+        0,
+        ...(session.questionMetrics || []).map(metric => metric.order || 0)
+      )
+
+      return Math.max(
+        session.lastQuestionOrder || 0,
+        metricProgress,
+        session.status === FormSessionStatusEnum.COMPLETED ? questionCount : 0
+      )
+    })
+
+    if (!progressBySession.some(progress => progress > 0)) {
+      return []
+    }
+
+    return orderedQuestions
+      .map((question, index) => {
+        const reachCount = progressBySession.filter(progress => progress >= question.order).length
+        const nextReach = index < orderedQuestions.length - 1
+          ? progressBySession.filter(progress => progress >= orderedQuestions[index + 1].order).length
+          : completedSessions
+        const completedCount = Math.min(reachCount, nextReach)
+        const dropOffCount = Math.max(0, reachCount - nextReach)
+        const dropOffRate = reachCount > 0 ? (dropOffCount / reachCount) * 100 : 0
+        const frictionScore = Math.round(dropOffRate)
+
+        return {
+          questionId: question.questionId,
+          order: question.order,
+          title: question.title,
+          reachCount,
+          reachRate: totalVisits > 0 ? (reachCount / totalVisits) * 100 : 0,
+          averageDuration: 0,
+          completedCount,
+          dropOffCount,
+          dropOffRate,
+          frictionScore,
+          frictionLevel:
+            frictionScore >= 55 ? 'high' : frictionScore >= 30 ? 'medium' : 'low'
+        }
+      })
+      .filter(question => question.reachCount > 0)
   }
 
   async getExperimentMetrics(experimentId: string, startAt?: number, endAt?: number) {

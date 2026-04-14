@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 
 import { useStoreContext } from '../../store'
 import CoverAndLayout from './CoverAndLayout'
+import ContactInfoSettings from './ContactInfo'
 import DateSettings from './Date'
 import FullNameSettings from './FullName'
 import LegalTermsSettings from './LegalTerms'
@@ -36,6 +37,9 @@ const Settings = ({ field }: RequiredSettingsProps) => {
 
       case FieldKindEnum.FULL_NAME:
         return <FullNameSettings field={field} />
+
+      case FieldKindEnum.CONTACT_INFO:
+        return <ContactInfoSettings field={field} />
 
       case FieldKindEnum.PHONE_NUMBER:
         return <PhoneNumberSettings field={field} />

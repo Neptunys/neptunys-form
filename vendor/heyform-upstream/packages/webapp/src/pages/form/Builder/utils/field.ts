@@ -163,6 +163,15 @@ export function getPropertiesFromKind(properties: Property, newKind: FieldKindEn
       }
       break
 
+    case FieldKindEnum.CONTACT_INFO:
+      if (!props.fullNameMode) {
+        props.fullNameMode = 'both'
+      }
+      if (!props.defaultCountryCode) {
+        props.defaultCountryCode = 'US'
+      }
+      break
+
     case FieldKindEnum.INPUT_TABLE:
       if (!helper.isArray(props.tableColumns)) {
         props.tableColumns = [
@@ -254,6 +263,12 @@ export function getFieldFromKind(kind: FieldKindEnum | string): FormFieldType {
       break
 
     case FieldKindEnum.PHONE_NUMBER:
+      field.properties!.defaultCountryCode = 'US'
+      break
+
+    case FieldKindEnum.CONTACT_INFO:
+      field.validations!.required = true
+      field.properties!.fullNameMode = 'both'
       field.properties!.defaultCountryCode = 'US'
       break
 

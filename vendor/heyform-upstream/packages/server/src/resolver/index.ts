@@ -36,6 +36,8 @@ export { EmptyProjectTrashResolver } from './project/empty-project-trash.resolve
 export { LeaveProjectResolver } from './project/leave-project.resolver'
 export { UpdateProjectResolver } from './project/update-project.resolver'
 export { ProjectLaunchOverviewResolver } from './project/project-launch-overview.resolver'
+export { ProjectLeadFlowResolver } from './project/project-lead-flow.resolver'
+export { TestProjectGoogleSheetsResolver } from './project/test-project-google-sheets.resolver'
 
 export { AppsResolver } from './apps/apps.resolver'
 

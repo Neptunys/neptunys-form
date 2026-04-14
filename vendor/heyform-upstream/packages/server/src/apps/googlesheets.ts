@@ -6,18 +6,108 @@ import {
   buildLeadCapturePayload,
   buildLeadSheetRow,
   buildLeadTemplateValues,
-  buildTestLeadCapturePayload,
+  buildTestLeadCapturePayloads,
   interpolateLeadTemplate,
   LeadCapturePayload
 } from '../utils'
 
 const GOOGLE_SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets'
 const DEFAULT_SHEET_NAME = 'Leads'
+const DEFAULT_COLUMN_WIDTH = 150
+const HEADER_ROW_PIXEL_SIZE = 42
+const DATA_ROW_PIXEL_SIZE = 32
+const LEAD_CONTACTED_HEADER = 'Lead Contacted'
+const SUBMISSION_ID_HEADER = 'Submission ID'
+const LEAD_SCORE_HEADER = 'Lead Score'
+const SUBMITTED_AT_HEADER = 'Submitted At (UTC)'
+const OBSOLETE_COLUMN_HEADERS = new Set(['Client Name', 'Hidden Fields JSON', 'Variables JSON'])
+const HEADER_BACKGROUND_COLOR = {
+  red: 0.11,
+  green: 0.15,
+  blue: 0.22
+}
+const HEADER_TEXT_COLOR = {
+  red: 1,
+  green: 1,
+  blue: 1
+}
+const DEFAULT_TEXT_COLOR = {
+  red: 0.13,
+  green: 0.13,
+  blue: 0.13
+}
+const BASE_ROW_BACKGROUND_COLOR = {
+  red: 1,
+  green: 1,
+  blue: 1
+}
+const LEAD_LEVEL_ROW_FORMATS = {
+  high: {
+    backgroundColor: {
+      red: 0.9,
+      green: 0.97,
+      blue: 0.91
+    },
+    textColor: {
+      red: 0.11,
+      green: 0.31,
+      blue: 0.12
+    }
+  },
+  medium: {
+    backgroundColor: {
+      red: 0.99,
+      green: 0.96,
+      blue: 0.84
+    },
+    textColor: {
+      red: 0.47,
+      green: 0.35,
+      blue: 0.06
+    }
+  },
+  low: {
+    backgroundColor: {
+      red: 0.99,
+      green: 0.9,
+      blue: 0.9
+    },
+    textColor: {
+      red: 0.56,
+      green: 0.12,
+      blue: 0.12
+    }
+  }
+} satisfies Record<LeadLevel, { backgroundColor: Record<string, number>; textColor: Record<string, number> }>
+const COLUMN_WIDTH_OVERRIDES: Record<string, number> = {
+  'Lead Contacted': 128,
+  'Submission ID': 170,
+  'Form ID': 110,
+  'User ID': 230,
+  'User ID Source': 120,
+  'Form Name': 220,
+  'Project ID': 120,
+  'Project Name': 200,
+  'Submitted At (UTC)': 185,
+  'Respondent Name': 180,
+  'Respondent Email': 240,
+  'Respondent Phone': 170,
+  'Lead Score': 100,
+  'Lead Level': 110,
+  'Lead Quality': 150,
+  'Lead Priority': 130,
+  'Lead Score Source': 170,
+  'Answers Summary': 320
+}
+const LEAD_SUMMARY_COLUMN_HEADERS = ['Lead Score', 'Lead Level', 'Lead Quality', 'Lead Priority']
 
 type GoogleSheetsConfig = Record<string, any>
-type GoogleSheetsRow = Record<string, string | number>
+type GoogleSheetsRow = Record<string, string | number | boolean>
 type LeadLevel = 'high' | 'medium' | 'low'
 type WriteMode = 'append' | 'upsert'
+type WorksheetInfo = {
+  sheetId: number
+}
 
 function getSheetRange(sheetName: string, range: string) {
   return `'${sheetName.replace(/'/g, "''")}'!${range}`
@@ -88,8 +178,12 @@ function getWriteMode(config: GoogleSheetsConfig): WriteMode {
   return normalizeText(config.writeMode) === 'upsert' ? 'upsert' : 'append'
 }
 
-function normalizeRowValue(value: unknown): string | number {
+function normalizeRowValue(value: unknown): string | number | boolean {
   if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+
+  if (typeof value === 'boolean') {
     return value
   }
 
@@ -169,6 +263,82 @@ function getColumnLetter(columnNumber: number) {
   return result
 }
 
+function buildUserEnteredFormat({
+  backgroundColor,
+  textColor,
+  bold,
+  horizontalAlignment,
+  verticalAlignment,
+  wrapStrategy
+}: {
+  backgroundColor?: Record<string, number>
+  textColor?: Record<string, number>
+  bold?: boolean
+  horizontalAlignment?: 'LEFT' | 'CENTER'
+  verticalAlignment?: 'TOP' | 'MIDDLE'
+  wrapStrategy?: 'CLIP' | 'WRAP'
+}) {
+  const textFormat: Record<string, any> = {}
+
+  if (!helper.isNil(bold)) {
+    textFormat.bold = bold
+  }
+
+  if (textColor) {
+    textFormat.foregroundColor = textColor
+  }
+
+  const format: Record<string, any> = {}
+
+  if (backgroundColor) {
+    format.backgroundColor = backgroundColor
+  }
+
+  if (!helper.isEmpty(textFormat)) {
+    format.textFormat = textFormat
+  }
+
+  if (horizontalAlignment) {
+    format.horizontalAlignment = horizontalAlignment
+  }
+
+  if (verticalAlignment) {
+    format.verticalAlignment = verticalAlignment
+  }
+
+  if (wrapStrategy) {
+    format.wrapStrategy = wrapStrategy
+  }
+
+  return format
+}
+
+function getColumnIndex(headers: string[], headerName: string) {
+  return headers.indexOf(headerName)
+}
+
+function buildDefaultSortSpecs(headers: string[]) {
+  const sortSpecs: Array<{ dimensionIndex: number; sortOrder: 'ASCENDING' | 'DESCENDING' }> = []
+  const leadScoreColumnIndex = getColumnIndex(headers, LEAD_SCORE_HEADER)
+  const submittedAtColumnIndex = getColumnIndex(headers, SUBMITTED_AT_HEADER)
+
+  if (leadScoreColumnIndex >= 0) {
+    sortSpecs.push({
+      dimensionIndex: leadScoreColumnIndex,
+      sortOrder: 'DESCENDING'
+    })
+  }
+
+  if (submittedAtColumnIndex >= 0) {
+    sortSpecs.push({
+      dimensionIndex: submittedAtColumnIndex,
+      sortOrder: 'DESCENDING'
+    })
+  }
+
+  return sortSpecs
+}
+
 function resolveSheetDestination(config: GoogleSheetsConfig, payload: LeadCapturePayload) {
   const routedLevel = shouldRouteByLeadLevel(config) && payload.leadLevel ? payload.leadLevel : undefined
 
@@ -208,7 +378,7 @@ function resolveUpsertMatchValue(
   return matchValue
 }
 
-function normalizeHeaders(existingHeaders: string[], nextRow: Record<string, string | number>) {
+function normalizeHeaders(existingHeaders: string[], nextRow: GoogleSheetsRow) {
   const normalizedHeaders = existingHeaders.filter(helper.isValid)
 
   Object.keys(nextRow).forEach(key => {
@@ -221,16 +391,28 @@ function normalizeHeaders(existingHeaders: string[], nextRow: Record<string, str
 }
 
 async function ensureWorksheet(sheets: any, spreadsheetId: string, sheetName: string) {
-  const spreadsheet = await sheets.spreadsheets.get({
-    spreadsheetId,
-    fields: 'sheets.properties.title'
-  })
+  const getWorksheetInfo = async (): Promise<WorksheetInfo | undefined> => {
+    const spreadsheet = await sheets.spreadsheets.get({
+      spreadsheetId,
+      fields: 'sheets.properties(sheetId,title)'
+    })
 
-  const hasSheet = spreadsheet.data.sheets?.some(
-    (sheet: any) => sheet.properties?.title === sheetName
-  )
+    const matchingSheet = spreadsheet.data.sheets?.find(
+      (sheet: any) => sheet.properties?.title === sheetName
+    )
 
-  if (!hasSheet) {
+    if (typeof matchingSheet?.properties?.sheetId !== 'number') {
+      return undefined
+    }
+
+    return {
+      sheetId: matchingSheet.properties.sheetId
+    }
+  }
+
+  let worksheetInfo = await getWorksheetInfo()
+
+  if (!worksheetInfo) {
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId,
       requestBody: {
@@ -245,22 +427,146 @@ async function ensureWorksheet(sheets: any, spreadsheetId: string, sheetName: st
         ]
       }
     })
+
+    worksheetInfo = await getWorksheetInfo()
   }
+
+  if (!worksheetInfo) {
+    throw new Error(`Google Sheets worksheet "${sheetName}" could not be created`)
+  }
+
+  return worksheetInfo
 }
 
 async function getMergedHeaders(
   sheets: any,
   spreadsheetId: string,
   sheetName: string,
-  nextRow: Record<string, string | number>
+  nextRow: GoogleSheetsRow
 ) {
+  const existingHeaders = await getWorksheetHeaders(sheets, spreadsheetId, sheetName)
+
+  return normalizeHeaders(existingHeaders, nextRow)
+}
+
+async function getWorksheetHeaders(sheets: any, spreadsheetId: string, sheetName: string) {
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
     range: getSheetRange(sheetName, '1:1')
   })
-  const existingHeaders = ((response.data.values || [])[0] || []) as string[]
 
-  return normalizeHeaders(existingHeaders, nextRow)
+  return ((response.data.values || [])[0] || []) as string[]
+}
+
+async function ensureLeadContactedColumnFirst(
+  sheets: any,
+  spreadsheetId: string,
+  sheetId: number,
+  existingHeaders: string[]
+) {
+  const leadContactedColumnIndex = existingHeaders.indexOf(LEAD_CONTACTED_HEADER)
+
+  if (leadContactedColumnIndex === 0 || helper.isEmpty(existingHeaders)) {
+    return false
+  }
+
+  if (leadContactedColumnIndex > 0) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            moveDimension: {
+              source: {
+                sheetId,
+                dimension: 'COLUMNS',
+                startIndex: leadContactedColumnIndex,
+                endIndex: leadContactedColumnIndex + 1
+              },
+              destinationIndex: 0
+            }
+          }
+        ]
+      }
+    })
+
+    return true
+  }
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests: [
+        {
+          insertDimension: {
+            range: {
+              sheetId,
+              dimension: 'COLUMNS',
+              startIndex: 0,
+              endIndex: 1
+            },
+            inheritFromBefore: false
+          }
+        }
+      ]
+    }
+  })
+
+  return true
+}
+
+async function pruneObsoleteColumns(
+  sheets: any,
+  spreadsheetId: string,
+  sheetId: number,
+  existingHeaders: string[]
+) {
+  const obsoleteColumnIndexes = existingHeaders
+    .map((header, index) => ({ header, index }))
+    .filter(({ header }) => OBSOLETE_COLUMN_HEADERS.has(header))
+    .map(({ index }) => index)
+    .sort((left, right) => right - left)
+
+  if (helper.isEmpty(obsoleteColumnIndexes)) {
+    return false
+  }
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests: obsoleteColumnIndexes.map(index => ({
+        deleteDimension: {
+          range: {
+            sheetId,
+            dimension: 'COLUMNS',
+            startIndex: index,
+            endIndex: index + 1
+          }
+        }
+      }))
+    }
+  })
+
+  return true
+}
+
+async function prepareWorksheetColumns(
+  sheets: any,
+  spreadsheetId: string,
+  sheetId: number,
+  sheetName: string
+) {
+  let existingHeaders = await getWorksheetHeaders(sheets, spreadsheetId, sheetName)
+
+  if (await ensureLeadContactedColumnFirst(sheets, spreadsheetId, sheetId, existingHeaders)) {
+    existingHeaders = await getWorksheetHeaders(sheets, spreadsheetId, sheetName)
+  }
+
+  if (await pruneObsoleteColumns(sheets, spreadsheetId, sheetId, existingHeaders)) {
+    existingHeaders = await getWorksheetHeaders(sheets, spreadsheetId, sheetName)
+  }
+
+  return existingHeaders
 }
 
 async function upsertHeaders(
@@ -284,7 +590,7 @@ async function appendRow(
   spreadsheetId: string,
   sheetName: string,
   headers: string[],
-  row: Record<string, string | number>
+  row: GoogleSheetsRow
 ) {
   await sheets.spreadsheets.values.append({
     spreadsheetId,
@@ -322,6 +628,22 @@ async function findMatchingRowNumber(
   return rowIndex >= 0 ? rowIndex + 2 : undefined
 }
 
+async function getCellValue(
+  sheets: any,
+  spreadsheetId: string,
+  sheetName: string,
+  rowNumber: number,
+  columnIndex: number
+) {
+  const columnLetter = getColumnLetter(columnIndex + 1)
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: getSheetRange(sheetName, `${columnLetter}${rowNumber}`)
+  })
+
+  return response.data.values?.[0]?.[0]
+}
+
 async function updateRow(
   sheets: any,
   spreadsheetId: string,
@@ -331,15 +653,405 @@ async function updateRow(
   row: GoogleSheetsRow
 ) {
   const lastColumn = getColumnLetter(headers.length)
+  const nextRowValues = headers.map(header => row[header] ?? '')
+  const leadContactedColumnIndex = getColumnIndex(headers, LEAD_CONTACTED_HEADER)
+
+  if (leadContactedColumnIndex >= 0) {
+    const existingLeadContactedValue = await getCellValue(
+      sheets,
+      spreadsheetId,
+      sheetName,
+      rowNumber,
+      leadContactedColumnIndex
+    )
+
+    if (existingLeadContactedValue === 'TRUE') {
+      nextRowValues[leadContactedColumnIndex] = true
+    } else if (existingLeadContactedValue === 'FALSE') {
+      nextRowValues[leadContactedColumnIndex] = false
+    }
+  }
 
   await sheets.spreadsheets.values.update({
     spreadsheetId,
     range: getSheetRange(sheetName, `A${rowNumber}:${lastColumn}${rowNumber}`),
     valueInputOption: 'RAW',
     requestBody: {
-      values: [headers.map(header => row[header] ?? '')]
+      values: [nextRowValues]
     }
   })
+}
+
+async function getWorksheetDataRowCount(
+  sheets: any,
+  spreadsheetId: string,
+  sheetName: string,
+  headers: string[]
+) {
+  const submissionIdColumnIndex = getColumnIndex(headers, SUBMISSION_ID_HEADER)
+  const targetColumnIndex = submissionIdColumnIndex >= 0 ? submissionIdColumnIndex : 0
+  const targetColumnLetter = getColumnLetter(targetColumnIndex + 1)
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: getSheetRange(sheetName, `${targetColumnLetter}2:${targetColumnLetter}`)
+  })
+
+  return ((response.data.values || []) as string[][]).length
+}
+
+async function formatWorksheetLayout(
+  sheets: any,
+  spreadsheetId: string,
+  sheetId: number,
+  headers: string[],
+  dataRowCount: number
+) {
+  if (helper.isEmpty(headers)) {
+    return
+  }
+
+  const leadContactedColumnIndex = getColumnIndex(headers, LEAD_CONTACTED_HEADER)
+  const sortSpecs = buildDefaultSortSpecs(headers)
+
+  const requests: any[] = [
+    {
+      updateSheetProperties: {
+        properties: {
+          sheetId,
+          gridProperties: {
+            frozenRowCount: 1
+          }
+        },
+        fields: 'gridProperties.frozenRowCount'
+      }
+    },
+    {
+      updateDimensionProperties: {
+        range: {
+          sheetId,
+          dimension: 'ROWS',
+          startIndex: 0,
+          endIndex: 1
+        },
+        properties: {
+          pixelSize: HEADER_ROW_PIXEL_SIZE
+        },
+        fields: 'pixelSize'
+      }
+    },
+    {
+      repeatCell: {
+        range: {
+          sheetId,
+          startRowIndex: 0,
+          endRowIndex: 1,
+          startColumnIndex: 0,
+          endColumnIndex: headers.length
+        },
+        cell: {
+          userEnteredFormat: buildUserEnteredFormat({
+            backgroundColor: HEADER_BACKGROUND_COLOR,
+            textColor: HEADER_TEXT_COLOR,
+            bold: true,
+            horizontalAlignment: 'CENTER',
+            verticalAlignment: 'MIDDLE',
+            wrapStrategy: 'WRAP'
+          })
+        },
+        fields:
+          'userEnteredFormat(backgroundColor,textFormat.foregroundColor,textFormat.bold,horizontalAlignment,verticalAlignment,wrapStrategy)'
+      }
+    },
+    {
+      updateDimensionProperties: {
+        range: {
+          sheetId,
+          dimension: 'COLUMNS',
+          startIndex: 0,
+          endIndex: headers.length
+        },
+        properties: {
+          pixelSize: DEFAULT_COLUMN_WIDTH
+        },
+        fields: 'pixelSize'
+      }
+    },
+    {
+      setBasicFilter: {
+        filter: {
+          range: {
+            sheetId,
+            startRowIndex: 0,
+            endRowIndex: Math.max(dataRowCount + 1, 1),
+            startColumnIndex: 0,
+            endColumnIndex: headers.length
+          },
+          ...(helper.isEmpty(sortSpecs)
+            ? {}
+            : {
+                sortSpecs
+              })
+        }
+      }
+    }
+  ]
+
+  if (dataRowCount > 0) {
+    requests.push(
+      {
+        repeatCell: {
+          range: {
+            sheetId,
+            startRowIndex: 1,
+            endRowIndex: dataRowCount + 1,
+            startColumnIndex: 0,
+            endColumnIndex: headers.length
+          },
+          cell: {
+            userEnteredFormat: buildUserEnteredFormat({
+              backgroundColor: BASE_ROW_BACKGROUND_COLOR,
+              textColor: DEFAULT_TEXT_COLOR,
+              verticalAlignment: 'MIDDLE',
+              wrapStrategy: 'CLIP'
+            })
+          },
+          fields:
+            'userEnteredFormat(backgroundColor,textFormat.foregroundColor,verticalAlignment,wrapStrategy)'
+        }
+      },
+      {
+        updateDimensionProperties: {
+          range: {
+            sheetId,
+            dimension: 'ROWS',
+            startIndex: 1,
+            endIndex: dataRowCount + 1
+          },
+          properties: {
+            pixelSize: DATA_ROW_PIXEL_SIZE
+          },
+          fields: 'pixelSize'
+        }
+      }
+    )
+  }
+
+  if (leadContactedColumnIndex >= 0 && dataRowCount > 0) {
+    requests.push(
+      {
+        setDataValidation: {
+          range: {
+            sheetId,
+            startRowIndex: 1,
+            endRowIndex: dataRowCount + 1,
+            startColumnIndex: leadContactedColumnIndex,
+            endColumnIndex: leadContactedColumnIndex + 1
+          },
+          rule: {
+            condition: {
+              type: 'BOOLEAN'
+            },
+            strict: true,
+            showCustomUi: true
+          }
+        }
+      },
+      {
+        repeatCell: {
+          range: {
+            sheetId,
+            startRowIndex: 1,
+            endRowIndex: dataRowCount + 1,
+            startColumnIndex: leadContactedColumnIndex,
+            endColumnIndex: leadContactedColumnIndex + 1
+          },
+          cell: {
+            userEnteredFormat: buildUserEnteredFormat({
+              textColor: DEFAULT_TEXT_COLOR,
+              horizontalAlignment: 'CENTER',
+              verticalAlignment: 'MIDDLE',
+              wrapStrategy: 'CLIP'
+            })
+          },
+          fields:
+            'userEnteredFormat(textFormat.foregroundColor,horizontalAlignment,verticalAlignment,wrapStrategy)'
+        }
+      }
+    )
+  }
+
+  headers.forEach((header, index) => {
+    const pixelSize = COLUMN_WIDTH_OVERRIDES[header]
+
+    if (!pixelSize) {
+      return
+    }
+
+    requests.push({
+      updateDimensionProperties: {
+        range: {
+          sheetId,
+          dimension: 'COLUMNS',
+          startIndex: index,
+          endIndex: index + 1
+        },
+        properties: {
+          pixelSize
+        },
+        fields: 'pixelSize'
+      }
+    })
+  })
+
+  const centeredColumnIndexes = LEAD_SUMMARY_COLUMN_HEADERS.map(header => getColumnIndex(headers, header)).filter(
+    index => index >= 0
+  )
+
+  centeredColumnIndexes.forEach(index => {
+    requests.push({
+      repeatCell: {
+        range: {
+          sheetId,
+          startRowIndex: 1,
+          startColumnIndex: index,
+          endColumnIndex: index + 1
+        },
+        cell: {
+          userEnteredFormat: buildUserEnteredFormat({
+            textColor: DEFAULT_TEXT_COLOR,
+            bold: true,
+            horizontalAlignment: 'CENTER',
+            verticalAlignment: 'MIDDLE',
+            wrapStrategy: 'CLIP'
+          })
+        },
+        fields:
+          'userEnteredFormat(textFormat.foregroundColor,textFormat.bold,horizontalAlignment,verticalAlignment,wrapStrategy)'
+      }
+    })
+  })
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests
+    }
+  })
+}
+
+async function sortWorksheetRows(
+  sheets: any,
+  spreadsheetId: string,
+  sheetId: number,
+  headers: string[],
+  dataRowCount: number
+) {
+  const sortSpecs = buildDefaultSortSpecs(headers)
+
+  if (dataRowCount <= 1 || helper.isEmpty(sortSpecs)) {
+    return
+  }
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests: [
+        {
+          sortRange: {
+            range: {
+              sheetId,
+              startRowIndex: 1,
+              endRowIndex: dataRowCount + 1,
+              startColumnIndex: 0,
+              endColumnIndex: headers.length
+            },
+            sortSpecs
+          }
+        }
+      ]
+    }
+  })
+}
+
+async function formatLeadColumns(
+  sheets: any,
+  spreadsheetId: string,
+  sheetId: number,
+  sheetName: string,
+  headers: string[]
+) {
+  const leadLevelColumnIndex = getColumnIndex(headers, 'Lead Level')
+
+  if (leadLevelColumnIndex === -1) {
+    return
+  }
+
+  const leadLevelColumnLetter = getColumnLetter(leadLevelColumnIndex + 1)
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: getSheetRange(sheetName, `${leadLevelColumnLetter}2:${leadLevelColumnLetter}`)
+  })
+  const leadLevelValues = (response.data.values || []) as string[][]
+
+  if (helper.isEmpty(leadLevelValues)) {
+    return
+  }
+
+  const requests: any[] = []
+
+  leadLevelValues.forEach((row, index) => {
+    const level = normalizeText(row?.[0])?.toLowerCase() as LeadLevel | undefined
+
+    if (!level || !Object.prototype.hasOwnProperty.call(LEAD_LEVEL_ROW_FORMATS, level)) {
+      return
+    }
+
+    const format = LEAD_LEVEL_ROW_FORMATS[level]
+
+    requests.push({
+      repeatCell: {
+        range: {
+          sheetId,
+          startRowIndex: index + 1,
+          endRowIndex: index + 2,
+          startColumnIndex: 0,
+          endColumnIndex: headers.length
+        },
+        cell: {
+          userEnteredFormat: buildUserEnteredFormat({
+            backgroundColor: format.backgroundColor,
+            textColor: format.textColor
+          })
+        },
+        fields: 'userEnteredFormat(backgroundColor,textFormat.foregroundColor)'
+      }
+    })
+  })
+
+  if (helper.isEmpty(requests)) {
+    return
+  }
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests
+    }
+  })
+}
+
+async function formatWorksheet(
+  sheets: any,
+  spreadsheetId: string,
+  sheetId: number,
+  sheetName: string,
+  headers: string[]
+) {
+  const dataRowCount = await getWorksheetDataRowCount(sheets, spreadsheetId, sheetName, headers)
+
+  await formatWorksheetLayout(sheets, spreadsheetId, sheetId, headers, dataRowCount)
+  await sortWorksheetRows(sheets, spreadsheetId, sheetId, headers, dataRowCount)
+  await formatLeadColumns(sheets, spreadsheetId, sheetId, sheetName, headers)
 }
 
 async function writeLeadRow(config: GoogleSheetsConfig, payload: LeadCapturePayload) {
@@ -348,7 +1060,13 @@ async function writeLeadRow(config: GoogleSheetsConfig, payload: LeadCapturePayl
   const sheets = google.sheets({ version: 'v4', auth })
   const row = applyColumnMapping(buildLeadSheetRow(payload), payload, config)
 
-  await ensureWorksheet(sheets, destination.spreadsheetId, destination.sheetName)
+  const worksheetInfo = await ensureWorksheet(sheets, destination.spreadsheetId, destination.sheetName)
+  await prepareWorksheetColumns(
+    sheets,
+    destination.spreadsheetId,
+    worksheetInfo.sheetId,
+    destination.sheetName
+  )
 
   const headers = await getMergedHeaders(sheets, destination.spreadsheetId, destination.sheetName, row)
 
@@ -376,6 +1094,14 @@ async function writeLeadRow(config: GoogleSheetsConfig, payload: LeadCapturePayl
         row
       )
 
+      await formatWorksheet(
+        sheets,
+        destination.spreadsheetId,
+        worksheetInfo.sheetId,
+        destination.sheetName,
+        headers
+      )
+
       return {
         ...destination,
         matchColumn,
@@ -387,6 +1113,14 @@ async function writeLeadRow(config: GoogleSheetsConfig, payload: LeadCapturePayl
 
     await appendRow(sheets, destination.spreadsheetId, destination.sheetName, headers, row)
 
+    await formatWorksheet(
+      sheets,
+      destination.spreadsheetId,
+      worksheetInfo.sheetId,
+      destination.sheetName,
+      headers
+    )
+
     return {
       ...destination,
       matchColumn,
@@ -397,6 +1131,14 @@ async function writeLeadRow(config: GoogleSheetsConfig, payload: LeadCapturePayl
   }
 
   await appendRow(sheets, destination.spreadsheetId, destination.sheetName, headers, row)
+
+  await formatWorksheet(
+    sheets,
+    destination.spreadsheetId,
+    worksheetInfo.sheetId,
+    destination.sheetName,
+    headers
+  )
 
   return {
     ...destination,
@@ -551,13 +1293,18 @@ export default {
     }
   },
   test: async ({ config, form, team }) => {
-    const payload = buildTestLeadCapturePayload(form, team)
-    const result = await writeLeadRow(config, payload)
+    const payloads = buildTestLeadCapturePayloads(form, team)
+    let result: Record<string, any> | undefined
+
+    for (const payload of payloads) {
+      result = await writeLeadRow(config, payload)
+    }
 
     return {
       ...result,
-      submissionId: payload.submissionId,
-      leadLevel: payload.leadLevel,
+      submissionIds: payloads.map(payload => payload.submissionId),
+      leadLevels: payloads.map(payload => payload.leadLevel),
+      sampleCount: payloads.length,
       test: true
     }
   }

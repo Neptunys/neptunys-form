@@ -55,6 +55,7 @@ export enum FieldKindEnum {
 
   // Fieldset
   PAYMENT = 'payment',
+  CONTACT_INFO = 'contact_info',
   FULL_NAME = 'full_name',
   ADDRESS = 'address',
   EMAIL = 'email',

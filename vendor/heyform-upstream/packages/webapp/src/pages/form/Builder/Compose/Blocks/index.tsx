@@ -1,4 +1,5 @@
 export * from './Address'
+export * from './ContactInfo'
 export * from './Country'
 export * from './Date'
 export * from './DateRange'

@@ -11,8 +11,10 @@ import {
   EMPTY_TRASH_GQL,
   EXPERIMENTS_GQL,
   LEAVE_PROJECT_GQL,
+  PROJECT_LEAD_FLOW_GQL,
   PROJECT_LAUNCH_OVERVIEW_GQL,
   RENAME_PROJECT_GQL,
+  TEST_PROJECT_GOOGLE_SHEETS_GQL,
   UPDATE_PROJECT_GQL
 } from '@/consts'
 
@@ -146,6 +148,30 @@ export class ProjectService {
         }
       },
       fetchPolicy: 'network-only'
+    })
+  }
+
+  static leadFlow(projectId: string) {
+    return apollo.query({
+      query: PROJECT_LEAD_FLOW_GQL,
+      variables: {
+        input: {
+          projectId
+        }
+      },
+      fetchPolicy: 'network-only'
+    })
+  }
+
+  static testGoogleSheets(projectId: string, googleSheetsLeadConfig: AnyMap) {
+    return apollo.mutate({
+      mutation: TEST_PROJECT_GOOGLE_SHEETS_GQL,
+      variables: {
+        input: {
+          projectId,
+          googleSheetsLeadConfig
+        }
+      }
     })
   }
 

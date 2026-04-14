@@ -92,6 +92,12 @@ export class UpdateProjectInput extends ProjectDetailInput {
 }
 
 @InputType()
+export class TestProjectGoogleSheetsInput extends ProjectDetailInput {
+  @Field(type => GraphQLJSONObject)
+  googleSheetsLeadConfig: Record<string, any>
+}
+
+@InputType()
 export class ProjectMemberInput {
   @Field()
   projectId: string
@@ -156,6 +162,39 @@ export class ProjectType {
   @Field({ nullable: true })
   isOwner?: boolean
 
+  @Field(type => [String], { nullable: true })
+  leadNotificationEmails?: string[]
+
+  @Field({ nullable: true })
+  enableLeadReport?: boolean
+
+  @Field({ nullable: true })
+  leadReportRangeDays?: number
+
+  @Field({ nullable: true })
+  leadReportLastSentAt?: number
+
+  @Field({ nullable: true })
+  reportingTimezone?: string
+
+  @Field({ nullable: true })
+  enableGoogleSheetsLeadSync?: boolean
+
+  @Field(type => GraphQLJSONObject, { nullable: true })
+  googleSheetsLeadConfig?: Record<string, any>
+
+  @Field({ nullable: true })
+  googleSheetsLeadLastDeliveryAt?: number
+
+  @Field({ nullable: true })
+  googleSheetsLeadLastDeliveryStatus?: string
+
+  @Field({ nullable: true })
+  googleSheetsLeadLastDeliveryMessage?: string
+}
+
+@ObjectType()
+export class ProjectLeadFlowType {
   @Field(type => [String], { nullable: true })
   leadNotificationEmails?: string[]
 

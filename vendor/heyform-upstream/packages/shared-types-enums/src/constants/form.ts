@@ -35,6 +35,7 @@ export const QUESTION_FIELD_KINDS = [
 
   // Fieldset
   FieldKindEnum.PAYMENT,
+  FieldKindEnum.CONTACT_INFO,
   FieldKindEnum.FULL_NAME,
   FieldKindEnum.ADDRESS,
   FieldKindEnum.EMAIL,

@@ -14,6 +14,7 @@ import { useFormStore } from '@/store'
 import { useStoreContext } from '../store'
 import {
   Address,
+  ContactInfo,
   Country,
   Date,
   DateRange,
@@ -58,6 +59,11 @@ const Fields: FC = () => {
     case FieldKindEnum.COUNTRY:
       return (
         <Country key={field.id} field={field} locale={state.locale} parentField={parentField} />
+      )
+
+    case FieldKindEnum.CONTACT_INFO:
+      return (
+        <ContactInfo key={field.id} field={field} locale={state.locale} parentField={parentField} />
       )
 
     case FieldKindEnum.DATE:

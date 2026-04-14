@@ -24,7 +24,11 @@ const EXCLUDE_KINDS = [
   'custom_multiple'
 ]
 
-const PRIVATE_REPORT_VALUE_KINDS = [FieldKindEnum.EMAIL, FieldKindEnum.PHONE_NUMBER]
+const PRIVATE_REPORT_VALUE_KINDS = [
+  FieldKindEnum.EMAIL,
+  FieldKindEnum.PHONE_NUMBER,
+  FieldKindEnum.CONTACT_INFO
+]
 
 @Resolver()
 @Auth()

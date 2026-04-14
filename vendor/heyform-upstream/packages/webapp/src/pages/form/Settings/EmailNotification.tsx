@@ -17,21 +17,21 @@ export default function FormSettingsEmailNotification() {
     }))
 
   const respondentNameOptions = formFields
-    .filter(field => [FieldKindEnum.FULL_NAME, FieldKindEnum.SHORT_TEXT].includes(field.kind))
+    .filter(field => [FieldKindEnum.FULL_NAME, FieldKindEnum.CONTACT_INFO, FieldKindEnum.SHORT_TEXT].includes(field.kind))
     .map(field => ({
       value: field.id,
       label: field.title || field.id
     }))
 
   const respondentEmailOptions = formFields
-    .filter(field => field.kind === FieldKindEnum.EMAIL)
+    .filter(field => [FieldKindEnum.EMAIL, FieldKindEnum.CONTACT_INFO].includes(field.kind))
     .map(field => ({
       value: field.id,
       label: field.title || field.id
     }))
 
   const respondentPhoneOptions = formFields
-    .filter(field => field.kind === FieldKindEnum.PHONE_NUMBER)
+    .filter(field => [FieldKindEnum.PHONE_NUMBER, FieldKindEnum.CONTACT_INFO].includes(field.kind))
     .map(field => ({
       value: field.id,
       label: field.title || field.id

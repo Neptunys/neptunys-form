@@ -308,7 +308,7 @@ const FormItem: FC<FormItemProps> = ({ form, isInTrash, onChange }) => {
 
   return (
     <FormItemLink
-      className="group flex items-center justify-between gap-6 px-6 py-6 hover:bg-[#f8fafc] has-[[data-state=open]]:bg-[#f8fafc] dark:hover:bg-[#374151]"
+      className="group flex items-center justify-between gap-6 px-6 py-6 hover:bg-accent-light has-[[data-state=open]]:bg-accent-light"
       to={`/workspace/${form.teamId}/project/${form.projectId}/form/${form.id}/analytics`}
       isInTrash={isInTrash}
       isSuspended={form.suspended}

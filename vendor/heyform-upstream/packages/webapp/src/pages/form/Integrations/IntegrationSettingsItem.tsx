@@ -1,6 +1,29 @@
 import { Form, Input, Select, Switch } from '@/components'
 import { AppSettingType } from '@/types'
 
+const GOOGLE_SHEETS_ROUTE_SETTING_NAMES = new Set([
+  'spreadsheetIdHigh',
+  'sheetNameHigh',
+  'spreadsheetIdMedium',
+  'sheetNameMedium',
+  'spreadsheetIdLow',
+  'sheetNameLow'
+])
+
+export function getVisibleIntegrationSettings(
+  appId: string | undefined,
+  settings: AppSettingType[] | undefined,
+  values: Record<string, any>
+) {
+  return (settings || []).filter(setting => {
+    if (appId === 'googlesheets' && GOOGLE_SHEETS_ROUTE_SETTING_NAMES.has(setting.name)) {
+      return Boolean(values.routeByLeadLevel)
+    }
+
+    return true
+  })
+}
+
 export default function IntegrationSettingsItem({ setting }: { setting: AppSettingType }) {
   switch (setting.type) {
     case 'text':

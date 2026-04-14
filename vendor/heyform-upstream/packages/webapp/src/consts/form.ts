@@ -1,5 +1,5 @@
 import { FieldKindEnum, FieldLayoutAlignEnum } from '@heyform-inc/shared-types-enums'
-import { IconCalendar, IconEyeOff, IconVariable } from '@tabler/icons-react'
+import { IconAddressBook, IconCalendar, IconEyeOff, IconVariable } from '@tabler/icons-react'
 
 import IconAddress from '@/assets/address.svg?react'
 import IconCountry from '@/assets/country.svg?react'
@@ -118,6 +118,13 @@ export const STANDARD_FIELD_CONFIGS = [
     label: 'form.builder.question.yesNo',
     textColor: '#b91c1c',
     backgroundColor: '#fee2e2'
+  },
+  {
+    kind: FieldKindEnum.CONTACT_INFO,
+    icon: IconAddressBook,
+    label: 'form.builder.question.contactInfo',
+    textColor: '#0369a1',
+    backgroundColor: '#e0f2fe'
   },
   {
     kind: FieldKindEnum.EMAIL,
@@ -267,6 +274,7 @@ export const BLOCK_GROUPS = [
     {
       name: 'form.builder.question.contactInfo',
       list: [
+        FieldKindEnum.CONTACT_INFO,
         FieldKindEnum.PHONE_NUMBER,
         FieldKindEnum.EMAIL,
         FieldKindEnum.FULL_NAME,

@@ -27,7 +27,7 @@
     "type-check": "tsc --pretty --noEmit"
   },
   "peerDependencies": {
-    "@heyform-inc/answer-utils": "^1.2.0",
+    "@heyform-inc/answer-utils": "workspace:*",
     "@heyform-inc/shared-types-enums": "^1.2.2",
     "@heyform-inc/utils": "^1.2.2",
     "@popperjs/core": "^2.11.8",

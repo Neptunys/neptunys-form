@@ -353,6 +353,13 @@ export interface FullNameValue {
   lastName?: string
 }
 
+export interface ContactInfoValue {
+  fullName?: FullNameValue
+  email?: string
+  phoneNumber?: string
+  address?: AddressValue
+}
+
 export interface DateRangeValue {
   start?: string
   end?: string
@@ -384,6 +391,7 @@ export type AnswerValue =
   | ChoiceValue
   | FileUploadValue
   | AddressValue
+  | ContactInfoValue
   | FullNameValue
   | DateRangeValue
   | InputTableValue

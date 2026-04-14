@@ -31,6 +31,12 @@ interface FormAnalyticResult {
   }>
 }
 
+interface QuestionAnalyticsSeed {
+  questionId: string
+  order: number
+  title?: string
+}
+
 @Injectable()
 export class FormAnalyticService {
   constructor(
@@ -48,23 +54,32 @@ export class FormAnalyticService {
     sourceChannel,
     dedupeByIp
   }: FormAnalyticOptions) {
-    const sessionSummary = await this.formSessionService.getSummary(
-      formId,
-      toUnixSeconds(startAt),
-      toUnixSeconds(endAt),
-      {
+    const hasSessionFilters = helper.isValid(sourceChannel) || dedupeByIp
+
+    const [sessionSummary, result, avgTotalVisits] = await Promise.all([
+      this.formSessionService.getSummary(formId, toUnixSeconds(startAt), toUnixSeconds(endAt), {
         sourceChannel,
         dedupeByIp
-      }
-    )
+      }),
+      hasSessionFilters
+        ? Promise.resolve([])
+        : this.submissionService.analytic(
+            formId,
+            Math.floor(startAt.getTime() / 1000),
+            Math.floor(endAt.getTime() / 1000)
+          ),
+      hasSessionFilters ? Promise.resolve(0) : this.getAverageTotalVisits(formId, startAt, endAt)
+    ])
 
-    const hasSessionFilters = helper.isValid(sourceChannel) || dedupeByIp
+    const submissionSummary = result[0] || {}
+    const submissionCount = submissionSummary.avgSubmissionCount || 0
+    const averageTime = submissionSummary.avgAverageTime || 0
 
     if (sessionSummary.totalVisits > 0) {
       return {
         avgTotalVisits: sessionSummary.totalVisits,
-        avgSubmissionCount: sessionSummary.submissionCount,
-        avgAverageTime: sessionSummary.averageTime,
+        avgSubmissionCount: Math.max(sessionSummary.submissionCount, submissionCount),
+        avgAverageTime: sessionSummary.averageTime || averageTime,
         sourceBreakdown: sessionSummary.sourceBreakdown || []
       }
     }
@@ -78,30 +93,16 @@ export class FormAnalyticService {
       }
     }
 
-    const [avgTotalVisits, result] = await Promise.all([
-      this.getAverageTotalVisits(formId, startAt, endAt),
-      this.submissionService.analytic(
-        formId,
-        Math.floor(startAt.getTime() / 1000),
-        Math.floor(endAt.getTime() / 1000)
-      )
-    ])
+    const inferredTotalVisits = Math.max(avgTotalVisits, submissionCount)
 
     const analytic = {
-      avgTotalVisits: 0,
-      avgSubmissionCount: 0,
-      avgAverageTime: 0,
+      avgTotalVisits: inferredTotalVisits,
+      avgSubmissionCount: submissionCount,
+      avgAverageTime: averageTime,
       sourceBreakdown: []
     }
 
-    if (avgTotalVisits > 0) {
-      analytic.avgTotalVisits = avgTotalVisits
-
-      if (helper.isValidArray(result)) {
-        analytic.avgSubmissionCount = result[0].avgSubmissionCount
-        analytic.avgAverageTime = result[0].avgAverageTime
-      }
-
+    if (inferredTotalVisits > 0 || submissionCount > 0) {
       return analytic
     } else if (isNext) {
       return analytic
@@ -114,13 +115,37 @@ export class FormAnalyticService {
     formId: string,
     startAt: Date,
     endAt: Date,
+    questions: QuestionAnalyticsSeed[] = [],
     options: Pick<FormAnalyticOptions, 'sourceChannel' | 'dedupeByIp'> = {}
   ) {
-    return this.formSessionService.getQuestionAnalytics(
+    const sessionAnalytics = await this.formSessionService.getQuestionAnalytics(
       formId,
       toUnixSeconds(startAt),
       toUnixSeconds(endAt),
       options
+    )
+
+    if (helper.isValidArray(sessionAnalytics) || helper.isEmpty(questions)) {
+      return sessionAnalytics
+    }
+
+    const fallbackAnalytics = await this.formSessionService.getQuestionAnalyticsFallback(
+      formId,
+      toUnixSeconds(startAt),
+      toUnixSeconds(endAt),
+      questions,
+      options
+    )
+
+    if (helper.isValidArray(fallbackAnalytics)) {
+      return fallbackAnalytics
+    }
+
+    return this.submissionService.questionAnalytics(
+      formId,
+      questions,
+      toUnixSeconds(startAt),
+      toUnixSeconds(endAt)
     )
   }
 

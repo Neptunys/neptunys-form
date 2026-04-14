@@ -106,7 +106,6 @@ export const WORKSPACES_GQL = gql`
         leadReportLastSentAt
         reportingTimezone
         enableGoogleSheetsLeadSync
-        googleSheetsLeadConfig
         googleSheetsLeadLastDeliveryAt
         googleSheetsLeadLastDeliveryStatus
         googleSheetsLeadLastDeliveryMessage
@@ -397,6 +396,29 @@ export const PROJECT_LAUNCH_OVERVIEW_GQL = gql`
       highPriorityLeadCount30d
       lastLeadAt
     }
+  }
+`
+
+export const PROJECT_LEAD_FLOW_GQL = gql`
+  query projectLeadFlow($input: ProjectDetailInput!) {
+    projectLeadFlow(input: $input) {
+      leadNotificationEmails
+      enableLeadReport
+      leadReportRangeDays
+      leadReportLastSentAt
+      reportingTimezone
+      enableGoogleSheetsLeadSync
+      googleSheetsLeadConfig
+      googleSheetsLeadLastDeliveryAt
+      googleSheetsLeadLastDeliveryStatus
+      googleSheetsLeadLastDeliveryMessage
+    }
+  }
+`
+
+export const TEST_PROJECT_GOOGLE_SHEETS_GQL = gql`
+  mutation testProjectGoogleSheets($input: TestProjectGoogleSheetsInput!) {
+    testProjectGoogleSheets(input: $input)
   }
 `
 

@@ -1,14 +1,21 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRequest } from 'ahooks'
 import { IconAlertCircle, IconCheck } from '@tabler/icons-react'
 
 import { AppService, ProjectService } from '@/services'
-import { Form, Switch, useToast } from '@/components'
-import IntegrationSettingsItem from '@/pages/form/Integrations/IntegrationSettingsItem'
-import { useWorkspaceStore } from '@/store'
+import { Button, Form, Switch, useToast } from '@/components'
+import IntegrationSettingsItem, { getVisibleIntegrationSettings } from '@/pages/form/Integrations/IntegrationSettingsItem'
 import { useParam } from '@/utils'
 import { AppType } from '@/types'
 import { helper } from '@heyform-inc/utils'
+
+interface ProjectLeadFlowType {
+  enableGoogleSheetsLeadSync?: boolean
+  googleSheetsLeadConfig?: AnyMap
+  googleSheetsLeadLastDeliveryAt?: number
+  googleSheetsLeadLastDeliveryStatus?: string
+  googleSheetsLeadLastDeliveryMessage?: string
+}
 
 function getGoogleSheetsInitialValues(app: AppType | undefined, values?: AnyMap) {
   const defaults = (app?.settings || []).reduce((result, setting) => {
@@ -47,17 +54,27 @@ function buildGoogleSheetsConfig(app: AppType | undefined, values: AnyMap) {
 }
 
 export default function ProjectGoogleSheets() {
-  const { workspaceId, projectId } = useParam()
-  const { project, updateProject } = useWorkspaceStore()
+  const { projectId } = useParam()
   const toast = useToast()
-  const [enabled, setEnabled] = useState(Boolean(project?.enableGoogleSheetsLeadSync))
+  const [googleSheetsForm] = Form.useForm()
+  const [enabled, setEnabled] = useState(false)
+  const [draftValues, setDraftValues] = useState<AnyMap>({})
 
-  const { data, refreshAsync } = useRequest(
+  const {
+    data,
+    error,
+    loading,
+    refreshAsync
+  } = useRequest(
     async () => {
-      const apps = await AppService.apps()
+      const [apps, leadFlow] = await Promise.all([
+        AppService.apps(),
+        ProjectService.leadFlow(projectId)
+      ])
 
       return {
-        googleSheetsApp: apps.find((app: AppType) => app.id === 'googlesheets')
+        googleSheetsApp: apps.find((app: AppType) => app.id === 'googlesheets'),
+        leadFlow
       }
     },
     {
@@ -66,30 +83,45 @@ export default function ProjectGoogleSheets() {
   )
 
   const googleSheetsApp = data?.googleSheetsApp
+  const leadFlow = data?.leadFlow as ProjectLeadFlowType | undefined
+
+  const { loading: testLoading, runAsync: runTestAsync } = useRequest(
+    (values: AnyMap) => ProjectService.testGoogleSheets(projectId, buildGoogleSheetsConfig(googleSheetsApp, values)),
+    {
+      manual: true
+    }
+  )
 
   const initialValues = useMemo(
     () =>
       getGoogleSheetsInitialValues(googleSheetsApp, {
-        enableGoogleSheetsLeadSync: Boolean(project?.enableGoogleSheetsLeadSync),
-        ...(project?.googleSheetsLeadConfig || {})
+        enableGoogleSheetsLeadSync: Boolean(leadFlow?.enableGoogleSheetsLeadSync),
+        ...(leadFlow?.googleSheetsLeadConfig || {})
       }),
-    [googleSheetsApp, project?.enableGoogleSheetsLeadSync, project?.googleSheetsLeadConfig]
+    [googleSheetsApp, leadFlow?.enableGoogleSheetsLeadSync, leadFlow?.googleSheetsLeadConfig]
   )
 
   const deliverySummary = useMemo(() => {
-    if (!project?.googleSheetsLeadLastDeliveryStatus || !project.googleSheetsLeadLastDeliveryAt) {
+    if (!leadFlow?.googleSheetsLeadLastDeliveryStatus || !leadFlow.googleSheetsLeadLastDeliveryAt) {
       return null
     }
 
-    const deliveredAt = new Date(project.googleSheetsLeadLastDeliveryAt * 1000).toLocaleString()
-    const failed = project.googleSheetsLeadLastDeliveryStatus === 'error'
+    const deliveredAt = new Date(leadFlow.googleSheetsLeadLastDeliveryAt * 1000).toLocaleString()
+    const failed = leadFlow.googleSheetsLeadLastDeliveryStatus === 'error'
 
     return {
       failed,
       text: failed ? `Last project sync failed · ${deliveredAt}` : `Last project sync succeeded · ${deliveredAt}`,
-      message: project.googleSheetsLeadLastDeliveryMessage
+      message: leadFlow.googleSheetsLeadLastDeliveryMessage
     }
-  }, [project?.googleSheetsLeadLastDeliveryAt, project?.googleSheetsLeadLastDeliveryMessage, project?.googleSheetsLeadLastDeliveryStatus])
+  }, [leadFlow?.googleSheetsLeadLastDeliveryAt, leadFlow?.googleSheetsLeadLastDeliveryMessage, leadFlow?.googleSheetsLeadLastDeliveryStatus])
+
+  useEffect(() => {
+    const nextEnabled = Boolean(initialValues.enableGoogleSheetsLeadSync)
+
+    setEnabled(nextEnabled)
+    setDraftValues(initialValues)
+  }, [initialValues])
 
   async function saveProjectGoogleSheets(values: AnyMap) {
     const enableGoogleSheetsLeadSync = Boolean(values.enableGoogleSheetsLeadSync)
@@ -102,11 +134,6 @@ export default function ProjectGoogleSheets() {
       googleSheetsLeadConfig
     })
 
-    updateProject(workspaceId, projectId, {
-      enableGoogleSheetsLeadSync,
-      googleSheetsLeadConfig: googleSheetsLeadConfig || undefined
-    })
-
     setEnabled(enableGoogleSheetsLeadSync)
 
     await refreshAsync()
@@ -117,7 +144,31 @@ export default function ProjectGoogleSheets() {
     })
   }
 
-  if (!project || !googleSheetsApp) {
+  async function handleTest(values: AnyMap) {
+    try {
+      const enableGoogleSheetsLeadSync = Boolean(values.enableGoogleSheetsLeadSync)
+
+      if (!enableGoogleSheetsLeadSync) {
+        throw new Error('Enable project Google Sheets sync before sending a sample lead set')
+      }
+
+      await runTestAsync(values)
+      await refreshAsync()
+
+      toast({
+        title: 'Sample lead set sent',
+        message: 'High, medium, and low sample leads were written to Google Sheets.'
+      })
+    } catch (testError: any) {
+      toast({
+        title: 'Sample lead set failed',
+        message: testError.message,
+        duration: 7000
+      })
+    }
+  }
+
+  if (loading) {
     return (
       <div className="mt-6">
         <section>
@@ -125,6 +176,36 @@ export default function ProjectGoogleSheets() {
             <h2 className="hf-section-title">Project Google Sheets</h2>
             <p data-slot="text" className="text-secondary mt-4 text-base/5 sm:text-sm/6">
               Loading Google Sheets settings...
+            </p>
+          </div>
+        </section>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="mt-6">
+        <section>
+          <div className="max-w-3xl">
+            <h2 className="hf-section-title">Project Google Sheets</h2>
+            <p data-slot="text" className="text-error mt-4 text-base/5 sm:text-sm/6">
+              {error.message}
+            </p>
+          </div>
+        </section>
+      </div>
+    )
+  }
+
+  if (!googleSheetsApp || !leadFlow) {
+    return (
+      <div className="mt-6">
+        <section>
+          <div className="max-w-3xl">
+            <h2 className="hf-section-title">Project Google Sheets</h2>
+            <p data-slot="text" className="text-error mt-4 text-base/5 sm:text-sm/6">
+              Google Sheets settings are unavailable for this project right now.
             </p>
           </div>
         </section>
@@ -145,10 +226,11 @@ export default function ProjectGoogleSheets() {
         <div className="mt-6 max-w-3xl">
           <Form.Simple
             key={`${projectId}:${JSON.stringify(initialValues)}`}
+            form={googleSheetsForm}
             className="space-y-6"
             initialValues={initialValues}
             fetch={saveProjectGoogleSheets}
-            refreshDeps={[projectId, project?.googleSheetsLeadLastDeliveryAt]}
+            refreshDeps={[projectId, leadFlow?.googleSheetsLeadLastDeliveryAt]}
             submitProps={{
               label: 'Save Google Sheets',
               className: 'w-full sm:w-auto'
@@ -156,6 +238,7 @@ export default function ProjectGoogleSheets() {
             submitOnChangedOnly
             onValuesChange={(_changedValues, values) => {
               setEnabled(Boolean(values.enableGoogleSheetsLeadSync))
+              setDraftValues(values)
             }}
           >
             <div className="space-y-6 rounded-2xl border border-accent-light p-5">
@@ -201,9 +284,19 @@ export default function ProjectGoogleSheets() {
                     <p className="text-secondary text-sm/6">{googleSheetsApp.description}</p>
                   </div>
 
-                  {googleSheetsApp.settings?.map(setting => (
+                  {getVisibleIntegrationSettings(googleSheetsApp.id, googleSheetsApp.settings, draftValues).map(setting => (
                     <IntegrationSettingsItem key={setting.name} setting={setting} />
                   ))}
+
+                  <div className="flex justify-end">
+                    <Button.Ghost
+                      className="w-full sm:w-auto"
+                      loading={testLoading}
+                      onClick={() => void handleTest(googleSheetsForm.getFieldsValue(true) || draftValues)}
+                    >
+                      Send sample lead set
+                    </Button.Ghost>
+                  </div>
                 </div>
               )}
             </div>

@@ -46,6 +46,22 @@ function fullName(answer: Answer): FullNameValue {
   return answer.value
 }
 
+function contactInfo(answer: Answer): string {
+  const value = answer.value || {}
+  const fullNameValue = value.fullName || {}
+  const fullNameText = [fullNameValue.firstName, fullNameValue.lastName].filter(Boolean).join(' ')
+  const addressText = helper.isValid(value.address)
+    ? address({
+        ...answer,
+        value: value.address
+      } as Answer)
+    : ''
+
+  return [fullNameText, value.email, value.phoneNumber, addressText]
+    .filter(helper.isValid)
+    .join('\n')
+}
+
 function address(answer: Answer): string {
   return [
     answer.value.address1,
@@ -109,6 +125,7 @@ export default {
   singleChoice,
   multipleChoice,
   fullName,
+  contactInfo,
   address,
   legalTerms,
   dateRange,

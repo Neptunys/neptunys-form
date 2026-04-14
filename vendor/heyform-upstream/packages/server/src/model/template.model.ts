@@ -30,7 +30,7 @@ export class TemplateModel extends Document {
     type: String,
     required: true,
     enum: Object.keys(InteractiveModeEnum).filter(key => Number.isNaN(Number(key))),
-    default: InteractiveModeEnum.GENERAL
+    default: InteractiveModeEnum[InteractiveModeEnum.GENERAL]
   })
   interactiveMode: InteractiveModeEnum
 
@@ -38,7 +38,7 @@ export class TemplateModel extends Document {
     type: String,
     required: true,
     enum: Object.keys(FormKindEnum).filter(key => Number.isNaN(Number(key))),
-    default: FormKindEnum.SURVEY
+    default: FormKindEnum[FormKindEnum.SURVEY]
   })
   kind: FormKindEnum
 

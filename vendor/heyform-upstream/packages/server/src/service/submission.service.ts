@@ -32,6 +32,12 @@ interface UpdateCategoryOptions {
   category: SubmissionCategoryEnum
 }
 
+interface QuestionAnalyticsSeed {
+  questionId: string
+  order: number
+  title?: string
+}
+
 @Injectable()
 export class SubmissionService {
   constructor(
@@ -559,5 +565,89 @@ export class SubmissionService {
         }
       }
     ])
+  }
+
+  async questionAnalytics(
+    formId: string,
+    questions: QuestionAnalyticsSeed[],
+    startAt: number,
+    endAt: number
+  ) {
+    if (!helper.isValidArray(questions)) {
+      return []
+    }
+
+    const orderedQuestions = [...questions].sort((left, right) => left.order - right.order)
+    const questionIds = orderedQuestions.map(question => question.questionId)
+
+    const [result] = await this.submissionModel.aggregate([
+      {
+        $match: {
+          formId,
+          status: SubmissionStatusEnum.PUBLIC,
+          isPartial: { $ne: true },
+          startAt: { $gte: startAt },
+          endAt: { $lte: endAt }
+        }
+      },
+      {
+        $facet: {
+          totals: [{ $count: 'submissionCount' }],
+          answers: [
+            {
+              $unwind: '$answers'
+            },
+            {
+              $match: {
+                'answers.id': {
+                  $in: questionIds
+                }
+              }
+            },
+            {
+              $group: {
+                _id: '$answers.id',
+                reachCount: { $sum: 1 }
+              }
+            }
+          ]
+        }
+      }
+    ])
+
+    const submissionCount = result?.totals?.[0]?.submissionCount || 0
+    const answerCounts = new Map<string, number>()
+
+    ;(result?.answers || []).forEach((row: { _id: string; reachCount: number }) => {
+      answerCounts.set(row._id, row.reachCount || 0)
+    })
+
+    return orderedQuestions
+      .map((question, index) => {
+        const reachCount = answerCounts.get(question.questionId) || 0
+        const nextReach = index < orderedQuestions.length - 1
+          ? answerCounts.get(orderedQuestions[index + 1].questionId) || 0
+          : submissionCount
+        const completedCount = Math.min(reachCount, nextReach)
+        const dropOffCount = Math.max(0, reachCount - nextReach)
+        const dropOffRate = reachCount > 0 ? (dropOffCount / reachCount) * 100 : 0
+        const frictionScore = Math.round(dropOffRate)
+
+        return {
+          questionId: question.questionId,
+          order: question.order,
+          title: question.title,
+          reachCount,
+          reachRate: submissionCount > 0 ? (reachCount / submissionCount) * 100 : 0,
+          averageDuration: 0,
+          completedCount,
+          dropOffCount,
+          dropOffRate,
+          frictionScore,
+          frictionLevel:
+            frictionScore >= 55 ? 'high' : frictionScore >= 30 ? 'medium' : 'low'
+        }
+      })
+      .filter(question => question.reachCount > 0)
   }
 }

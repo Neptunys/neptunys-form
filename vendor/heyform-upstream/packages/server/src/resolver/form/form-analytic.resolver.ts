@@ -1,13 +1,16 @@
-import { Auth, FormGuard } from '@decorator'
+import { Auth, Form, FormGuard } from '@decorator'
 import {
   FormAnalyticInput,
   FormAnalyticResult,
   FormAnalyticType,
   FormQuestionAnalyticType
 } from '@graphql'
+import { flattenFields, htmlUtils } from '@heyform-inc/answer-utils'
+import { QUESTION_FIELD_KINDS } from '@heyform-inc/shared-types-enums'
 import { date, helper } from '@heyform-inc/utils'
 import { FormAnalyticRangeEnum } from '@model'
 import { Args, Query, Resolver } from '@nestjs/graphql'
+import { FormModel } from '@model'
 import { FormAnalyticService } from '@service'
 
 function getChanges(prev: number, next: number, isInteger = true) {
@@ -160,12 +163,29 @@ export class FormAnalyticResolver {
 
   @Query(returns => [FormQuestionAnalyticType])
   @FormGuard()
-  async formQuestionAnalytics(@Args('input') input: FormAnalyticInput) {
+  async formQuestionAnalytics(@Form() form: FormModel, @Args('input') input: FormAnalyticInput) {
     const { startAt, endAt } = getRangeDates(input)
+    const questions = flattenFields(form.fields || [])
+      .filter(field => QUESTION_FIELD_KINDS.includes(field.kind))
+      .map((field, index) => ({
+        questionId: field.id,
+        order: index + 1,
+        title: helper.isValidArray(field.title)
+          ? htmlUtils.serialize(field.title as any, { plain: true })
+          : helper.isString(field.title)
+            ? htmlUtils.plain(field.title as string)
+            : undefined
+      }))
 
-    return this.formAnalyticService.questionAnalytics(input.formId, startAt, endAt, {
-      sourceChannel: input.sourceChannel,
-      dedupeByIp: input.dedupeByIp
-    })
+    return this.formAnalyticService.questionAnalytics(
+      input.formId,
+      startAt,
+      endAt,
+      questions,
+      {
+        sourceChannel: input.sourceChannel,
+        dedupeByIp: input.dedupeByIp
+      }
+    )
   }
 }

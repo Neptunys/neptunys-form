@@ -36,15 +36,23 @@ function getLeadContactFieldIds(fields: FormField[], settings?: FormSettings) {
     fieldIds.add(settings!.respondentPhoneFieldId!)
   } else {
     fields
-      .filter(candidate => candidate.kind === FieldKindEnum.PHONE_NUMBER)
+      .filter(candidate => [FieldKindEnum.PHONE_NUMBER, FieldKindEnum.CONTACT_INFO].includes(candidate.kind))
       .forEach(candidate => fieldIds.add(candidate.id))
   }
 
   return Array.from(fieldIds)
 }
 
+function hasLeadContactChannelValue(value: any) {
+  if (helper.isString(value)) {
+    return helper.isValid(value)
+  }
+
+  return helper.isValid(value?.email) || helper.isValid(value?.phoneNumber)
+}
+
 function hasLeadContactValue(values: Record<string, any>, fields: FormField[], settings?: FormSettings) {
-  return getLeadContactFieldIds(fields, settings).some(fieldId => helper.isValid(values[fieldId]))
+  return getLeadContactFieldIds(fields, settings).some(fieldId => hasLeadContactChannelValue(values[fieldId]))
 }
 
 interface FormProps extends RCFormProps {

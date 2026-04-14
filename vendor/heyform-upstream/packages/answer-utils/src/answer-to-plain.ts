@@ -41,6 +41,10 @@ export function parsePlainAnswer(answer: Answer, livePreview = false): string {
       value = [name.firstName, name.lastName].filter(Boolean).join(' ')
       break
 
+    case FieldKindEnum.CONTACT_INFO:
+      value = parser.contactInfo(answer)
+      break
+
     case FieldKindEnum.ADDRESS:
       value = parser.address(answer)
       break

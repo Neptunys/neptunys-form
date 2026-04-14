@@ -1,6 +1,9 @@
+import { createHash } from 'crypto'
+
 import { answersToHtml, htmlUtils, parsePlainAnswer } from '@heyform-inc/answer-utils'
 import {
   Answer,
+  ContactInfoValue,
   FieldKindEnum,
   FormField,
   HiddenField,
@@ -88,6 +91,56 @@ interface LeadFlowSettings {
   operatorNotificationMessage?: string
 }
 
+type LeadLevel = 'high' | 'medium' | 'low'
+type LeadIdentitySource = 'email' | 'phone' | 'name' | 'submission'
+
+const TEST_LEAD_PERSONAS: Record<
+  LeadLevel,
+  {
+    respondentName: string
+    respondentEmail: string
+    respondentPhone: string
+    answerTone: string
+    choiceLabel: string
+    url: string
+    address: string
+    payment: string
+  }
+> = {
+  high: {
+    respondentName: 'High Intent Lead',
+    respondentEmail: 'lead.high@example.com',
+    respondentPhone: '+1 555 010 2101',
+    answerTone: 'Strong fit',
+    choiceLabel: 'Option A',
+    url: 'https://example.com/high-fit',
+    address: '12 Victory Avenue, London',
+    payment: '$249.00'
+  },
+  medium: {
+    respondentName: 'Medium Intent Lead',
+    respondentEmail: 'lead.medium@example.com',
+    respondentPhone: '+1 555 010 2102',
+    answerTone: 'Review needed',
+    choiceLabel: 'Option B',
+    url: 'https://example.com/review-fit',
+    address: '45 Service Road, Manchester',
+    payment: '$149.00'
+  },
+  low: {
+    respondentName: 'Low Intent Lead',
+    respondentEmail: 'lead.low@example.com',
+    respondentPhone: '+1 555 010 2103',
+    answerTone: 'Low fit',
+    choiceLabel: 'Option C',
+    url: 'https://example.com/low-fit',
+    address: '88 Example Street, Leeds',
+    payment: '$49.00'
+  }
+}
+
+const TEST_LEAD_LEVELS: LeadLevel[] = ['high', 'medium', 'low']
+
 export interface LeadCapturePayload {
   clientName?: string
   formId: string
@@ -95,6 +148,8 @@ export interface LeadCapturePayload {
   projectId?: string
   projectName?: string
   submissionId: string
+  userId: string
+  userIdSource: LeadIdentitySource
   submittedAt: number
   submittedAtIso: string
   respondentName?: string
@@ -103,7 +158,7 @@ export interface LeadCapturePayload {
   leadScore?: number
   leadScoreVariableId?: string
   leadScoreVariableName?: string
-  leadLevel?: 'high' | 'medium' | 'low'
+  leadLevel?: LeadLevel
   leadQuality?: string
   leadPriority?: string
   answersByTitle: Record<string, string>
@@ -160,6 +215,10 @@ function normalizeNumber(value: unknown): number | undefined {
   return undefined
 }
 
+function getRecordIdentifier(record: Record<string, any> | undefined): string | undefined {
+  return normalizeString(record?.id || record?._id)
+}
+
 function getFieldTitle(field?: FormField, fallback?: string): string {
   const title = field ? asPlainText(field.title) : ''
 
@@ -174,16 +233,22 @@ function getFieldTitle(field?: FormField, fallback?: string): string {
   return 'Untitled question'
 }
 
-function getSampleAnswerValue(field: FormField, index: number): string {
+function getSampleAnswerValue(field: FormField, index: number, leadLevel: LeadLevel = 'high'): string {
+  const persona = TEST_LEAD_PERSONAS[leadLevel]
+
   switch (field.kind) {
     case FieldKindEnum.FULL_NAME:
-      return 'Test Lead'
+      return persona.respondentName
     case FieldKindEnum.EMAIL:
-      return 'test.lead@example.com'
+      return persona.respondentEmail
     case FieldKindEnum.PHONE_NUMBER:
-      return '+1 555 010 2024'
+      return persona.respondentPhone
+    case FieldKindEnum.CONTACT_INFO:
+      return [persona.respondentName, persona.respondentEmail, persona.respondentPhone, persona.address]
+        .filter(Boolean)
+        .join('\n')
     case FieldKindEnum.URL:
-      return 'https://example.com/test-lead'
+      return persona.url
     case FieldKindEnum.DATE:
       return '2026-01-15'
     case FieldKindEnum.DATE_RANGE:
@@ -191,27 +256,29 @@ function getSampleAnswerValue(field: FormField, index: number): string {
     case FieldKindEnum.NUMBER:
     case FieldKindEnum.RATING:
     case FieldKindEnum.OPINION_SCALE:
-      return String(index + 4)
+      return String(
+        leadLevel === 'high' ? 9 - (index % 2) : leadLevel === 'medium' ? 6 - (index % 2) : 2 + (index % 2)
+      )
     case FieldKindEnum.YES_NO:
     case FieldKindEnum.LEGAL_TERMS:
-      return 'Yes'
+      return leadLevel === 'low' ? 'No' : 'Yes'
     case FieldKindEnum.MULTIPLE_CHOICE:
     case FieldKindEnum.PICTURE_CHOICE:
-      return 'Option A'
+      return persona.choiceLabel
     case FieldKindEnum.ADDRESS:
-      return '123 Test Street, Example City'
+      return persona.address
     case FieldKindEnum.COUNTRY:
       return 'United States'
     case FieldKindEnum.FILE_UPLOAD:
-      return 'test-upload.pdf'
+      return `${leadLevel}-lead-evidence.pdf`
     case FieldKindEnum.SIGNATURE:
-      return 'Signed by Test Lead'
+      return `Signed by ${persona.respondentName}`
     case FieldKindEnum.PAYMENT:
-      return '$149.00'
+      return persona.payment
     case FieldKindEnum.INPUT_TABLE:
-      return 'Sample row data'
+      return `${persona.answerTone} data row ${index + 1}`
     default:
-      return `Sample answer ${index + 1}`
+      return `${persona.answerTone} answer ${index + 1}`
   }
 }
 
@@ -254,6 +321,92 @@ function getLeadLabel(
   return level ? labels[level] : undefined
 }
 
+function normalizeEmailIdentity(value: unknown): string | undefined {
+  const normalized = normalizeString(value)
+  return normalized ? normalized.toLowerCase() : undefined
+}
+
+function normalizePhoneIdentity(value: unknown): string | undefined {
+  const normalized = normalizeString(value)
+
+  if (!normalized) {
+    return undefined
+  }
+
+  const hasPlusPrefix = normalized.startsWith('+')
+  const digits = normalized.replace(/\D/g, '')
+
+  if (!helper.isValid(digits)) {
+    return undefined
+  }
+
+  return hasPlusPrefix ? `+${digits}` : digits
+}
+
+function createLeadIdentityHash(value: string): string {
+  return createHash('sha1').update(value).digest('hex').slice(0, 10)
+}
+
+function buildLeadUserIdentity({
+  respondentName,
+  respondentEmail,
+  respondentPhone,
+  submissionId
+}: {
+  respondentName?: string
+  respondentEmail?: string
+  respondentPhone?: string
+  submissionId?: string
+}) {
+  const normalizedEmail = normalizeEmailIdentity(respondentEmail)
+
+  if (normalizedEmail) {
+    return {
+      userId: `email:${normalizedEmail}`,
+      userIdSource: 'email' as const
+    }
+  }
+
+  const normalizedPhone = normalizePhoneIdentity(respondentPhone)
+
+  if (normalizedPhone) {
+    return {
+      userId: `phone:${normalizedPhone}`,
+      userIdSource: 'phone' as const
+    }
+  }
+
+  const normalizedName = normalizeString(respondentName)
+
+  if (normalizedName) {
+    const loweredName = normalizedName.toLowerCase()
+
+    return {
+      userId: `name:${toTokenSlug(loweredName)}-${createLeadIdentityHash(loweredName)}`,
+      userIdSource: 'name' as const
+    }
+  }
+
+  const fallbackSubmissionId = normalizeString(submissionId) || 'unknown-submission'
+
+  return {
+    userId: `submission:${fallbackSubmissionId}`,
+    userIdSource: 'submission' as const
+  }
+}
+
+function getTestLeadScore(level: LeadLevel, mediumThreshold: number, highThreshold: number) {
+  if (level === 'high') {
+    return highThreshold + 5
+  }
+
+  if (level === 'medium') {
+    return Math.max(mediumThreshold, Math.floor((mediumThreshold + highThreshold - 1) / 2))
+  }
+
+  return Math.max(0, mediumThreshold - 5)
+}
+
 function resolveConfiguredAnswer(
   settings: LeadFlowSettings | undefined,
   answers: Answer[],
@@ -271,6 +424,44 @@ function resolveConfiguredAnswer(
   }
 
   return answers.find(answer => fallbackKinds.includes(answer.kind))
+}
+
+function getContactInfoValue(answer?: Answer): ContactInfoValue | undefined {
+  return answer?.kind === FieldKindEnum.CONTACT_INFO && helper.isObject(answer.value)
+    ? (answer.value as ContactInfoValue)
+    : undefined
+}
+
+function getRespondentName(answer?: Answer) {
+  const contactInfo = getContactInfoValue(answer)
+
+  if (contactInfo) {
+    return normalizeString(
+      [contactInfo.fullName?.firstName, contactInfo.fullName?.lastName].filter(Boolean).join(' ')
+    )
+  }
+
+  return answer ? normalizeString(parsePlainAnswer(answer)) : undefined
+}
+
+function getRespondentEmail(answer?: Answer) {
+  const contactInfo = getContactInfoValue(answer)
+
+  if (contactInfo) {
+    return normalizeString(contactInfo.email)
+  }
+
+  return answer ? normalizeString(parsePlainAnswer(answer)) : undefined
+}
+
+function getRespondentPhone(answer?: Answer) {
+  const contactInfo = getContactInfoValue(answer)
+
+  if (contactInfo) {
+    return normalizeString(contactInfo.phoneNumber)
+  }
+
+  return answer ? normalizeString(parsePlainAnswer(answer)) : undefined
 }
 
 function resolveScoreVariable(
@@ -354,6 +545,8 @@ export function buildLeadTemplateValues(
     projectId: payload.projectId,
     projectName: payload.projectName,
     submissionId: payload.submissionId,
+    userId: payload.userId,
+    userIdSource: payload.userIdSource,
     submittedAt: payload.submittedAtIso,
     respondentName: payload.respondentName,
     respondentEmail: payload.respondentEmail,
@@ -428,13 +621,16 @@ export function buildLeadCapturePayload(
   })
 
   const respondentNameAnswer = resolveConfiguredAnswer(settings, submission.answers, 'respondentNameFieldId', [
+    FieldKindEnum.CONTACT_INFO,
     FieldKindEnum.FULL_NAME,
     FieldKindEnum.SHORT_TEXT
   ])
   const respondentEmailAnswer = resolveConfiguredAnswer(settings, submission.answers, 'respondentEmailFieldId', [
+    FieldKindEnum.CONTACT_INFO,
     FieldKindEnum.EMAIL
   ])
   const respondentPhoneAnswer = resolveConfiguredAnswer(settings, submission.answers, 'respondentPhoneFieldId', [
+    FieldKindEnum.CONTACT_INFO,
     FieldKindEnum.PHONE_NUMBER
   ])
   const scoreVariable = resolveScoreVariable(form, submission)
@@ -442,6 +638,15 @@ export function buildLeadCapturePayload(
   const leadMediumThreshold = normalizeNumber(settings.leadMediumThreshold) ?? 50
   const leadHighThreshold = normalizeNumber(settings.leadHighThreshold) ?? 80
   const leadLevel = getLeadLevel(leadScore, leadMediumThreshold, leadHighThreshold)
+  const respondentName = getRespondentName(respondentNameAnswer)
+  const respondentEmail = getRespondentEmail(respondentEmailAnswer)
+  const respondentPhone = getRespondentPhone(respondentPhoneAnswer)
+  const userIdentity = buildLeadUserIdentity({
+    respondentName,
+    respondentEmail,
+    respondentPhone,
+    submissionId: submission.id
+  })
   const leadQuality = getLeadLabel(leadScore, leadMediumThreshold, leadHighThreshold, {
     high: normalizeString(settings.leadQualityHighLabel) || DEFAULT_LEAD_QUALITY_LABELS.high,
     medium: normalizeString(settings.leadQualityMediumLabel) || DEFAULT_LEAD_QUALITY_LABELS.medium,
@@ -464,20 +669,18 @@ export function buildLeadCapturePayload(
 
   return {
     clientName: normalizeString(team?.clientName),
-    formId: form.id || '',
+    formId: getRecordIdentifier(form) || '',
     formName: form.name,
-    projectId: form.projectId || project?.id,
+    projectId: normalizeString(form.projectId) || getRecordIdentifier(project),
     projectName: normalizeString(project?.name),
-    submissionId: submission.id || '',
+    submissionId: getRecordIdentifier(submission) || '',
+    userId: userIdentity.userId,
+    userIdSource: userIdentity.userIdSource,
     submittedAt: submission.endAt || 0,
     submittedAtIso: new Date((submission.endAt || 0) * 1000).toISOString(),
-    respondentName: respondentNameAnswer ? normalizeString(parsePlainAnswer(respondentNameAnswer)) : undefined,
-    respondentEmail: respondentEmailAnswer
-      ? normalizeString(parsePlainAnswer(respondentEmailAnswer))
-      : undefined,
-    respondentPhone: respondentPhoneAnswer
-      ? normalizeString(parsePlainAnswer(respondentPhoneAnswer))
-      : undefined,
+    respondentName,
+    respondentEmail,
+    respondentPhone,
     leadScore,
     leadScoreVariableId: scoreVariable?.id,
     leadScoreVariableName: scoreVariable?.name,
@@ -495,7 +698,8 @@ export function buildLeadCapturePayload(
 
 export function buildTestLeadCapturePayload(
   form: LeadAwareForm,
-  team?: LeadAwareTeam
+  team?: LeadAwareTeam,
+  sampleLeadLevel: LeadLevel = 'high'
 ): LeadCapturePayload {
   const settings = (form.settings || {}) as LeadFlowSettings
   const answersByTitle: Record<string, string> = {}
@@ -504,13 +708,15 @@ export function buildTestLeadCapturePayload(
   const submittedAt = Math.floor(Date.now() / 1000)
   const leadMediumThreshold = normalizeNumber(settings.leadMediumThreshold) ?? 50
   const leadHighThreshold = normalizeNumber(settings.leadHighThreshold) ?? 80
-  const leadScore = leadHighThreshold + 5
+  const persona = TEST_LEAD_PERSONAS[sampleLeadLevel]
+  const leadScore = getTestLeadScore(sampleLeadLevel, leadMediumThreshold, leadHighThreshold)
+  const submissionId = `test-${sampleLeadLevel}-${submittedAt}`
 
   ;(form.fields || [])
     .filter(field => !NON_QUESTION_FIELD_KINDS.includes(field.kind))
     .forEach((field, index) => {
       const key = makeUniqueKey(answersByTitle, getFieldTitle(field), `Question ${index + 1}`)
-      answersByTitle[key] = getSampleAnswerValue(field, index)
+      answersByTitle[key] = getSampleAnswerValue(field, index, sampleLeadLevel)
     })
 
   ;(form.hiddenFields || []).forEach(hiddenField => {
@@ -537,7 +743,7 @@ export function buildTestLeadCapturePayload(
     }
   })
 
-  const leadLevel = getLeadLevel(leadScore, leadMediumThreshold, leadHighThreshold)
+  const resolvedLeadLevel = getLeadLevel(leadScore, leadMediumThreshold, leadHighThreshold)
   const leadQuality = getLeadLabel(leadScore, leadMediumThreshold, leadHighThreshold, {
     high: normalizeString(settings.leadQualityHighLabel) || DEFAULT_LEAD_QUALITY_LABELS.high,
     medium: normalizeString(settings.leadQualityMediumLabel) || DEFAULT_LEAD_QUALITY_LABELS.medium,
@@ -548,24 +754,33 @@ export function buildTestLeadCapturePayload(
     medium: normalizeString(settings.leadPriorityMediumLabel) || DEFAULT_LEAD_PRIORITY_LABELS.medium,
     low: normalizeString(settings.leadPriorityLowLabel) || DEFAULT_LEAD_PRIORITY_LABELS.low
   })
+  const userIdentity = buildLeadUserIdentity({
+    respondentName: persona.respondentName,
+    respondentEmail: persona.respondentEmail,
+    respondentPhone: persona.respondentPhone,
+    submissionId
+  })
   const answersPlain = Object.entries(answersByTitle)
     .map(([title, value]) => `${title}\n${value}`)
     .join('\n\n')
 
   return {
     clientName: normalizeString(team?.clientName),
-    formId: form.id || '',
+    formId: getRecordIdentifier(form) || '',
     formName: form.name,
-    submissionId: `test-${submittedAt}`,
+    projectId: form.projectId,
+    submissionId,
+    userId: userIdentity.userId,
+    userIdSource: userIdentity.userIdSource,
     submittedAt,
     submittedAtIso: new Date(submittedAt * 1000).toISOString(),
-    respondentName: 'Test Lead',
-    respondentEmail: 'test.lead@example.com',
-    respondentPhone: '+1 555 010 2024',
+    respondentName: persona.respondentName,
+    respondentEmail: persona.respondentEmail,
+    respondentPhone: persona.respondentPhone,
     leadScore,
     leadScoreVariableId: scoreVariable?.id,
     leadScoreVariableName: scoreVariable?.name,
-    leadLevel,
+    leadLevel: resolvedLeadLevel,
     leadQuality,
     leadPriority,
     answersByTitle,
@@ -577,11 +792,23 @@ export function buildTestLeadCapturePayload(
   }
 }
 
+export function buildTestLeadCapturePayloads(
+  form: LeadAwareForm,
+  team?: LeadAwareTeam
+): LeadCapturePayload[] {
+  return TEST_LEAD_LEVELS.map(level => buildTestLeadCapturePayload(form, team, level))
+}
+
 export function buildLeadSheetRow(payload: LeadCapturePayload) {
-  const row: Record<string, string | number> = {
+  const row: Record<string, string | number | boolean> = {
+    'Lead Contacted': false,
     'Submission ID': payload.submissionId,
     'Form ID': payload.formId,
+    'User ID': payload.userId,
+    'User ID Source': payload.userIdSource,
     'Form Name': payload.formName,
+    'Project ID': payload.projectId || '',
+    'Project Name': payload.projectName || '',
     'Submitted At (UTC)': payload.submittedAtIso,
     'Respondent Name': payload.respondentName || '',
     'Respondent Email': payload.respondentEmail || '',
@@ -591,21 +818,7 @@ export function buildLeadSheetRow(payload: LeadCapturePayload) {
     'Lead Quality': payload.leadQuality || '',
     'Lead Priority': payload.leadPriority || '',
     'Lead Score Source': payload.leadScoreVariableName || '',
-    'Answers Summary': payload.answersPlain,
-    'Hidden Fields JSON': JSON.stringify(payload.hiddenFieldsByName),
-    'Variables JSON': JSON.stringify(payload.variablesByName)
-  }
-
-  if (helper.isValid(payload.clientName)) {
-    row['Client Name'] = payload.clientName!
-  }
-
-  if (helper.isValid(payload.projectId)) {
-    row['Project ID'] = payload.projectId!
-  }
-
-  if (helper.isValid(payload.projectName)) {
-    row['Project Name'] = payload.projectName!
+    'Answers Summary': payload.answersPlain
   }
 
   Object.entries(payload.answersByTitle).forEach(([key, value]) => {

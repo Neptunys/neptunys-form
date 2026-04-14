@@ -50,7 +50,7 @@ export class FormModel extends Document {
     type: String,
     required: true,
     enum: Object.keys(InteractiveModeEnum).filter(key => Number.isNaN(Number(key))),
-    default: InteractiveModeEnum.GENERAL
+    default: InteractiveModeEnum[InteractiveModeEnum.GENERAL]
   })
   interactiveMode: InteractiveModeEnum
 
@@ -58,7 +58,7 @@ export class FormModel extends Document {
     type: String,
     required: true,
     enum: Object.keys(FormKindEnum).filter(key => Number.isNaN(Number(key))),
-    default: FormKindEnum.SURVEY
+    default: FormKindEnum[FormKindEnum.SURVEY]
   })
   kind: FormKindEnum
 
@@ -117,7 +117,7 @@ export class FormModel extends Document {
     type: String,
     required: true,
     enum: Object.keys(FormStatusEnum).filter(key => Number.isNaN(Number(key))),
-    default: FormStatusEnum.NORMAL
+    default: FormStatusEnum[FormStatusEnum.NORMAL]
   })
   status: FormStatusEnum
 }

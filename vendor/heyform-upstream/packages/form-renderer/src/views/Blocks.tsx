@@ -7,6 +7,7 @@ import { htmlUtils } from '@heyform-inc/answer-utils'
 
 import { Address } from '../blocks/Address'
 import { Country } from '../blocks/Country'
+import { ContactInfo } from '../blocks/ContactInfo'
 import { Date } from '../blocks/Date'
 import { DateRange } from '../blocks/DateRange'
 import { Email } from '../blocks/Email'
@@ -47,6 +48,9 @@ function getBlock(
 
     case FieldKindEnum.COUNTRY:
       return <Country key={field.id} field={field} transitionState={transitionState} />
+
+    case FieldKindEnum.CONTACT_INFO:
+      return <ContactInfo key={field.id} field={field} transitionState={transitionState} />
 
     case FieldKindEnum.FULL_NAME:
       return <FullName key={field.id} field={field} transitionState={transitionState} />

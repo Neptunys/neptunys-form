@@ -7,9 +7,9 @@ import {
   ExportProjectReportDto,
   ExportSubmissionsDto
 } from '@dto'
-import { flattenFields } from '@heyform-inc/answer-utils'
-import { FormStatusEnum } from '@heyform-inc/shared-types-enums'
-import { date } from '@heyform-inc/utils'
+import { flattenFields, htmlUtils } from '@heyform-inc/answer-utils'
+import { FormStatusEnum, QUESTION_FIELD_KINDS } from '@heyform-inc/shared-types-enums'
+import { date, helper } from '@heyform-inc/utils'
 import { FormAnalyticRangeEnum, ProjectModel } from '@model'
 import { ExportFileService, FormAnalyticService, FormService, SubmissionService } from '@service'
 
@@ -123,6 +123,17 @@ export class ExportSubmissionsController {
     }
 
     const { startAt, endAt } = this.resolveAnalyticRange(input)
+    const questionSeeds = flattenFields(form.fields || [])
+      .filter(field => QUESTION_FIELD_KINDS.includes(field.kind))
+      .map((field, index) => ({
+        questionId: field.id,
+        order: index + 1,
+        title: helper.isValidArray(field.title)
+          ? htmlUtils.serialize(field.title as any, { plain: true })
+          : helper.isString(field.title)
+            ? htmlUtils.plain(field.title as string)
+            : undefined
+      }))
     const [summary, questions] = await Promise.all([
       this.formAnalyticService.summary({
         formId: input.formId,
@@ -132,7 +143,7 @@ export class ExportSubmissionsController {
         sourceChannel: input.sourceChannel,
         dedupeByIp: input.dedupeByIp
       }),
-      this.formAnalyticService.questionAnalytics(input.formId, startAt, endAt, {
+      this.formAnalyticService.questionAnalytics(input.formId, startAt, endAt, questionSeeds, {
         sourceChannel: input.sourceChannel,
         dedupeByIp: input.dedupeByIp
       })

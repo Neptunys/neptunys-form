@@ -10,7 +10,7 @@ import { Button, Form, Image, Modal, useToast } from '@/components'
 import { useAppStore, useFormStore, useModal } from '@/store'
 import { IntegratedAppType } from '@/types'
 
-import IntegrationSettingsItem from './IntegrationSettingsItem'
+import IntegrationSettingsItem, { getVisibleIntegrationSettings } from './IntegrationSettingsItem'
 
 export interface IntegrationSettingsProps {
   app: IntegratedAppType
@@ -72,12 +72,12 @@ const SettingsForm: FC<IntegrationSettingsProps> = ({ app, onValuesChange }) => 
     try {
       await runTestAsync(draftValues)
       toast({
-        title: 'Test row sent',
-        message: 'A sample lead row was written to Google Sheets.'
+        title: 'Sample lead set sent',
+        message: 'High, medium, and low sample leads were written to Google Sheets.'
       })
     } catch (error: any) {
       toast({
-        title: 'Test row failed',
+        title: 'Sample lead set failed',
         message: error.message,
         duration: 7000
       })
@@ -97,14 +97,14 @@ const SettingsForm: FC<IntegrationSettingsProps> = ({ app, onValuesChange }) => 
       submitOnChangedOnly
       onValuesChange={handleValuesChange}
     >
-      {app.settings?.map(setting => (
+      {getVisibleIntegrationSettings(app.id, app.settings, draftValues).map(setting => (
         <IntegrationSettingsItem key={setting.name} setting={setting} />
       ))}
 
       {app.id === 'googlesheets' && (
         <div className="flex justify-end">
           <Button.Ghost className="w-full sm:w-auto" loading={testLoading} onClick={handleTest}>
-            Send test row
+            Send sample lead set
           </Button.Ghost>
         </div>
       )}

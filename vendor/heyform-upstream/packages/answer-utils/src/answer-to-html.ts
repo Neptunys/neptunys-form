@@ -48,6 +48,10 @@ function parseHtmlAnswer(answer: Answer): string {
         value = [name.firstName, name.lastName].filter(Boolean).join(' ')
         break
 
+      case FieldKindEnum.CONTACT_INFO:
+        value = parser.contactInfo(answer).replace(/\n/g, '<br />')
+        break
+
       case FieldKindEnum.ADDRESS:
         value = parser.address(answer)
         break

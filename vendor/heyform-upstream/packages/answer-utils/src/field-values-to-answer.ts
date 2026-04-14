@@ -1,4 +1,4 @@
-import { Answer, CHOICES_FIELD_KINDS, FormField } from '@heyform-inc/shared-types-enums'
+import { Answer, CHOICES_FIELD_KINDS, FieldKindEnum, FormField } from '@heyform-inc/shared-types-enums'
 
 import { helper } from '@heyform-inc/utils'
 
@@ -42,6 +42,8 @@ export function fieldValuesToAnswers(
         value = {
           value: []
         }
+      } else if (rule.kind === FieldKindEnum.CONTACT_INFO) {
+        value = {}
       } else {
         value = ''
       }

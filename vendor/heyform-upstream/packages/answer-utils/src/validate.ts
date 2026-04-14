@@ -93,6 +93,10 @@ export function validate(rule: FieldsToValidateRules, value: AnswerValue): void 
       validatePayment(rule, value)
       break
 
+    case FieldKindEnum.CONTACT_INFO:
+      validateContactInfo(rule, value)
+      break
+
     case FieldKindEnum.FULL_NAME:
       validateFullName(rule, value)
       break
@@ -538,6 +542,87 @@ function validatePayment(rule: FieldsToValidateRules, value: AnswerValue) {
       kind: rule.kind,
       title: rule.title,
       message: 'Invalid payment currency'
+    })
+  }
+}
+
+function hasContactInfoValue(value: any) {
+  const fullName = value?.fullName || {}
+  const address = value?.address || {}
+
+  return [
+    fullName.firstName,
+    fullName.lastName,
+    value?.email,
+    value?.phoneNumber,
+    address.address1,
+    address.address2,
+    address.city,
+    address.state,
+    address.zip,
+    address.country
+  ].some(helper.isValid)
+}
+
+function validateContactInfo(rule: FieldsToValidateRules, value: AnswerValue) {
+  if (!helper.isObject(value)) {
+    throw new ValidateError({
+      id: rule.id,
+      kind: rule.kind,
+      title: rule.title,
+      message: 'This field is required'
+    })
+  }
+
+  if (!rule.required && !hasContactInfoValue(value)) {
+    return
+  }
+
+  const fullName = value.fullName || {}
+  const address = value.address || {}
+  const fullNameMode = rule.fullNameMode || 'both'
+  const showFirstName = fullNameMode !== 'last'
+  const showLastName = fullNameMode !== 'first'
+
+  if ((showFirstName && helper.isEmpty(fullName.firstName)) || (showLastName && helper.isEmpty(fullName.lastName))) {
+    throw new ValidateError({
+      id: rule.id,
+      kind: rule.kind,
+      title: rule.title,
+      message: 'Please enter your name'
+    })
+  }
+
+  if (!helper.isString(value.email) || !helper.isEmail(value.email)) {
+    throw new ValidateError({
+      id: rule.id,
+      kind: rule.kind,
+      title: rule.title,
+      message: 'Please enter a valid email address'
+    })
+  }
+
+  if (!isMobilePhone(value.phoneNumber)) {
+    throw new ValidateError({
+      id: rule.id,
+      kind: rule.kind,
+      title: rule.title,
+      message: 'Please enter a valid mobile phone number'
+    })
+  }
+
+  if (
+    helper.isEmpty(address.address1) ||
+    helper.isEmpty(address.city) ||
+    helper.isEmpty(address.state) ||
+    helper.isEmpty(address.zip) ||
+    helper.isEmpty(address.country)
+  ) {
+    throw new ValidateError({
+      id: rule.id,
+      kind: rule.kind,
+      title: rule.title,
+      message: 'Please complete your address'
     })
   }
 }
