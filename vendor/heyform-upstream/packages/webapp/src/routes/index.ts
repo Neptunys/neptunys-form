@@ -18,6 +18,7 @@ import FormSettings from '@/pages/form/Settings'
 import FormShare from '@/pages/form/Share'
 import FormSubmissions from '@/pages/form/Submissions'
 import ProjectExperiments from '@/pages/project/Experiments'
+import ProjectEmail from '@/pages/project/Email'
 import ProjectForms from '@/pages/project/Forms'
 import ProjectGoogleSheets from '@/pages/project/GoogleSheets'
 import ProjectSettings from '@/pages/project/Settings'
@@ -152,6 +153,16 @@ const routes = [
       projectShell: true,
       loginRequired: true,
       title: 'Settings'
+    }
+  },
+  {
+    path: '/workspace/:workspaceId/project/:projectId/email',
+    layout: WorkspaceLayout,
+    component: ProjectEmail,
+    options: {
+      projectShell: true,
+      loginRequired: true,
+      title: 'Email'
     }
   },
   {

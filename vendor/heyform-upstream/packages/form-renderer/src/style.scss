@@ -1869,6 +1869,17 @@ button.button-icon-only {
   line-height: var(--heyform-field-text-line-height);
 }
 
+.heyform-consent-link {
+  margin-left: 0.4rem;
+  color: var(--heyform-button-color);
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
 // -----------------------------------------------------------------------------
 // File upload
 .heyform-file-uploader {

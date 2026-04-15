@@ -68,6 +68,7 @@ export interface FormSettings {
   respondentNameFieldId?: string
   respondentEmailFieldId?: string
   respondentPhoneFieldId?: string
+  trackLeadOnCapture?: boolean
   enableRespondentNotification?: boolean
   respondentNotificationSubject?: string
   respondentNotificationMessage?: string
@@ -170,6 +171,7 @@ export interface Property {
   emailRequired?: boolean
   showCompany?: boolean
   companyRequired?: boolean
+  showConsent?: boolean
   mapToContacts?: boolean
 
   // PhoneNumber
@@ -202,6 +204,8 @@ export interface Property {
   enableShareIcon?: boolean
   enableCompleteTime?: boolean
   consentText?: string
+  consentLinkLabel?: string
+  consentLinkUrl?: string
   defaultChecked?: boolean
 
   // Thank You
@@ -371,6 +375,7 @@ export interface ContactInfoValue {
   email?: string
   phoneNumber?: string
   company?: string
+  consentAccepted?: boolean
   address?: AddressValue
 }
 

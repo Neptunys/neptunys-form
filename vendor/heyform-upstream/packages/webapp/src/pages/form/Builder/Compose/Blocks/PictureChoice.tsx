@@ -17,7 +17,12 @@ import { clone, excludeObject, helper, nanoid } from '@heyform-inc/utils'
 
 import { ImagePicker, ImagePickerRef } from '@/components'
 
-import { LEAD_SCORE_OPTIONS, normalizeLeadScore } from '../../utils/lead-score'
+import {
+  LEAD_SCORE_LABEL_CLASSNAME,
+  LEAD_SCORE_OPTIONS,
+  LEAD_SCORE_SELECT_CLASSNAME,
+  normalizeLeadScore
+} from '../../utils/lead-score'
 import { useStoreContext } from '../../store'
 import type { BlockProps } from './Block'
 import { Block } from './Block'
@@ -123,11 +128,9 @@ const PictureChoiceItem: FC<PictureChoiceItemProps> = ({
                   onChange={handleLabelChange}
                 />
                 <div className="flex items-center gap-2">
-                  <span className="text-text-light min-w-10 text-[11px] font-medium uppercase tracking-[0.08em]">
-                    Score
-                  </span>
+                  <span className={LEAD_SCORE_LABEL_CLASSNAME}>Score</span>
                   <Select
-                    className="w-32"
+                    className={LEAD_SCORE_SELECT_CLASSNAME}
                     allowClear
                     placeholder="0-3"
                     options={LEAD_SCORE_OPTIONS}

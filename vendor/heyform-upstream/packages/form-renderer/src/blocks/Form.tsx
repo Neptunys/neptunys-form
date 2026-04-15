@@ -57,6 +57,7 @@ function hasLeadContactValue(values: Record<string, any>, fields: FormField[], s
 
 interface FormProps extends RCFormProps {
   field: FormField
+  autoComplete?: 'on' | 'off'
   autoSubmit?: boolean
   autoSubmitDelayMs?: number
   allowAutoSubmitWithNextButton?: boolean
@@ -69,6 +70,7 @@ interface FormProps extends RCFormProps {
 
 export const Form: FC<FormProps> = ({
   field,
+  autoComplete = 'off',
   autoSubmit: rawAutoSubmit = false,
   autoSubmitDelayMs = 80,
   allowAutoSubmitWithNextButton = false,
@@ -386,7 +388,7 @@ export const Form: FC<FormProps> = ({
       className={clsx('heyform-form', 'heyform-form-mobile-docked', {
         'heyform-form-last': isLastBlock
       })}
-      autoComplete="off"
+      autoComplete={autoComplete}
       form={form}
       validateTrigger={validateTrigger}
       onValuesChange={handleValuesChange}

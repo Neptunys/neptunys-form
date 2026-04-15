@@ -9,9 +9,40 @@ export function isNumber(arg: any): boolean {
   return Number.isFinite(arg)
 }
 
-export function isMobilePhone(arg: any): boolean {
-  const phoneNumber = parsePhoneNumberFromString(arg)
-  return !!phoneNumber?.isValid()
+export function normalizePhoneNumber(arg: any, defaultCountryCode?: string): string | undefined {
+  if (!helper.isString(arg)) {
+    return undefined
+  }
+
+  const trimmedValue = arg.trim()
+
+  if (!trimmedValue) {
+    return undefined
+  }
+
+  const phoneNumber = parsePhoneNumberFromString(trimmedValue, defaultCountryCode as any)
+
+  if (phoneNumber?.isValid()) {
+    return phoneNumber.number
+  }
+
+  if (trimmedValue.startsWith('+') || !trimmedValue.startsWith('0')) {
+    return undefined
+  }
+
+  const digitsOnly = trimmedValue.replace(/\D/g, '')
+
+  if (digitsOnly.length <= 1) {
+    return undefined
+  }
+
+  const normalizedPhoneNumber = parsePhoneNumberFromString(digitsOnly.slice(1), defaultCountryCode as any)
+
+  return normalizedPhoneNumber?.isValid() ? normalizedPhoneNumber.number : undefined
+}
+
+export function isMobilePhone(arg: any, defaultCountryCode?: string): boolean {
+  return helper.isValid(normalizePhoneNumber(arg, defaultCountryCode))
 }
 
 const REGEX_FORMAT = /\[([^\]]+)]|Y{4}|M{2}|D{2}|H{1,2}|h{1,2}|a|A|m{1,2}|s{1,2}|Z{1,2}|SSS/g

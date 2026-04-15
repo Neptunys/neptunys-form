@@ -10,8 +10,7 @@ import {
   PublicExperimentType,
   UpdateExperimentInput
 } from '@graphql'
-import { helper, timestamp } from '@heyform-inc/utils'
-import { ExperimentModel, ExperimentStatusEnum, ProjectModel } from '@model'
+import { ExperimentModel, ProjectModel } from '@model'
 import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql'
 import { ExperimentService } from '@service'
 
@@ -24,31 +23,8 @@ export class PublicExperimentResolver {
     @Context() context: any,
     @Args('input') input: PublicExperimentInput
   ): Promise<PublicExperimentType> {
-    const experiment = await this.experimentService.findById(input.experimentId)
-
-    if (!experiment) {
-      throw new BadRequestException('The experiment does not exist')
-    }
-
     const anonymousId = context?.req?.get('x-anonymous-id')
-    const isExpired = experiment.endAt <= timestamp()
-
-    let winnerFormId = experiment.winnerFormId
-
-    if (experiment.status === ExperimentStatusEnum.RUNNING && isExpired) {
-      const result = await this.experimentService.evaluateWinner(experiment)
-      winnerFormId = result.winnerFormId
-    }
-
-    const formId = helper.isValid(winnerFormId)
-      ? winnerFormId!
-      : await this.experimentService.assignVariant(experiment, anonymousId)
-
-    return {
-      experimentId: experiment.id,
-      formId,
-      winnerFormId
-    }
+    return this.experimentService.resolvePublicExperiment(input.experimentId, anonymousId)
   }
 }
 

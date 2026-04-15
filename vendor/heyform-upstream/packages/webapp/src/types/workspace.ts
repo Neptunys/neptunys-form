@@ -15,8 +15,15 @@ export interface ProjectType {
   launchFormId?: string
   launchExperimentId?: string
   leadNotificationEmails?: string[]
+  leadReportEmails?: string[]
+  enableRespondentNotification?: boolean
+  respondentNotificationSubject?: string
+  respondentNotificationMessage?: string
   enableLeadReport?: boolean
+  leadReportFrequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly'
   leadReportRangeDays?: number
+  leadReportSubject?: string
+  leadReportMessage?: string
   leadReportLastSentAt?: number
   reportingTimezone?: string
   enableGoogleSheetsLeadSync?: boolean
@@ -82,6 +89,26 @@ export interface WorkspaceLeadFlowType {
   leadNotificationEmails?: string[]
   enableLeadReport?: boolean
   leadReportRangeDays?: number
+  leadReportLastSentAt?: number
+  reportingTimezone?: string
+  enableGoogleSheetsLeadSync?: boolean
+  googleSheetsLeadConfig?: AnyMap
+  googleSheetsLeadLastDeliveryAt?: number
+  googleSheetsLeadLastDeliveryStatus?: string
+  googleSheetsLeadLastDeliveryMessage?: string
+}
+
+export interface ProjectLeadFlowType {
+  leadNotificationEmails?: string[]
+  leadReportEmails?: string[]
+  enableRespondentNotification?: boolean
+  respondentNotificationSubject?: string
+  respondentNotificationMessage?: string
+  enableLeadReport?: boolean
+  leadReportFrequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly'
+  leadReportRangeDays?: number
+  leadReportSubject?: string
+  leadReportMessage?: string
   leadReportLastSentAt?: number
   reportingTimezone?: string
   enableGoogleSheetsLeadSync?: boolean

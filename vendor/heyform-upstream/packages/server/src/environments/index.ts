@@ -94,6 +94,7 @@ export const REDIS_TLS: boolean = process.env.REDIS_TLS
 
 // SMTP
 export const VERIFY_USER_EMAIL: boolean = toBool(process.env.VERIFY_USER_EMAIL, false)
+export const MAIL_PROVIDER: string = (process.env.MAIL_PROVIDER || 'smtp').trim().toLowerCase()
 export const SMTP_FROM: string = process.env.SMTP_FROM
 export const SMTP_HOST: string = process.env.SMTP_HOST
 export const SMTP_PORT: number = +process.env.SMTP_PORT
@@ -102,6 +103,9 @@ export const SMTP_PASSWORD: string = process.env.SMTP_PASSWORD
 export const SMTP_SERVERNAME: string = process.env.SMTP_SERVERNAME || null
 export const SMTP_SECURE: boolean = helper.isTrue(process.env.SMTP_SECURE)
 export const SMTP_IGNORE_CERT: boolean = helper.isTrue(process.env.SMTP_IGNORE_CERT)
+export const GMAIL_SERVICE_ACCOUNT_EMAIL: string = process.env.GMAIL_SERVICE_ACCOUNT_EMAIL
+export const GMAIL_SERVICE_ACCOUNT_PRIVATE_KEY: string = process.env.GMAIL_SERVICE_ACCOUNT_PRIVATE_KEY
+export const GMAIL_IMPERSONATED_USER: string = process.env.GMAIL_IMPERSONATED_USER
 
 // Google recaptcha
 export const GOOGLE_RECAPTCHA_KEY: string = process.env.GOOGLE_RECAPTCHA_KEY

@@ -186,7 +186,7 @@ function validateNumber(rule: FieldsToValidateRules, value: AnswerValue) {
 }
 
 function validatePhoneNumber(rule: FieldsToValidateRules, value: AnswerValue) {
-  if (!isMobilePhone(value)) {
+  if (!isMobilePhone(value, rule.properties?.defaultCountryCode)) {
     throw new ValidateError({
       id: rule.id,
       kind: rule.kind,
@@ -624,7 +624,11 @@ function validateContactInfo(rule: FieldsToValidateRules, value: AnswerValue) {
     })
   }
 
-  if (showPhoneNumber && helper.isValid(value.phoneNumber) && !isMobilePhone(value.phoneNumber)) {
+  if (
+    showPhoneNumber &&
+    helper.isValid(value.phoneNumber) &&
+    !isMobilePhone(value.phoneNumber, rule.properties?.defaultCountryCode)
+  ) {
     throw new ValidateError({
       id: rule.id,
       kind: rule.kind,

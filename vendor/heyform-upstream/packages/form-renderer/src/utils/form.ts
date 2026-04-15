@@ -24,6 +24,25 @@ const MENTION_REGEX = /<span[^>]+data-mention="([^"]+)"([^>]+)?>[^<]+<\/span>/gi
 const HIDDEN_FIELD_REGEX = /<span[^>]+data-hiddenfield="([^"]+)"([^>]+)?>[^<]+<\/span>/gi
 const VARIABLE_REGEX = /<span[^>]+data-variable="([^"]+)"([^>]+)?>[^<]+<\/span>/gi
 
+const QUERY_PREFILL_KEYS = {
+  fullName: ['full_name', 'fullName', 'fullname', 'name'],
+  firstName: ['first_name', 'firstName', 'firstname', 'given_name', 'givenName', 'fname'],
+  lastName: ['last_name', 'lastName', 'lastname', 'family_name', 'familyName', 'lname', 'surname'],
+  email: ['email', 'email_address', 'emailAddress', 'mail'],
+  phoneNumber: [
+    'phone',
+    'phone_number',
+    'phoneNumber',
+    'phonenumber',
+    'mobile',
+    'mobile_number',
+    'mobileNumber',
+    'telephone',
+    'tel'
+  ],
+  company: ['company', 'company_name', 'companyName', 'business', 'business_name', 'businessName']
+} as const
+
 export function isNotNil(arg: any): boolean {
   return !helper.isNil(arg)
 }
@@ -35,6 +54,86 @@ export function isFile(arg: any): boolean {
 export function initialValue(value: any) {
   if (helper.isValid(value)) {
     return value
+  }
+}
+
+function normalizeQueryPrefillValue(value: any): string | undefined {
+  if (helper.isArray(value)) {
+    return value.map(normalizeQueryPrefillValue).find(helper.isValid)
+  }
+
+  if (helper.isString(value)) {
+    const trimmedValue = value.trim()
+
+    if (helper.isValid(trimmedValue)) {
+      return trimmedValue
+    }
+
+    return undefined
+  }
+
+  if (helper.isNumber(value)) {
+    return String(value)
+  }
+}
+
+export function getQueryPrefillValue(query: AnyMap = {}, aliases: readonly string[]) {
+  for (const alias of aliases) {
+    const value = normalizeQueryPrefillValue(query[alias])
+
+    if (helper.isValid(value)) {
+      return value
+    }
+  }
+}
+
+function splitFullName(fullName?: string) {
+  if (!helper.isValid(fullName)) {
+    return {}
+  }
+
+  const parts = fullName!.split(/\s+/).filter(Boolean)
+
+  if (parts.length === 0) {
+    return {}
+  }
+
+  const [firstName, ...rest] = parts
+
+  return {
+    firstName,
+    lastName: rest.length > 0 ? rest.join(' ') : undefined
+  }
+}
+
+export function getPrefilledName(query: AnyMap = {}) {
+  const firstName = getQueryPrefillValue(query, QUERY_PREFILL_KEYS.firstName)
+  const lastName = getQueryPrefillValue(query, QUERY_PREFILL_KEYS.lastName)
+
+  if (helper.isValid(firstName) || helper.isValid(lastName)) {
+    return {
+      firstName,
+      lastName
+    }
+  }
+
+  return splitFullName(getQueryPrefillValue(query, QUERY_PREFILL_KEYS.fullName))
+}
+
+export function getPrefilledEmail(query: AnyMap = {}) {
+  return getQueryPrefillValue(query, QUERY_PREFILL_KEYS.email)
+}
+
+export function getPrefilledPhoneNumber(query: AnyMap = {}) {
+  return getQueryPrefillValue(query, QUERY_PREFILL_KEYS.phoneNumber)
+}
+
+export function getPrefilledContactInfo(query: AnyMap = {}) {
+  return {
+    ...getPrefilledName(query),
+    email: getPrefilledEmail(query),
+    phoneNumber: getPrefilledPhoneNumber(query),
+    company: getQueryPrefillValue(query, QUERY_PREFILL_KEYS.company)
   }
 }
 

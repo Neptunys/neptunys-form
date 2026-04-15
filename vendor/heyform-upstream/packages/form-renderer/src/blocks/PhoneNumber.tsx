@@ -3,7 +3,7 @@ import { isValidPhoneNumber } from 'libphonenumber-js'
 import type { FC } from 'react'
 import { useState } from 'react'
 
-import { useTranslation } from '../utils'
+import { getPrefilledPhoneNumber, initialValue, useTranslation } from '../utils'
 import { helper } from '@heyform-inc/utils'
 
 import { FormField, PhoneNumberInput } from '../components'
@@ -16,6 +16,7 @@ export const PhoneNumber: FC<BlockProps> = ({ field, ...restProps }) => {
   const { state } = useStore()
   const { t } = useTranslation()
   const [isDropdownShown, setIsDropdownShown] = useState(false)
+  const prefilledPhoneNumber = getPrefilledPhoneNumber(state.query)
 
   function getValues(values: any) {
     return values.input
@@ -32,8 +33,9 @@ export const PhoneNumber: FC<BlockProps> = ({ field, ...restProps }) => {
     >
       <Form
         initialValues={{
-          input: state.values[field.id]
+          input: initialValue(state.values[field.id]) ?? prefilledPhoneNumber
         }}
+        autoComplete="on"
         field={field}
         getValues={getValues}
       >
@@ -66,6 +68,8 @@ export const PhoneNumber: FC<BlockProps> = ({ field, ...restProps }) => {
           ]}
         >
           <PhoneNumberInput
+            name="tel"
+            autoComplete="tel"
             defaultCountryCode={field.properties?.defaultCountryCode}
             hideCountrySelect={field.properties?.hideCountrySelect}
             onDropdownVisibleChange={setIsDropdownShown}

@@ -138,19 +138,32 @@ function ensureMetaPixel(pixelId?: string) {
 
 function trackPublicEvent(
   form: FormModel & { integrations?: Record<string, string> },
-  eventName: 'heyform_view' | 'heyform_submit'
+  eventName: 'heyform_view' | 'heyform_lead' | 'heyform_submit',
+  extraPayload?: Record<string, Any>
 ) {
   const win = window as Any
   const payload = {
     formId: form.id,
-    formName: form.name
+    formName: form.name,
+    ...extraPayload
   }
 
   if (form.integrations?.googleanalytics4 && typeof win.gtag === 'function') {
+    if (eventName === 'heyform_lead') {
+      win.gtag('event', 'generate_lead', payload)
+    }
+
     win.gtag('event', eventName, payload)
   }
 
   if (form.integrations?.googletagmanager && Array.isArray(win.dataLayer)) {
+    if (eventName === 'heyform_lead') {
+      win.dataLayer.push({
+        event: 'generate_lead',
+        ...payload
+      })
+    }
+
     win.dataLayer.push({
       event: eventName,
       ...payload
@@ -158,7 +171,14 @@ function trackPublicEvent(
   }
 
   if (form.integrations?.metapixel && typeof win.fbq === 'function') {
-    win.fbq('track', eventName === 'heyform_submit' ? 'Lead' : 'PageView')
+    if (eventName === 'heyform_view') {
+      win.fbq('track', 'PageView')
+    }
+
+    if (eventName === 'heyform_lead') {
+      win.fbq('track', 'Lead')
+    }
+
     win.fbq('trackCustom', eventName, payload)
   }
 }
@@ -166,6 +186,7 @@ function trackPublicEvent(
 export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId, experimentId }) => {
   const openTokenRef = useRef<string>('')
   const passwordTokenRef = useRef<string>('')
+  const leadTrackedRef = useRef(false)
   const lastKeepaliveSyncAtRef = useRef<number>(0)
   const activeQuestionRef = useRef<
     | {
@@ -417,7 +438,22 @@ export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId, ex
       .filter(Boolean) as HiddenFieldAnswer[]
   }
 
+  function trackLeadEventOnce(trigger: 'capture' | 'submit') {
+    if (leadTrackedRef.current) {
+      return
+    }
+
+    leadTrackedRef.current = true
+    trackPublicEvent(form, 'heyform_lead', {
+      leadTrigger: trigger
+    })
+  }
+
   async function handleLeadCapture(values: Record<string, any>) {
+    if ((form.settings as Any)?.trackLeadOnCapture) {
+      trackLeadEventOnce('capture')
+    }
+
     if (!openTokenRef.current) {
       return
     }
@@ -480,6 +516,10 @@ export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId, ex
             throw new Error(result.error.message)
           }
         }
+      }
+
+      if (!(form.settings as Any)?.trackLeadOnCapture) {
+        trackLeadEventOnce('submit')
       }
 
       sendMessageToParent('FORM_SUBMITTED')

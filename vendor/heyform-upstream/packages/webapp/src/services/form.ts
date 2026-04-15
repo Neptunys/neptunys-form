@@ -37,6 +37,7 @@ import {
   PUBLIC_EXPERIMENT_GQL,
   PUBLIC_FORM_GQL,
   PUBLIC_FORM_BY_DOMAIN_GQL,
+  PUBLIC_RENDER_GQL,
   PUBLIC_ROUTE_BY_DOMAIN_GQL,
   PUBLISH_FORM_SQL,
   RESTORE_FORM_GQL,
@@ -573,6 +574,22 @@ export class FormService {
           hostname,
           slug
         }
+      },
+      fetchPolicy: 'network-only'
+    })
+  }
+
+  static async publicRender(input: {
+    formId?: string
+    experimentId?: string
+    hostname?: string
+    slug?: string
+    previewVariantFormId?: string
+  }) {
+    return apollo.query({
+      query: PUBLIC_RENDER_GQL,
+      variables: {
+        input
       },
       fetchPolicy: 'network-only'
     })

@@ -35,6 +35,11 @@ export const ProjectShell: FC<ProjectShellProps> = ({ children }) => {
         to: `/workspace/${workspaceId}/project/${projectId}/settings`
       },
       {
+        value: 'email',
+        label: 'Email',
+        to: `/workspace/${workspaceId}/project/${projectId}/email`
+      },
+      {
         value: 'google-sheets',
         label: 'Google Sheets',
         to: `/workspace/${workspaceId}/project/${projectId}/google-sheets`

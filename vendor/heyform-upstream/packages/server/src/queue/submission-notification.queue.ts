@@ -82,6 +82,7 @@ export class SubmissionNotificationQueue extends BaseQueue {
       project?.leadNotificationEmails,
       team?.leadNotificationEmails
     )
+    const formSettings = ((form.settings || {}) as Record<string, any>) || {}
     const payload = buildLeadCapturePayload(form, submission, team || undefined, project || undefined)
     const submissionLink = `${APP_HOMEPAGE_URL}/workspace/${form.teamId}/project/${form.projectId}/form/${form.id}/submissions`
     const values = buildLeadTemplateValues(payload, {
@@ -90,7 +91,7 @@ export class SubmissionNotificationQueue extends BaseQueue {
       submissionLink
     })
 
-    if (user?.email && (form.settings as any)?.enableEmailNotification) {
+    if (user?.email && formSettings.enableEmailNotification) {
       await this.mailService.submissionNotification(user.email, {
         formName: form.name,
         submission: payload.answersHtml,
@@ -98,13 +99,23 @@ export class SubmissionNotificationQueue extends BaseQueue {
       })
     }
 
-    if ((form.settings as any)?.enableRespondentNotification && helper.isValid(payload.respondentEmail)) {
+    const respondentNotificationEnabled = Object.prototype.hasOwnProperty.call(
+      formSettings,
+      'enableRespondentNotification'
+    )
+      ? formSettings.enableRespondentNotification
+      : project?.enableRespondentNotification
+
+    if (respondentNotificationEnabled && helper.isValid(payload.respondentEmail)) {
       const subject = interpolateLeadTemplate(
-        (form.settings as any)?.respondentNotificationSubject || 'We received your submission for {formName}',
+        formSettings.respondentNotificationSubject ||
+          project?.respondentNotificationSubject ||
+          'We received your submission for {formName}',
         values
       )
       const body = renderLeadTemplateHtml(
-        (form.settings as any)?.respondentNotificationMessage ||
+        formSettings.respondentNotificationMessage ||
+          project?.respondentNotificationMessage ||
           'Hi {respondentName},\n\nThanks for your submission to {formName}. We received it on {submittedAt}. A team member will review it and follow up if needed.',
         values
       )
@@ -121,18 +132,18 @@ export class SubmissionNotificationQueue extends BaseQueue {
     }
 
     const operatorEmails = getUniqueEmails(
-      (form.settings as any)?.operatorNotificationEmails,
+      formSettings.operatorNotificationEmails,
       inheritedProjectRecipients
     )
 
-    if ((form.settings as any)?.enableOperatorNotification && operatorEmails.length > 0) {
+    if (formSettings.enableOperatorNotification && operatorEmails.length > 0) {
       const subject = interpolateLeadTemplate(
-        (form.settings as any)?.operatorNotificationSubject ||
+        formSettings.operatorNotificationSubject ||
           'New lead for {formName}: {leadPriority} priority',
         values
       )
       const message = renderLeadTemplateHtml(
-        (form.settings as any)?.operatorNotificationMessage ||
+        formSettings.operatorNotificationMessage ||
           'A new lead was captured for {formName}.\n\nName: {respondentName}\nEmail: {respondentEmail}\nPhone: {respondentPhone}\nScore: {leadScore}\nQuality: {leadQuality}\nPriority: {leadPriority}\nSubmitted: {submittedAt}',
         values
       )

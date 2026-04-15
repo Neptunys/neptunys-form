@@ -38,12 +38,52 @@ export class UpdateProjectResolver {
         : null
     }
 
+    if (Object.prototype.hasOwnProperty.call(input, 'leadReportEmails')) {
+      updates.leadReportEmails = helper.isArray(input.leadReportEmails)
+        ? input.leadReportEmails
+        : null
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, 'enableRespondentNotification')) {
+      updates.enableRespondentNotification = input.enableRespondentNotification
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, 'respondentNotificationSubject')) {
+      updates.respondentNotificationSubject = helper.isValid(input.respondentNotificationSubject)
+        ? input.respondentNotificationSubject
+        : null
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, 'respondentNotificationMessage')) {
+      updates.respondentNotificationMessage = helper.isValid(input.respondentNotificationMessage)
+        ? input.respondentNotificationMessage
+        : null
+    }
+
     if (Object.prototype.hasOwnProperty.call(input, 'enableLeadReport')) {
       updates.enableLeadReport = input.enableLeadReport
     }
 
+    if (Object.prototype.hasOwnProperty.call(input, 'leadReportFrequency')) {
+      updates.leadReportFrequency = helper.isValid(input.leadReportFrequency)
+        ? input.leadReportFrequency
+        : null
+    }
+
     if (Object.prototype.hasOwnProperty.call(input, 'leadReportRangeDays')) {
       updates.leadReportRangeDays = input.leadReportRangeDays
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, 'leadReportSubject')) {
+      updates.leadReportSubject = helper.isValid(input.leadReportSubject)
+        ? input.leadReportSubject
+        : null
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, 'leadReportMessage')) {
+      updates.leadReportMessage = helper.isValid(input.leadReportMessage)
+        ? input.leadReportMessage
+        : null
     }
 
     if (Object.prototype.hasOwnProperty.call(input, 'reportingTimezone')) {

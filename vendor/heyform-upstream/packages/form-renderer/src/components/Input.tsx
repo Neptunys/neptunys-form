@@ -8,6 +8,8 @@ import { IComponentProps } from '../typings'
 interface InputProps extends Omit<IComponentProps, 'onKeyDown'> {
   ref?: Ref<InputRef>
   type?: 'text' | 'email' | 'number' | 'tel'
+  name?: string
+  autoComplete?: string
   disabled?: boolean
   autoFocus?: boolean
   min?: number

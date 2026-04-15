@@ -1,5 +1,5 @@
 import { COUNTRIES, FlagIcon } from '@heyform-inc/form-renderer'
-import { IconChevronDown, IconChevronRight } from '@tabler/icons-react'
+import { IconCheck, IconChevronDown, IconChevronRight } from '@tabler/icons-react'
 import clsx from 'clsx'
 import type { FC } from 'react'
 import { useMemo } from 'react'
@@ -18,6 +18,10 @@ export const ContactInfo: FC<BlockProps> = ({ field, locale, ...restProps }) => 
   const showPhoneNumber = field.properties?.showPhoneNumber ?? true
   const showEmail = field.properties?.showEmail ?? true
   const showCompany = field.properties?.showCompany ?? true
+  const showConsent = field.properties?.showConsent ?? false
+  const consentText = field.properties?.consentText || 'I consent to being contacted about my enquiry.'
+  const consentLinkLabel = field.properties?.consentLinkLabel
+  const consentLinkUrl = field.properties?.consentLinkUrl
   const selectedCountry = useMemo(
     () =>
       COUNTRIES.find(country => country.value === field.properties?.defaultCountryCode) ||
@@ -75,6 +79,32 @@ export const ContactInfo: FC<BlockProps> = ({ field, locale, ...restProps }) => 
             placeholder={t('Company', { lng: locale })}
             disabled={true}
           />
+        )}
+
+        {showConsent && (
+          <div className="w-full max-w-[28rem] pt-1">
+            <div
+              className={`heyform-consent-option${field.properties?.defaultChecked ? ' heyform-consent-option-selected' : ''}`}
+            >
+              <span className="heyform-consent-box" aria-hidden="true">
+                <IconCheck className="heyform-consent-box-icon" />
+              </span>
+              <span className="heyform-consent-text">
+                {consentText || t('I accept', { lng: locale })}
+                {consentLinkLabel && consentLinkUrl && (
+                  <a
+                    href={consentLinkUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="heyform-consent-link"
+                    onClick={event => event.stopPropagation()}
+                  >
+                    {consentLinkLabel}
+                  </a>
+                )}
+              </span>
+            </div>
+          </div>
         )}
       </div>
 

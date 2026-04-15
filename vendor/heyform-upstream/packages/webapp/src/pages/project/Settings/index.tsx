@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { FormStatusEnum } from '@heyform-inc/shared-types-enums'
 import { useRequest } from 'ahooks'
 
-import { TIMEZONES } from '@/consts/date'
 import { FormService, ProjectService } from '@/services'
 import { useWorkspaceStore } from '@/store'
 import { getTimeZone, normalizeCustomDomain, useParam } from '@/utils'
@@ -127,25 +126,10 @@ export default function ProjectSettings() {
     [experiments]
   )
   const normalizedDomain = normalizeCustomDomain(workspace?.customDomain)
-
-  const timezoneOptions = useMemo(
-    () =>
-      TIMEZONES.map(timezone => ({
-        value: timezone.value,
-        label: `(GMT${timezone.gmt}) ${t(timezone.label)}`
-      })),
-    [t]
-  )
-
-  const workspaceDefaultRangeDays = workspace?.leadReportRangeDays ?? 30
-  const workspaceDefaultTimezone = workspace?.reportingTimezone ?? getTimeZone()
   const projectLeadNotificationEmailsText = (project?.leadNotificationEmails || []).join('\n')
 
   const initialValues = useMemo(
     () => ({
-      enableLeadReport: Boolean(project?.enableLeadReport),
-      leadReportRangeDays: project?.leadReportRangeDays,
-      reportingTimezone: project?.reportingTimezone,
       leadNotificationEmailsText: projectLeadNotificationEmailsText,
       launchPath: project?.launchPath ?? '',
       launchMode: project?.launchMode ?? (experiments.length > 0 ? 'experiment' : 'form'),
@@ -155,9 +139,6 @@ export default function ProjectSettings() {
     [
       experiments,
       forms,
-      project?.enableLeadReport,
-      project?.leadReportRangeDays,
-      project?.reportingTimezone,
       projectLeadNotificationEmailsText,
       project?.launchPath,
       project?.launchMode,
@@ -203,11 +184,6 @@ export default function ProjectSettings() {
     }
 
     await ProjectService.update(projectId, {
-      enableLeadReport: Boolean(values.enableLeadReport),
-      leadReportRangeDays: helper.isValid(values.leadReportRangeDays)
-        ? Number(values.leadReportRangeDays)
-        : null,
-      reportingTimezone: helper.isValid(values.reportingTimezone) ? values.reportingTimezone : '',
       leadNotificationEmails: notificationEmails.length > 0 ? notificationEmails : null,
       launchPath: helper.isValid(values.launchPath) ? values.launchPath : '',
       launchMode,
@@ -216,11 +192,6 @@ export default function ProjectSettings() {
     })
 
     updateProject(workspaceId, projectId, {
-      enableLeadReport: Boolean(values.enableLeadReport),
-      leadReportRangeDays: helper.isValid(values.leadReportRangeDays)
-        ? Number(values.leadReportRangeDays)
-        : undefined,
-      reportingTimezone: helper.isValid(values.reportingTimezone) ? values.reportingTimezone : undefined,
       leadNotificationEmails: notificationEmails.length > 0 ? notificationEmails : undefined,
       launchPath: nextLaunchPath,
       launchMode,
@@ -239,7 +210,7 @@ export default function ProjectSettings() {
 
     toast({
       title: 'Project settings updated',
-      message: 'Project routing, reporting defaults, and client report settings were saved.'
+      message: 'Project routing and internal lead routing were saved.'
     })
   }
 
@@ -283,8 +254,8 @@ export default function ProjectSettings() {
         <div className="max-w-3xl">
           <h2 className="hf-section-title">Project settings</h2>
           <p data-slot="text" className="text-secondary mt-4 text-base/5 sm:text-sm/6">
-            Override workspace lead routing and reporting defaults for this project. Leave a field
-            blank to keep inheriting the workspace value.
+            Configure internal lead routing, launch behavior, and report exports for this project.
+            Project confirmation emails and campaign recaps now live in the Email tab.
           </p>
         </div>
 
@@ -322,43 +293,12 @@ export default function ProjectSettings() {
             }}
           >
             <div className="space-y-6 rounded-2xl border border-accent-light p-5">
-              <Form.Item
-                className="[&_[data-slot=content]]:pt-1.5"
-                name="enableLeadReport"
-                label="Monthly project report"
-                description="Send a scheduled project-level digest using project recipients when provided, otherwise the workspace defaults."
-                isInline
-              >
-                <Switch />
-              </Form.Item>
-
-              <Form.Item
-                name="leadReportRangeDays"
-                label="Report lookback window (days)"
-                footer={
-                  project?.leadReportLastSentAt
-                    ? `Last project digest: ${new Date(project.leadReportLastSentAt * 1000).toLocaleString()}`
-                    : `Leave blank to use the workspace default of ${workspaceDefaultRangeDays} days.`
-                }
-              >
-                <Input type="number" min={1} max={365} placeholder={String(workspaceDefaultRangeDays)} />
-              </Form.Item>
-
-              <Form.Item
-                name="reportingTimezone"
-                label="Reporting timezone"
-                footer={`Leave blank to inherit the workspace timezone (${workspaceDefaultTimezone}).`}
-              >
-                <Select
-                  className="w-full"
-                  allowClear
-                  placeholder="Inherit workspace timezone"
-                  options={timezoneOptions}
-                  contentProps={{
-                    position: 'popper'
-                  }}
-                />
-              </Form.Item>
+              <div>
+                <h3 className="text-base font-semibold">Internal lead routing</h3>
+                <p className="text-secondary mt-1 text-sm/6">
+                  Route project leads to specific internal recipients. Client-facing confirmation and recap emails are configured in the Email tab.
+                </p>
+              </div>
 
               <Form.Item
                 name="leadNotificationEmailsText"
@@ -463,8 +403,7 @@ export default function ProjectSettings() {
                 <div>
                   <h3 className="text-base font-semibold">Client report</h3>
                   <p className="text-secondary mt-1 text-sm/6">
-                    Download the client-facing workbook for a specific window. The monthly email
-                    digest is configured above and sent separately.
+                    Download the client-facing workbook for a specific window. Scheduled recap emails are configured in the Email tab and sent separately.
                   </p>
                 </div>
 

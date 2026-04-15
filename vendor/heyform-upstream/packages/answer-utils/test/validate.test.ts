@@ -43,6 +43,29 @@ test('number', () => {
   expect(validate(rules[0], 1)).toBe(undefined)
 })
 
+test('contact info local phone numbers should respect the default country', () => {
+  const field = {
+    validations: {
+      required: true
+    },
+    properties: {
+      showFirstName: false,
+      showLastName: false,
+      showPhoneNumber: true,
+      phoneNumberRequired: true,
+      showEmail: false,
+      showCompany: false,
+      defaultCountryCode: 'GB'
+    },
+    id: 'CONTACT_INFO',
+    title: 'CONTACT_INFO',
+    kind: FieldKindEnum.CONTACT_INFO
+  }
+  const rules = fieldsToValidateRules([field])
+
+  expect(validate(rules[0], { phoneNumber: '07911123123' })).toBe(undefined)
+})
+
 test('yes or no', () => {
   const field = {
     validations: {

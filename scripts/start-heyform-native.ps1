@@ -6,6 +6,8 @@ $serverEnvPath = Join-Path $heyformRoot 'packages\server\.env'
 $webappEnvPath = Join-Path $heyformRoot 'packages\webapp\.env'
 $stateRoot = Join-Path $repoRoot '.heyform-local'
 $logRoot = Join-Path $stateRoot 'logs'
+$serverOverrideEnvPath = Join-Path $stateRoot 'server.override.env'
+$webappOverrideEnvPath = Join-Path $stateRoot 'webapp.override.env'
 
 if (-not (Test-Path $heyformRoot)) {
   throw "NeptunysForm upstream clone not found at $heyformRoot"
@@ -14,10 +16,35 @@ if (-not (Test-Path $heyformRoot)) {
 New-Item -ItemType Directory -Force -Path $stateRoot | Out-Null
 New-Item -ItemType Directory -Force -Path $logRoot | Out-Null
 
+$preferredWebappPort = 3000
+$fallbackWebappPort = 3001
+$webappPort = $preferredWebappPort
+
+$preferredWebappListener = Get-NetTCPConnection -LocalPort $preferredWebappPort -State Listen -ErrorAction SilentlyContinue |
+  Select-Object -First 1
+
+if ($null -ne $preferredWebappListener) {
+  $listenerProcess = Get-CimInstance Win32_Process -Filter "ProcessId = $($preferredWebappListener.OwningProcess)" -ErrorAction SilentlyContinue
+  $listenerCommand = $listenerProcess.CommandLine
+
+  if ($listenerCommand -notlike "*$heyformRoot*") {
+    $fallbackWebappListener = Get-NetTCPConnection -LocalPort $fallbackWebappPort -State Listen -ErrorAction SilentlyContinue |
+      Select-Object -First 1
+
+    if ($null -ne $fallbackWebappListener) {
+      throw "Ports $preferredWebappPort and $fallbackWebappPort are both in use. Free one of them before starting the native Heyform stack."
+    }
+
+    $webappPort = $fallbackWebappPort
+  }
+}
+
+$homepageUrl = "http://127.0.0.1:$webappPort"
+
 $serverEnv = @"
 APP_LISTEN_HOSTNAME=127.0.0.1
 APP_LISTEN_PORT=9157
-APP_HOMEPAGE_URL=http://127.0.0.1:3000
+APP_HOMEPAGE_URL=$homepageUrl
 COOKIE_DOMAIN=127.0.0.1
 ENABLE_GOOGLE_FONTS=false
 SESSION_MAX_AGE=15d
@@ -27,6 +54,7 @@ MONGO_URI=mongodb://127.0.0.1:27017/heyform
 MONGO_USER=
 MONGO_PASSWORD=
 UPLOAD_FILE_TYPES=.jpg,.jpeg,.png,.bmp,.gif,.webp,.svg,.txt,.md,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.pdf,.mp4,.wmv,.zip,.rar,.7z
+MAIL_PROVIDER=smtp
 SMTP_FROM=NeptunysForm <noreply@localhost>
 SMTP_HOST=127.0.0.1
 SMTP_PORT=1025
@@ -62,7 +90,7 @@ OPENAI_API_KEY=
 "@
 
 $webappEnv = @"
-VITE_HOMEPAGE_URL=http://127.0.0.1:3000
+VITE_HOMEPAGE_URL=$homepageUrl
 VITE_COOKIE_DOMAIN=127.0.0.1
 VITE_COOKIE_DOMAIN_REWRITE=127.0.0.1
 VITE_PROXY_TARGET=http://127.0.0.1:9157
@@ -75,6 +103,22 @@ VITE_DISABLE_LOGIN_WITH_APPLE=true
 VITE_VERIFY_USER_EMAIL=true
 VITE_ENABLE_GOOGLE_FONTS=false
 "@
+
+if (Test-Path $serverOverrideEnvPath) {
+  $serverOverrideEnv = Get-Content -Path $serverOverrideEnvPath -Raw
+
+  if (-not [string]::IsNullOrWhiteSpace($serverOverrideEnv)) {
+    $serverEnv += "`r`n$serverOverrideEnv"
+  }
+}
+
+if (Test-Path $webappOverrideEnvPath) {
+  $webappOverrideEnv = Get-Content -Path $webappOverrideEnvPath -Raw
+
+  if (-not [string]::IsNullOrWhiteSpace($webappOverrideEnv)) {
+    $webappEnv += "`r`n$webappOverrideEnv"
+  }
+}
 
 Set-Content -Path $serverEnvPath -Value $serverEnv -Encoding UTF8
 Set-Content -Path $webappEnvPath -Value $webappEnv -Encoding UTF8
@@ -116,7 +160,7 @@ $processSpecs = @(
   @{
     Name = 'webapp'
     FilePath = 'powershell.exe'
-    Arguments = '-NoLogo -NoProfile -ExecutionPolicy Bypass -Command "Set-Location ''' + $heyformRoot + '''; corepack pnpm --filter ./packages/webapp dev -- --host 127.0.0.1 --port 3000"'
+    Arguments = '-NoLogo -NoProfile -ExecutionPolicy Bypass -Command "Set-Location ''' + $heyformRoot + '''; corepack pnpm --filter ./packages/webapp exec vite --host 127.0.0.1 --port ' + $webappPort + '"'
     WorkingDirectory = $heyformRoot
   }
 )
@@ -146,7 +190,7 @@ $state | ConvertTo-Json -Depth 4 | Set-Content -Path $statePath -Encoding UTF8
 
 Write-Host ''
 Write-Host 'NeptunysForm native local stack started:'
-Write-Host '  App:     http://127.0.0.1:3000'
+Write-Host "  App:     $homepageUrl"
 Write-Host '  API:     http://127.0.0.1:9157/graphql'
 Write-Host '  Mailpit: http://127.0.0.1:8025'
 Write-Host ''

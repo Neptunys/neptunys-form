@@ -40,11 +40,32 @@ export class ProjectModel extends Document {
   @Prop({ type: [String] })
   leadNotificationEmails?: string[]
 
+  @Prop({ type: [String] })
+  leadReportEmails?: string[]
+
+  @Prop()
+  enableRespondentNotification?: boolean
+
+  @Prop()
+  respondentNotificationSubject?: string
+
+  @Prop()
+  respondentNotificationMessage?: string
+
   @Prop()
   enableLeadReport?: boolean
 
   @Prop()
+  leadReportFrequency?: string
+
+  @Prop()
   leadReportRangeDays?: number
+
+  @Prop()
+  leadReportSubject?: string
+
+  @Prop()
+  leadReportMessage?: string
 
   @Prop()
   leadReportLastSentAt?: number

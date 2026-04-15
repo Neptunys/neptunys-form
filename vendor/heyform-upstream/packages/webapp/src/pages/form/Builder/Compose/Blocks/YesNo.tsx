@@ -5,7 +5,12 @@ import { useTranslation } from 'react-i18next'
 import { Select } from '@/components'
 import { clone, helper } from '@heyform-inc/utils'
 
-import { LEAD_SCORE_OPTIONS, normalizeLeadScore } from '../../utils/lead-score'
+import {
+  LEAD_SCORE_LABEL_CLASSNAME,
+  LEAD_SCORE_OPTIONS,
+  LEAD_SCORE_SELECT_CLASSNAME,
+  normalizeLeadScore
+} from '../../utils/lead-score'
 import { useStoreContext } from '../../store'
 import { FakeRadio } from '../FakeRadio'
 import type { BlockProps } from './Block'
@@ -48,19 +53,20 @@ export const YesNo: FC<BlockProps> = ({ field, locale, ...restProps }) => {
     <Block className="heyform-yes-no" field={field} locale={locale} {...restProps}>
       <div className="heyform-radio-group w-full max-w-xs gap-3">
         {choices.map((choice, index) => (
-          <div key={choice.id} className="flex items-center gap-3">
-            <div className="flex-1">
-              <FakeRadio
-                hotkey={index === 0 ? 'Y' : 'N'}
-                label={index === 0 ? t('Yes', { lng: locale }) : t('No', { lng: locale })}
-              />
+          <div key={choice.id} className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <FakeRadio
+                  hotkey={index === 0 ? 'Y' : 'N'}
+                  label={index === 0 ? t('Yes', { lng: locale }) : t('No', { lng: locale })}
+                />
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-text-light text-[11px] font-medium uppercase tracking-[0.08em]">
-                Score
-              </span>
+
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <span className={LEAD_SCORE_LABEL_CLASSNAME}>Score</span>
               <Select
-                className="w-32"
+                className={LEAD_SCORE_SELECT_CLASSNAME}
                 allowClear
                 placeholder="0-3"
                 options={LEAD_SCORE_OPTIONS}

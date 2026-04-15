@@ -4,10 +4,10 @@ import { JobOptions, Queue } from 'bull'
 import { readFileSync, readdirSync } from 'fs'
 import { basename, extname, join } from 'path'
 
-import { SmtpOptionsFactory } from '@config'
+import { MailOptionsFactory } from '@config'
 import { EMAIL_TEMPLATES_DIR, SMTP_FROM, SMTP_USER } from '@environments'
 import { helper } from '@heyform-inc/utils'
-import { SmtpOptions, validateSmtpConfig } from '@utils'
+import { MailOptions, validateMailConfig } from '@utils'
 
 interface JoinWorkspaceAlertOptions {
   teamName: string
@@ -78,10 +78,10 @@ const MAIL_JOB_TIMEOUT_MS = 5 * 60 * 1000
 @Injectable()
 export class MailService {
   private readonly emailTemplates: Record<string, { subject: string; html: string }> = {}
-  private readonly smtpOptions: SmtpOptions
+  private readonly mailOptions: MailOptions
 
   constructor(@InjectQueue('MailQueue') private readonly mailQueue: Queue) {
-    this.smtpOptions = SmtpOptionsFactory()
+    this.mailOptions = MailOptionsFactory()
     this.init()
   }
 
@@ -164,7 +164,10 @@ export class MailService {
         queueName: 'MailQueue',
         data: {
           from: SMTP_FROM,
-          sender: helper.isValid(SMTP_USER) ? SMTP_USER : undefined,
+          sender:
+            this.mailOptions.provider === 'smtp' && helper.isValid(SMTP_USER)
+              ? SMTP_USER
+              : undefined,
           to: recipients,
           subject: options.subject,
           html: options.html
@@ -266,7 +269,10 @@ export class MailService {
         queueName: 'MailQueue',
         data: {
           from: SMTP_FROM,
-          sender: helper.isValid(SMTP_USER) ? SMTP_USER : undefined,
+          sender:
+            this.mailOptions.provider === 'smtp' && helper.isValid(SMTP_USER)
+              ? SMTP_USER
+              : undefined,
           to,
           subject,
           html
@@ -278,7 +284,7 @@ export class MailService {
   }
 
   private async assertMailDeliveryConfigured() {
-    const configError = validateSmtpConfig(this.smtpOptions, SMTP_FROM)
+    const configError = validateMailConfig(this.mailOptions, SMTP_FROM)
 
     if (configError) {
       throw new BadRequestException(configError)

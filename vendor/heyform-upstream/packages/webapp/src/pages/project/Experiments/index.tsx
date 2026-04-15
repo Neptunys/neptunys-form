@@ -1,7 +1,7 @@
 import { FormStatusEnum } from '@heyform-inc/shared-types-enums'
 import { IconCopy, IconTrash } from '@tabler/icons-react'
 import { useRequest } from 'ahooks'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { FormService, ProjectService } from '@/services'
 import { normalizeCustomDomain, useParam } from '@/utils'
@@ -18,6 +18,26 @@ const DURATION_OPTIONS = [
   { label: '7 days', value: 24 * 7 }
 ]
 
+function getVariantWeightDrafts(experiment: ExperimentType) {
+  return (experiment.variants || []).reduce(
+    (result, variant) => ({
+      ...result,
+      [variant.formId]: String(variant.weight ?? '')
+    }),
+    {} as Record<string, string>
+  )
+}
+
+function parseVariantWeight(value: unknown) {
+  const numericValue = Number(value)
+
+  if (!Number.isFinite(numericValue)) {
+    return 0
+  }
+
+  return Math.max(0, Math.round(numericValue))
+}
+
 function formatExperimentDate(timestampValue?: number) {
   if (!timestampValue) {
     return 'No end date'
@@ -33,7 +53,8 @@ function ExperimentCard({
   sharingURLPrefix,
   isLaunchTarget,
   launchAliasUrl,
-  onDelete
+  onDelete,
+  onUpdateSplit
 }: {
   experiment: ExperimentType
   formNameMap: Map<string, string>
@@ -41,8 +62,36 @@ function ExperimentCard({
   isLaunchTarget?: boolean
   launchAliasUrl?: string
   onDelete: (experimentId: string) => Promise<void>
+  onUpdateSplit: (
+    experimentId: string,
+    variants: Array<{ formId: string; weight: number }>
+  ) => Promise<void>
 }) {
   const toast = useToast()
+  const [draftWeights, setDraftWeights] = useState<Record<string, string>>(() =>
+    getVariantWeightDrafts(experiment)
+  )
+  const [isSavingSplit, setIsSavingSplit] = useState(false)
+
+  useEffect(() => {
+    setDraftWeights(getVariantWeightDrafts(experiment))
+  }, [experiment])
+
+  const requestedWeightTotal = useMemo(
+    () =>
+      experiment.variants.reduce(
+        (total, variant) => total + parseVariantWeight(draftWeights[variant.formId]),
+        0
+      ),
+    [draftWeights, experiment.variants]
+  )
+  const isSplitDirty = useMemo(
+    () =>
+      experiment.variants.some(
+        variant => String(parseVariantWeight(draftWeights[variant.formId])) !== String(variant.weight)
+      ),
+    [draftWeights, experiment.variants]
+  )
 
   async function handleCopy(url: string, label: string) {
     await navigator.clipboard.writeText(url)
@@ -50,6 +99,54 @@ function ExperimentCard({
       title: `${label} copied`,
       message: url
     })
+  }
+
+  function handleWeightChange(formId: string, value: any) {
+    setDraftWeights(current => ({
+      ...current,
+      [formId]: String(value ?? '')
+    }))
+  }
+
+  function getVariantPreviewUrl(formId: string) {
+    const baseUrl =
+      isLaunchTarget && launchAliasUrl
+        ? launchAliasUrl
+        : `${sharingURLPrefix}/x/${experiment.id}`
+
+    const separator = baseUrl.includes('?') ? '&' : '?'
+    return `${baseUrl}${separator}variant=${encodeURIComponent(formId)}`
+  }
+
+  async function handleSaveSplit() {
+    const variants = experiment.variants.map(variant => ({
+      formId: variant.formId,
+      weight: parseVariantWeight(draftWeights[variant.formId])
+    }))
+
+    if (variants.some(variant => variant.weight < 1)) {
+      toast({
+        title: 'Invalid traffic split',
+        message: 'Each variant needs at least 1% requested traffic before you can save.',
+        duration: 7000
+      })
+      return
+    }
+
+    setIsSavingSplit(true)
+
+    try {
+      await onUpdateSplit(experiment.id, variants)
+      toast({
+        title: 'Traffic split updated',
+        message:
+          requestedWeightTotal === 100
+            ? 'The experiment traffic split was updated.'
+            : `Requested weights totaled ${requestedWeightTotal}%. Heyform normalized them to 100% on save.`
+      })
+    } finally {
+      setIsSavingSplit(false)
+    }
   }
 
   return (
@@ -110,6 +207,67 @@ function ExperimentCard({
               : 'Winner promotion stays blocked until every variant reaches the threshold.'}
           </div>
         </div>
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-accent-light p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold">Traffic split</div>
+            <p className="text-secondary mt-1 text-sm/6">
+              Visitors stay on the same variant once assigned. Use the preview links below to QA each version, or open a private window for a fresh allocation.
+            </p>
+          </div>
+
+          <Button.Ghost size="sm" loading={isSavingSplit} disabled={!isSplitDirty} onClick={handleSaveSplit}>
+            Save traffic split
+          </Button.Ghost>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {experiment.variants.map(variant => {
+            const formName = formNameMap.get(variant.formId) || variant.formId
+            const requestedWeight = parseVariantWeight(draftWeights[variant.formId])
+
+            return (
+              <div key={variant.formId} className="hf-card-muted px-4 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-medium">{formName}</div>
+                    <div className="text-secondary mt-1 text-xs/5">Requested traffic share</div>
+                  </div>
+
+                  <div className="w-24 shrink-0">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={draftWeights[variant.formId] ?? ''}
+                      onChange={value => handleWeightChange(variant.formId, value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                  <div className="text-secondary text-xs/5">{requestedWeight}% requested</div>
+
+                  <Button.Link
+                    size="sm"
+                    onClick={() => handleCopy(getVariantPreviewUrl(variant.formId), 'Variant preview URL')}
+                  >
+                    <IconCopy className="h-4 w-4" />
+                    <span>Copy preview</span>
+                  </Button.Link>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {requestedWeightTotal !== 100 && (
+          <p className="text-secondary mt-3 text-xs/5">
+            Requested traffic totals {requestedWeightTotal}%. Heyform normalizes the saved split to 100% automatically.
+          </p>
+        )}
       </div>
 
       <div className="mt-5 overflow-x-auto">
@@ -233,6 +391,19 @@ export default function ProjectExperiments() {
     })
   }
 
+  async function handleUpdateSplit(
+    experimentId: string,
+    variants: Array<{ formId: string; weight: number }>
+  ) {
+    await ProjectService.updateExperiment({
+      projectId,
+      experimentId,
+      variants
+    })
+
+    await refreshAsync()
+  }
+
   return (
     <div className="mt-6 space-y-6">
       <div className="hf-card p-6">
@@ -322,6 +493,7 @@ export default function ProjectExperiments() {
                 : undefined
             }
             onDelete={handleDelete}
+            onUpdateSplit={handleUpdateSplit}
           />
         ))
       )}

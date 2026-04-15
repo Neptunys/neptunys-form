@@ -14,6 +14,8 @@ export const LegalTerms: FC<BlockProps> = ({ field, ...restProps }) => {
   const { t } = useTranslation()
   const consentText =
     field.properties?.consentText || 'I agree to the terms and privacy policy.'
+  const consentLinkLabel = field.properties?.consentLinkLabel
+  const consentLinkUrl = field.properties?.consentLinkUrl
   const hasStoredValue = Object.prototype.hasOwnProperty.call(state.values, field.id)
   const initialValue = hasStoredValue
     ? helper.isTrue(state.values[field.id])
@@ -47,7 +49,11 @@ export const LegalTerms: FC<BlockProps> = ({ field, ...restProps }) => {
             }
           ]}
         >
-          <ConsentCheckbox label={consentText} />
+          <ConsentCheckbox
+            label={consentText}
+            linkLabel={consentLinkLabel}
+            linkUrl={consentLinkUrl}
+          />
         </FormField>
       </Form>
     </Block>

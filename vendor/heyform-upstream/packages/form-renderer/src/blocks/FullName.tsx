@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import type { FC } from 'react'
 
-import { initialValue, useTranslation } from '../utils'
+import { getPrefilledName, initialValue, useTranslation } from '../utils'
 import { helper } from '@heyform-inc/utils'
 
 import { FormField, Input } from '../components'
@@ -17,6 +17,8 @@ export const FullName: FC<BlockProps> = ({ field, ...restProps }) => {
   const showFirstName = fullNameMode !== 'last'
   const showLastName = fullNameMode !== 'first'
   const showBothFields = showFirstName && showLastName
+  const storedValue = initialValue(state.values[field.id]) || {}
+  const prefilledName = getPrefilledName(state.query)
 
   function getValues(values: any) {
     return helper.isValid(values?.firstName) || helper.isValid(values?.lastName)
@@ -27,7 +29,11 @@ export const FullName: FC<BlockProps> = ({ field, ...restProps }) => {
   return (
     <Block className="heyform-full-name" field={field} {...restProps}>
       <Form
-        initialValues={initialValue(state.values[field.id])}
+        initialValues={{
+          ...prefilledName,
+          ...storedValue
+        }}
+        autoComplete="on"
         field={field}
         getValues={getValues}
       >
@@ -47,7 +53,7 @@ export const FullName: FC<BlockProps> = ({ field, ...restProps }) => {
                 }
               ]}
             >
-              <Input placeholder={t('First Name')} />
+              <Input name="given-name" autoComplete="given-name" placeholder={t('First Name')} />
             </FormField>
           )}
 
@@ -62,7 +68,7 @@ export const FullName: FC<BlockProps> = ({ field, ...restProps }) => {
                 }
               ]}
             >
-              <Input placeholder={t('Last Name')} />
+              <Input name="family-name" autoComplete="family-name" placeholder={t('Last Name')} />
             </FormField>
           )}
         </div>

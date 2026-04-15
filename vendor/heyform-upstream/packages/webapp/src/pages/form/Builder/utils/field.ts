@@ -174,6 +174,11 @@ export function getPropertiesFromKind(properties: Property, newKind: FieldKindEn
       props.emailRequired = props.emailRequired ?? true
       props.showCompany = props.showCompany ?? true
       props.companyRequired = props.companyRequired ?? false
+      props.showConsent = props.showConsent ?? false
+      props.consentText = props.consentText ?? 'I consent to being contacted about my enquiry.'
+      props.consentLinkLabel = props.consentLinkLabel ?? undefined
+      props.consentLinkUrl = props.consentLinkUrl ?? undefined
+      props.defaultChecked = props.defaultChecked ?? true
       props.mapToContacts = props.mapToContacts ?? false
       props.fullNameMode = props.showFirstName && props.showLastName
         ? 'both'
@@ -295,6 +300,11 @@ export function getFieldFromKind(kind: FieldKindEnum | string): FormFieldType {
       field.properties!.emailRequired = true
       field.properties!.showCompany = true
       field.properties!.companyRequired = false
+      field.properties!.showConsent = false
+      field.properties!.consentText = 'I consent to being contacted about my enquiry.'
+      field.properties!.consentLinkLabel = undefined
+      field.properties!.consentLinkUrl = undefined
+      field.properties!.defaultChecked = true
       field.properties!.mapToContacts = false
       field.properties!.defaultCountryCode = 'US'
       field.properties!.hideCountrySelect = false
@@ -325,6 +335,8 @@ export function getFieldFromKind(kind: FieldKindEnum | string): FormFieldType {
       field.validations!.required = true
       field.properties!.buttonText = 'Continue'
       field.properties!.consentText = 'I agree to the terms and privacy policy.'
+      field.properties!.consentLinkLabel = undefined
+      field.properties!.consentLinkUrl = undefined
       field.properties!.defaultChecked = false
       break
 

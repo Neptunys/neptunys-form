@@ -216,8 +216,8 @@ export default function LinkSettings() {
                   </div>
                 </div>
               ) : (
-                <div className="relative aspect-[1200/630] select-none overflow-hidden rounded-lg bg-foreground text-background">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.14),transparent_42%)]" />
+                <div className="relative aspect-[1200/630] select-none overflow-hidden rounded-lg bg-slate-100 text-slate-900">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.75),transparent_42%)]" />
 
                   <div className="relative flex h-full flex-col justify-between p-7">
                     <div className="max-w-[78%]">
@@ -225,13 +225,13 @@ export default function LinkSettings() {
                         {title}
                       </div>
                       {!!description && (
-                        <div className="mt-3 overflow-hidden text-sm/6 text-background/70 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
+                        <div className="mt-3 overflow-hidden text-sm/6 text-slate-600 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
                           {description}
                         </div>
                       )}
                     </div>
 
-                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-background/60">
+                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                       NeptunysForm
                     </div>
                   </div>

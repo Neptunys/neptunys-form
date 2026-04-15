@@ -43,6 +43,25 @@ export default function LegalTermsSettings({ field }: RequiredSettingsProps) {
       </div>
 
       <div className="space-y-1">
+        <div className="text-sm/6">Consent link text</div>
+        <Input
+          placeholder="Privacy policy"
+          value={field.properties?.consentLinkLabel}
+          onChange={value => handleChange('consentLinkLabel', value)}
+        />
+      </div>
+
+      <div className="space-y-1">
+        <div className="text-sm/6">Consent link URL</div>
+        <Input
+          type="url"
+          placeholder="https://example.com/privacy"
+          value={field.properties?.consentLinkUrl}
+          onChange={value => handleChange('consentLinkUrl', value)}
+        />
+      </div>
+
+      <div className="space-y-1">
         <div className="text-sm/6">Button label</div>
         <Input
           placeholder="Continue"

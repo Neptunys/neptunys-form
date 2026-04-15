@@ -1,6 +1,6 @@
 import type { FC } from 'react'
 
-import { useTranslation } from '../utils'
+import { getPrefilledEmail, initialValue, useTranslation } from '../utils'
 
 import { FormField, Input } from '../components'
 import { useStore } from '../store'
@@ -11,6 +11,7 @@ import { Form } from './Form'
 export const Email: FC<BlockProps> = ({ field, ...restProps }) => {
   const { state } = useStore()
   const { t } = useTranslation()
+  const prefilledEmail = getPrefilledEmail(state.query)
 
   function getValues(values: any) {
     return values.input
@@ -20,8 +21,9 @@ export const Email: FC<BlockProps> = ({ field, ...restProps }) => {
     <Block className="heyform-email" field={field} {...restProps}>
       <Form
         initialValues={{
-          input: state.values[field.id]
+          input: initialValue(state.values[field.id]) ?? prefilledEmail
         }}
+        autoComplete="on"
         field={field}
         getValues={getValues}
       >
@@ -35,7 +37,7 @@ export const Email: FC<BlockProps> = ({ field, ...restProps }) => {
             }
           ]}
         >
-          <Input type="email" placeholder="email@example.com" />
+          <Input name="email" autoComplete="email" type="email" placeholder="email@example.com" />
         </FormField>
       </Form>
     </Block>

@@ -22,7 +22,7 @@ services:
       - key: ENABLE_GOOGLE_FONTS
         value: "false"
       - key: VERIFY_USER_EMAIL
-        value: "false"
+        value: "true"
       - key: ADMIN_APPROVAL_EMAIL
         value: contact@neptunys.com
       - key: BULL_JOB_TIMEOUT
@@ -36,7 +36,7 @@ services:
       - key: REDIS_URL
         sync: false
       - key: SMTP_FROM
-        value: NeptunysForm <noreplay@neptunys.com>
+        value: NeptunysForm <noreply@neptunys.com>
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT

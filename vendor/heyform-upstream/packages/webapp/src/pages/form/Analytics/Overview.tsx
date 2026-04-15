@@ -432,7 +432,7 @@ export default function FormAnalyticsOverview() {
                     </td>
                     <td className="px-5 py-4">
                       <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold leading-4 ${
                           question.frictionLevel === 'high'
                             ? 'bg-red-100 text-red-700'
                             : question.frictionLevel === 'medium'

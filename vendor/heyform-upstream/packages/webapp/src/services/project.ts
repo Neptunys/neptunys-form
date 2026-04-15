@@ -14,7 +14,9 @@ import {
   PROJECT_LEAD_FLOW_GQL,
   PROJECT_LAUNCH_OVERVIEW_GQL,
   RENAME_PROJECT_GQL,
+  TEST_PROJECT_EMAIL_GQL,
   TEST_PROJECT_GOOGLE_SHEETS_GQL,
+  UPDATE_EXPERIMENT_GQL,
   UPDATE_PROJECT_GQL
 } from '@/consts'
 
@@ -175,6 +177,25 @@ export class ProjectService {
     })
   }
 
+  static testEmail(
+    projectId: string,
+    input: {
+      emailType: 'confirmation' | 'recap'
+      recipientEmail: string
+      settingsOverride?: AnyMap
+    }
+  ) {
+    return apollo.mutate({
+      mutation: TEST_PROJECT_EMAIL_GQL,
+      variables: {
+        input: {
+          projectId,
+          ...input
+        }
+      }
+    })
+  }
+
   static downloadReport(
     projectId: string,
     input: {
@@ -220,6 +241,25 @@ export class ProjectService {
           projectId,
           experimentId
         }
+      }
+    })
+  }
+
+  static updateExperiment(input: {
+    projectId: string
+    experimentId: string
+    name?: string
+    variants?: Array<{ formId: string; weight?: number }>
+    status?: string
+    winnerFormId?: string
+    autoPromote?: boolean
+    durationHours?: number
+    minimumSampleSize?: number
+  }) {
+    return apollo.mutate({
+      mutation: UPDATE_EXPERIMENT_GQL,
+      variables: {
+        input
       }
     })
   }

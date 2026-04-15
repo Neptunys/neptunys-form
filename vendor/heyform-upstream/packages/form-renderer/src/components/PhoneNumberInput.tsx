@@ -1,7 +1,6 @@
 import type { PhoneNumber } from 'libphonenumber-js'
 import {
   formatIncompletePhoneNumber,
-  isValidPhoneNumber,
   parsePhoneNumber
 } from 'libphonenumber-js'
 import type { FC } from 'react'
@@ -11,11 +10,12 @@ import { helper } from '@heyform-inc/utils'
 
 import { COUNTRIES } from '../consts'
 import { CountrySelect } from './CountrySelect'
-import { FlagIcon } from './FlagIcon'
 import { Input } from './Input'
 
 interface PhoneNumberInputProps {
   value?: string
+  name?: string
+  autoComplete?: string
   defaultCountryCode?: string
   hideCountrySelect?: boolean
   onDropdownVisibleChange?: (visible: boolean) => void
@@ -61,6 +61,8 @@ function getSubmittedValue(input: string, countryCode: string) {
 }
 
 export const PhoneNumberInput: FC<PhoneNumberInputProps> = ({
+  name,
+  autoComplete,
   defaultCountryCode = 'US',
   hideCountrySelect = false,
   value: rawValue = '',
@@ -143,28 +145,27 @@ export const PhoneNumberInput: FC<PhoneNumberInputProps> = ({
       setCountryCode(defaultCountryCode)
     }
 
-    if (isValidPhoneNumber(rawValue)) {
-      const parsed = parsePhoneNumber(rawValue, defaultCountryCode as any)
+    const parsed = normalizeLeadingZeroPhoneNumber(rawValue, defaultCountryCode)
 
-      if (parsed) {
-        const { country, nationalNumber } = parsed
-        const nextCountryCode = hideCountrySelect ? defaultCountryCode : country || defaultCountryCode
-        const newValue = format(nationalNumber! as string, nextCountryCode)
+    if (parsed) {
+      const { country, nationalNumber } = parsed
+      const nextCountryCode = hideCountrySelect ? defaultCountryCode : country || defaultCountryCode
+      const newValue = format(nationalNumber! as string, nextCountryCode)
 
-        setValue(newValue)
-        setCountryCode(nextCountryCode)
-      }
+      setValue(newValue)
+      setCountryCode(nextCountryCode)
+      return
     }
-  }, [])
+
+    if (!rawValue) {
+      setValue('')
+      setCountryCode(defaultCountryCode)
+    }
+  }, [defaultCountryCode, hideCountrySelect, rawValue])
 
   return (
     <div className="flex items-center">
-      {hideCountrySelect ? (
-        <div className="heyform-calling-code">
-          <FlagIcon countryCode={selectedCountry?.value} />
-          <span className="heyform-phone-static-code">+{selectedCountry?.callingCode}</span>
-        </div>
-      ) : (
+      {!hideCountrySelect && (
         <CountrySelect
           popupClassName="heyform-phone-number-popup"
           enableLabel={false}
@@ -176,6 +177,8 @@ export const PhoneNumberInput: FC<PhoneNumberInputProps> = ({
         />
       )}
       <Input
+        name={name}
+        autoComplete={autoComplete}
         type="tel"
         value={value}
         placeholder={placeholder}

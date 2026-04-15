@@ -104,6 +104,18 @@ class SharedPropertyInput {
   consentText?: string
 
   @Field({ nullable: true })
+  @IsOptional()
+  consentLinkLabel?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  consentLinkUrl?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  showConsent?: boolean
+
+  @Field({ nullable: true })
   allowOther?: boolean
 
   @Field({ nullable: true })
@@ -459,6 +471,29 @@ export class PublicFormRouteInput {
   @Field({ nullable: true })
   @IsOptional()
   slug?: string
+}
+
+@InputType()
+export class PublicRenderInput {
+  @Field({ nullable: true })
+  @IsOptional()
+  formId?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  experimentId?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  hostname?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  slug?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  previewVariantFormId?: string
 }
 
 @InputType()
@@ -827,6 +862,10 @@ export class UpdateFormInput extends FormDetailInput {
   @Field({ nullable: true })
   @IsOptional()
   respondentPhoneFieldId?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  trackLeadOnCapture?: boolean
 
   @Field({ nullable: true })
   @IsOptional()
@@ -1249,6 +1288,18 @@ export class PropertyType {
   hideMarks?: boolean
 
   @Field({ nullable: true })
+  consentText?: string
+
+  @Field({ nullable: true })
+  consentLinkLabel?: string
+
+  @Field({ nullable: true })
+  consentLinkUrl?: string
+
+  @Field({ nullable: true })
+  showConsent?: boolean
+
+  @Field({ nullable: true })
   allowOther?: boolean
 
   @Field({ nullable: true })
@@ -1337,6 +1388,9 @@ export class PropertyType {
 
   @Field({ nullable: true })
   score?: number
+
+  @Field({ nullable: true })
+  defaultChecked?: boolean
 }
 
 @ObjectType()
@@ -1503,6 +1557,9 @@ export class FormSettingType {
 
   @Field({ nullable: true })
   respondentPhoneFieldId?: string
+
+  @Field({ nullable: true })
+  trackLeadOnCapture?: boolean
 
   @Field({ nullable: true })
   enableRespondentNotification?: boolean
@@ -1719,6 +1776,15 @@ export class PublicFormType extends FormType {
 
   @Field(type => GraphQLJSONObject, { nullable: true })
   integrations?: Record<string, string>
+}
+
+@ObjectType()
+export class PublicRenderType {
+  @Field(type => PublicFormType)
+  form: PublicFormType
+
+  @Field({ nullable: true })
+  experimentId?: string
 }
 
 @ObjectType()

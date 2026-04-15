@@ -14,8 +14,15 @@ export class ProjectLeadFlowResolver {
   ): Promise<ProjectLeadFlowType> {
     return {
       leadNotificationEmails: project.leadNotificationEmails,
+      leadReportEmails: project.leadReportEmails,
+      enableRespondentNotification: project.enableRespondentNotification,
+      respondentNotificationSubject: project.respondentNotificationSubject,
+      respondentNotificationMessage: project.respondentNotificationMessage,
       enableLeadReport: project.enableLeadReport,
+      leadReportFrequency: project.leadReportFrequency,
       leadReportRangeDays: project.leadReportRangeDays,
+      leadReportSubject: project.leadReportSubject,
+      leadReportMessage: project.leadReportMessage,
       leadReportLastSentAt: project.leadReportLastSentAt,
       reportingTimezone: project.reportingTimezone,
       enableGoogleSheetsLeadSync: project.enableGoogleSheetsLeadSync,

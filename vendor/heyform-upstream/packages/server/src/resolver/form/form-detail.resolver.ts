@@ -2,14 +2,22 @@ import { Auth, FormGuard, Team } from '@decorator'
 import {
   FormDetailInput,
   FormType,
+  PublicRenderInput,
+  PublicRenderType,
   PublicFormRouteInput,
   PublicFormType,
   PublicRouteType
 } from '@graphql'
 import { date, helper } from '@heyform-inc/utils'
 import { FormModel, IntegrationStatusEnum, TeamModel } from '@model'
-import { Args, Query, Resolver } from '@nestjs/graphql'
-import { FormService, IntegrationService, ProjectService, SubmissionService } from '@service'
+import { Args, Context, Query, Resolver } from '@nestjs/graphql'
+import {
+  ExperimentService,
+  FormService,
+  IntegrationService,
+  ProjectService,
+  SubmissionService
+} from '@service'
 
 const DEFAULT_FORM_NAME = 'Untitled'
 
@@ -51,7 +59,8 @@ export class PublicFormResolver {
   constructor(
     private readonly formService: FormService,
     private readonly integrationService: IntegrationService,
-    private readonly projectService: ProjectService
+    private readonly projectService: ProjectService,
+    private readonly experimentService: ExperimentService
   ) {}
 
   private async buildPublicFormResponse(formId: string): Promise<PublicFormType> {
@@ -170,5 +179,60 @@ export class PublicFormResolver {
     }
 
     return resolvedRoute
+  }
+
+  @Query(returns => PublicRenderType)
+  async publicRender(
+    @Context() context: any,
+    @Args('input') input: PublicRenderInput
+  ): Promise<PublicRenderType> {
+    let resolvedFormId = input.formId
+    let resolvedExperimentId = input.experimentId
+
+    if (!resolvedFormId && helper.isValid(input.hostname)) {
+      if (helper.isValid(input.slug)) {
+        const resolvedRoute = await this.projectService.resolvePublicRouteByDomain(
+          input.hostname!,
+          input.slug
+        )
+
+        if (resolvedRoute?.kind === 'form' && resolvedRoute.formId) {
+          resolvedFormId = resolvedRoute.formId
+        }
+
+        if (resolvedRoute?.kind === 'experiment' && resolvedRoute.experimentId) {
+          resolvedExperimentId = resolvedRoute.experimentId
+        }
+      }
+
+      if (!resolvedFormId && !resolvedExperimentId) {
+        const resolvedForm = await this.formService.resolvePublicFormByDomain(input.hostname!, input.slug)
+
+        if (resolvedForm) {
+          resolvedFormId = resolvedForm.id
+        }
+      }
+    }
+
+    if (!resolvedFormId && resolvedExperimentId) {
+      const anonymousId = context?.req?.get('x-anonymous-id')
+      const resolvedExperiment = await this.experimentService.resolvePublicExperiment(
+        resolvedExperimentId,
+        anonymousId,
+        input.previewVariantFormId
+      )
+
+      resolvedFormId = resolvedExperiment.formId
+      resolvedExperimentId = resolvedExperiment.experimentId
+    }
+
+    if (!resolvedFormId) {
+      throw new Error('Form not found')
+    }
+
+    return {
+      form: await this.buildPublicFormResponse(resolvedFormId),
+      experimentId: resolvedExperimentId
+    }
   }
 }

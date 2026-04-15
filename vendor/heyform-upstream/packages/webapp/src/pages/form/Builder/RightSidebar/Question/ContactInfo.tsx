@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 
 import { cn, isRenderableImageSource } from '@/utils'
 
-import { Button, ImagePicker, Select, Switch, Tooltip } from '@/components'
+import { Button, ImagePicker, Input, Select, Switch, Tooltip } from '@/components'
 
 import { useStoreContext } from '../../store'
 import { RequiredSettingsProps } from './Required'
@@ -77,6 +77,7 @@ export default function ContactInfoSettings({ field }: RequiredSettingsProps) {
   const showPhoneNumber = field.properties?.showPhoneNumber ?? true
   const showEmail = field.properties?.showEmail ?? true
   const showCompany = field.properties?.showCompany ?? true
+  const showConsent = field.properties?.showConsent ?? false
   const hasMedia = isRenderableImageSource(field.layout?.mediaUrl)
   const legacyRequired = Boolean(field.validations?.required)
 
@@ -214,8 +215,78 @@ export default function ContactInfoSettings({ field }: RequiredSettingsProps) {
             multiLanguage
             onChange={value => updateProperties({ defaultCountryCode: value })}
           />
+
+          <div className="flex items-center justify-between pt-2">
+            <label className="text-sm/6">{t('form.builder.settings.phoneNumber.hideCountryPicker')}</label>
+
+            <Switch
+              value={field.properties?.hideCountrySelect}
+              onChange={value => updateProperties({ hideCountrySelect: value })}
+            />
+          </div>
         </div>
       )}
+
+      <div className="hf-card-muted space-y-3 rounded-xl px-3 py-3">
+        <div className="flex items-center justify-between">
+          <label className="text-sm/6 font-medium">Consent block</label>
+
+          <Switch
+            value={showConsent}
+            onChange={value => updateProperties({ showConsent: value })}
+          />
+        </div>
+
+        {showConsent && (
+          <>
+            <div className="space-y-1">
+              <label className="text-sm/6">Consent label</label>
+
+              <Input
+                placeholder="I consent to being contacted about my enquiry."
+                value={field.properties?.consentText}
+                onChange={value =>
+                  updateProperties({ consentText: typeof value === 'string' ? value.trim() || undefined : value })
+                }
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm/6">Consent link text</label>
+
+              <Input
+                placeholder="Privacy policy"
+                value={field.properties?.consentLinkLabel}
+                onChange={value =>
+                  updateProperties({ consentLinkLabel: typeof value === 'string' ? value.trim() || undefined : value })
+                }
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm/6">Consent link URL</label>
+
+              <Input
+                type="url"
+                placeholder="https://example.com/privacy"
+                value={field.properties?.consentLinkUrl}
+                onChange={value =>
+                  updateProperties({ consentLinkUrl: typeof value === 'string' ? value.trim() || undefined : value })
+                }
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="text-sm/6">Checked by default</label>
+
+              <Switch
+                value={field.properties?.defaultChecked ?? true}
+                onChange={value => updateProperties({ defaultChecked: value })}
+              />
+            </div>
+          </>
+        )}
+      </div>
 
       <div className="flex items-center justify-between">
         <label className="text-sm/6">Map to contacts</label>

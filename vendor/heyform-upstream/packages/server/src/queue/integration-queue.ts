@@ -43,7 +43,10 @@ export class IntegrationQueue extends BaseQueue {
       ])
 
       if (submission && form) {
-        const team = await this.teamService.findById(teamId || form.teamId)
+        const [team, project] = await Promise.all([
+          this.teamService.findById(teamId || form.teamId),
+          form.projectId ? this.projectService.findById(projectId || form.projectId) : Promise.resolve(null)
+        ])
         const config = integration ? mapToObject(integration.config) : mapToObject(rawConfig)
 
         try {
@@ -51,7 +54,8 @@ export class IntegrationQueue extends BaseQueue {
             submission,
             form,
             config,
-            team: team || undefined
+            team: team || undefined,
+            project: project || undefined
           })
 
           if (integration) {

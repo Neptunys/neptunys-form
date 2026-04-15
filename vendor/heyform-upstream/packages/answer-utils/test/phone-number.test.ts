@@ -54,3 +54,22 @@ test('invalid value should throw error', () => {
     })
   }).toThrow('Please enter a valid mobile phone number')
 })
+
+test('local value with a leading zero should be normalized when a default country is configured', () => {
+  const answer = fieldValuesToAnswers(
+    [
+      {
+        ...field,
+        validations: { required: true },
+        properties: {
+          defaultCountryCode: 'GB'
+        }
+      }
+    ],
+    {
+      PHONE_NUMBER: '07911123123'
+    }
+  )
+
+  expect(answer[0].value).toBe('+447911123123')
+})

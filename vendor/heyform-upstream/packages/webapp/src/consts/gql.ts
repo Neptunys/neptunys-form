@@ -101,8 +101,15 @@ export const WORKSPACES_GQL = gql`
         launchFormId
         launchExperimentId
         leadNotificationEmails
+        leadReportEmails
+        enableRespondentNotification
+        respondentNotificationSubject
+        respondentNotificationMessage
         enableLeadReport
+        leadReportFrequency
         leadReportRangeDays
+        leadReportSubject
+        leadReportMessage
         leadReportLastSentAt
         reportingTimezone
         enableGoogleSheetsLeadSync
@@ -403,8 +410,15 @@ export const PROJECT_LEAD_FLOW_GQL = gql`
   query projectLeadFlow($input: ProjectDetailInput!) {
     projectLeadFlow(input: $input) {
       leadNotificationEmails
+      leadReportEmails
+      enableRespondentNotification
+      respondentNotificationSubject
+      respondentNotificationMessage
       enableLeadReport
+      leadReportFrequency
       leadReportRangeDays
+      leadReportSubject
+      leadReportMessage
       leadReportLastSentAt
       reportingTimezone
       enableGoogleSheetsLeadSync
@@ -419,6 +433,12 @@ export const PROJECT_LEAD_FLOW_GQL = gql`
 export const TEST_PROJECT_GOOGLE_SHEETS_GQL = gql`
   mutation testProjectGoogleSheets($input: TestProjectGoogleSheetsInput!) {
     testProjectGoogleSheets(input: $input)
+  }
+`
+
+export const TEST_PROJECT_EMAIL_GQL = gql`
+  mutation testProjectEmail($input: SendProjectEmailTestInput!) {
+    testProjectEmail(input: $input)
   }
 `
 
@@ -746,6 +766,7 @@ export const FORM_DETAIL_GQL = gql`
         respondentNameFieldId
         respondentEmailFieldId
         respondentPhoneFieldId
+        trackLeadOnCapture
         enableRespondentNotification
         respondentNotificationSubject
         respondentNotificationMessage
@@ -1600,17 +1621,9 @@ export const PUBLIC_FORM_GQL = gql`
   query publicForm($input: FormDetailInput!) {
     publicForm(input: $input) {
       id
-      slug
-      isDomainRoot
-      teamId
-      memberId
       name
-      description
-      interactiveMode
-      kind
       stripeAccount {
         accountId
-        email
       }
       settings {
         captchaKind
@@ -1637,21 +1650,12 @@ export const PUBLIC_FORM_GQL = gql`
         enableQuestionNumbers
         enableQuestionList
         enableNavigationArrows
+        trackLeadOnCapture
         locale
         languages
         enableClosedMessage
         closedFormTitle
         closedFormDescription
-      }
-      drafts {
-        id
-        title
-        titleSchema
-        description
-        kind
-        validations
-        properties
-        layout
       }
       fields {
         id
@@ -1670,15 +1674,11 @@ export const PUBLIC_FORM_GQL = gql`
       }
       logics
       variables
-      fieldsUpdatedAt
       themeSettings {
         logo
         theme
       }
-      retentionAt
       suspended
-      isDraft
-      status
       integrations
     }
   }
@@ -1688,17 +1688,9 @@ export const PUBLIC_FORM_BY_DOMAIN_GQL = gql`
   query publicFormByDomain($input: PublicFormRouteInput!) {
     publicFormByDomain(input: $input) {
       id
-      slug
-      isDomainRoot
-      teamId
-      memberId
       name
-      description
-      interactiveMode
-      kind
       stripeAccount {
         accountId
-        email
       }
       settings {
         captchaKind
@@ -1725,21 +1717,12 @@ export const PUBLIC_FORM_BY_DOMAIN_GQL = gql`
         enableQuestionNumbers
         enableQuestionList
         enableNavigationArrows
+        trackLeadOnCapture
         locale
         languages
         enableClosedMessage
         closedFormTitle
         closedFormDescription
-      }
-      drafts {
-        id
-        title
-        titleSchema
-        description
-        kind
-        validations
-        properties
-        layout
       }
       fields {
         id
@@ -1758,16 +1741,82 @@ export const PUBLIC_FORM_BY_DOMAIN_GQL = gql`
       }
       logics
       variables
-      fieldsUpdatedAt
       themeSettings {
         logo
         theme
       }
-      retentionAt
       suspended
-      isDraft
-      status
       integrations
+    }
+  }
+`
+
+export const PUBLIC_RENDER_GQL = gql`
+  query publicRender($input: PublicRenderInput!) {
+    publicRender(input: $input) {
+      experimentId
+      form {
+        id
+        name
+        stripeAccount {
+          accountId
+        }
+        settings {
+          captchaKind
+          googleRecaptchaKey
+          active
+          enableExpirationDate
+          expirationTimeZone
+          enabledAt
+          closedAt
+          enableTimeLimit
+          timeLimit
+          filterSpam
+          allowArchive
+          password
+          requirePassword
+          enableQuotaLimit
+          quotaLimit
+          enableIpLimit
+          ipLimitCount
+          ipLimitTime
+          enableProgress
+          progressStyle
+          autoAdvanceSingleChoice
+          enableQuestionNumbers
+          enableQuestionList
+          enableNavigationArrows
+          trackLeadOnCapture
+          locale
+          languages
+          enableClosedMessage
+          closedFormTitle
+          closedFormDescription
+        }
+        fields {
+          id
+          title
+          titleSchema
+          description
+          kind
+          validations
+          properties
+          layout
+        }
+        translations
+        hiddenFields {
+          id
+          name
+        }
+        logics
+        variables
+        themeSettings {
+          logo
+          theme
+        }
+        suspended
+        integrations
+      }
     }
   }
 `

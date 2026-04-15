@@ -16,7 +16,12 @@ import { cn, nextTick } from '@/utils'
 import { Select } from '@/components'
 import { clone, excludeObject, helper, nanoid } from '@heyform-inc/utils'
 
-import { LEAD_SCORE_OPTIONS, normalizeLeadScore } from '../../utils/lead-score'
+import {
+  LEAD_SCORE_LABEL_CLASSNAME,
+  LEAD_SCORE_OPTIONS,
+  LEAD_SCORE_SELECT_CLASSNAME,
+  normalizeLeadScore
+} from '../../utils/lead-score'
 import { useStoreContext } from '../../store'
 import type { BlockProps } from './Block'
 import { Block } from './Block'
@@ -98,21 +103,21 @@ const MultipleChoiceItem: FC<MultipleChoiceItemProps> = ({
 
   return (
     <div className="heyform-radio">
-      <div className="heyform-radio-container">
-        <div className="heyform-radio-content">
-          <div
-            className={cn(
-              'heyform-radio-hotkey',
-              isOther ? null : 'heyform-multiple-choice-handle cursor-move'
-            )}
-          >
-            {getChoiceKeyName(badge, index)}
-          </div>
-          <div className="heyform-radio-label">
-            {isOther ? (
-              <div className="heyform-radio-label-other cursor-default">{choice.label}</div>
-            ) : (
-              <>
+      <div className="flex w-full flex-col gap-3">
+        <div className="heyform-radio-container flex-1">
+          <div className="heyform-radio-content">
+            <div
+              className={cn(
+                'heyform-radio-hotkey',
+                isOther ? null : 'heyform-multiple-choice-handle cursor-move'
+              )}
+            >
+              {getChoiceKeyName(badge, index)}
+            </div>
+            <div className="heyform-radio-label">
+              {isOther ? (
+                <div className="heyform-radio-label-other cursor-default">{choice.label}</div>
+              ) : (
                 <AutoResizeTextarea
                   ref={ref}
                   value={choice.label}
@@ -122,28 +127,29 @@ const MultipleChoiceItem: FC<MultipleChoiceItemProps> = ({
                   onChange={handleChange}
                   onKeyDown={handleKeyDown}
                 />
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="text-text-light min-w-10 text-[11px] font-medium uppercase tracking-[0.08em]">
-                    Score
-                  </span>
-                  <Select
-                    className="w-32"
-                    allowClear
-                    placeholder="0-3"
-                    options={LEAD_SCORE_OPTIONS}
-                    value={choice.score ?? ''}
-                    onChange={handleScoreChange}
-                  />
-                </div>
-              </>
+              )}
+            </div>
+            {enableRemove && (
+              <div className="heyform-radio-remove" onClick={handleRemove}>
+                <IconX />
+              </div>
             )}
           </div>
-          {enableRemove && (
-            <div className="heyform-radio-remove" onClick={handleRemove}>
-              <IconX />
-            </div>
-          )}
         </div>
+
+        {!isOther && (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <span className={LEAD_SCORE_LABEL_CLASSNAME}>Score</span>
+            <Select
+              className={LEAD_SCORE_SELECT_CLASSNAME}
+              allowClear
+              placeholder="0-3"
+              options={LEAD_SCORE_OPTIONS}
+              value={choice.score ?? ''}
+              onChange={handleScoreChange}
+            />
+          </div>
+        )}
       </div>
     </div>
   )

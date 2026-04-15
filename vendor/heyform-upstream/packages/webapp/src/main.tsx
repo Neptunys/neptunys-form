@@ -199,7 +199,35 @@ const App = ({ routes }: { routes: Route[] }) => {
 
 let root: Root | undefined
 
+const RUNTIME_CONFIG_KEYS = [
+  'homepageURL',
+  'websiteURL',
+  'cookieDomain',
+  'stripePublishableKey',
+  'googleRecaptchaKey',
+  'templatesURL',
+  'helpCenterURL',
+  'appDisableRegistration',
+  'disableLoginWithGoogle',
+  'disableLoginWithApple',
+  'verifyUserEmail'
+]
+
+function hasInjectedRuntimeConfig() {
+  const runtimeConfig = window.heyform
+
+  if (!runtimeConfig) {
+    return false
+  }
+
+  return RUNTIME_CONFIG_KEYS.some(key => typeof (runtimeConfig as any)[key] !== 'undefined')
+}
+
 async function loadRuntimeConfig() {
+  if (hasInjectedRuntimeConfig()) {
+    return
+  }
+
   try {
     const response = await fetch('/api/config', {
       credentials: 'include'

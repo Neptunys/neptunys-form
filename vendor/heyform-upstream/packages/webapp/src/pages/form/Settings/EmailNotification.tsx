@@ -179,6 +179,16 @@ export default function FormSettingsEmailNotification() {
           </Form.Item>
         </div>
 
+        <Form.Item
+          className="[&_[data-slot=content]]:pt-1.5"
+          name="trackLeadOnCapture"
+          label="Count lead on contact capture"
+          description="Installed pixels fire their lead event as soon as a valid email or phone number is captured. Leave this off to wait for a successful submission and thank-you step."
+          isInline
+        >
+          <Switch />
+        </Form.Item>
+
         <div className="space-y-6 rounded-2xl border border-zinc-200/70 p-5">
           <Form.Item
             className="[&_[data-slot=content]]:pt-1.5"

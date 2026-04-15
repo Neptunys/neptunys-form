@@ -17,6 +17,7 @@ const DEFAULT_COLUMN_WIDTH = 150
 const HEADER_ROW_PIXEL_SIZE = 42
 const DATA_ROW_PIXEL_SIZE = 32
 const LEAD_CONTACTED_HEADER = 'Lead Contacted'
+const LEAD_CONTACTED_AT_HEADER = 'Lead Contacted At'
 const SUBMISSION_ID_HEADER = 'Submission ID'
 const LEAD_SCORE_HEADER = 'Lead Score'
 const SUBMITTED_AT_HEADER = 'Submitted At (UTC)'
@@ -81,6 +82,7 @@ const LEAD_LEVEL_ROW_FORMATS = {
 } satisfies Record<LeadLevel, { backgroundColor: Record<string, number>; textColor: Record<string, number> }>
 const COLUMN_WIDTH_OVERRIDES: Record<string, number> = {
   'Lead Contacted': 128,
+  'Lead Contacted At': 180,
   'Submission ID': 170,
   'Form ID': 110,
   'User ID': 230,
@@ -515,6 +517,67 @@ async function ensureLeadContactedColumnFirst(
   return true
 }
 
+async function ensureLeadContactedAtColumnSecond(
+  sheets: any,
+  spreadsheetId: string,
+  sheetId: number,
+  existingHeaders: string[]
+) {
+  if (helper.isEmpty(existingHeaders) || existingHeaders.indexOf(LEAD_CONTACTED_HEADER) !== 0) {
+    return false
+  }
+
+  const leadContactedAtColumnIndex = existingHeaders.indexOf(LEAD_CONTACTED_AT_HEADER)
+
+  if (leadContactedAtColumnIndex === 1) {
+    return false
+  }
+
+  if (leadContactedAtColumnIndex > 1) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            moveDimension: {
+              source: {
+                sheetId,
+                dimension: 'COLUMNS',
+                startIndex: leadContactedAtColumnIndex,
+                endIndex: leadContactedAtColumnIndex + 1
+              },
+              destinationIndex: 1
+            }
+          }
+        ]
+      }
+    })
+
+    return true
+  }
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests: [
+        {
+          insertDimension: {
+            range: {
+              sheetId,
+              dimension: 'COLUMNS',
+              startIndex: 1,
+              endIndex: 2
+            },
+            inheritFromBefore: false
+          }
+        }
+      ]
+    }
+  })
+
+  return true
+}
+
 async function pruneObsoleteColumns(
   sheets: any,
   spreadsheetId: string,
@@ -559,6 +622,10 @@ async function prepareWorksheetColumns(
   let existingHeaders = await getWorksheetHeaders(sheets, spreadsheetId, sheetName)
 
   if (await ensureLeadContactedColumnFirst(sheets, spreadsheetId, sheetId, existingHeaders)) {
+    existingHeaders = await getWorksheetHeaders(sheets, spreadsheetId, sheetName)
+  }
+
+  if (await ensureLeadContactedAtColumnSecond(sheets, spreadsheetId, sheetId, existingHeaders)) {
     existingHeaders = await getWorksheetHeaders(sheets, spreadsheetId, sheetName)
   }
 
@@ -697,6 +764,81 @@ async function getWorksheetDataRowCount(
   })
 
   return ((response.data.values || []) as string[][]).length
+}
+
+async function ensureIterativeCalculationEnabled(sheets: any, spreadsheetId: string) {
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests: [
+        {
+          updateSpreadsheetProperties: {
+            properties: {
+              iterativeCalculationSettings: {
+                maxIterations: 1,
+                convergenceThreshold: 0.05
+              }
+            },
+            fields:
+              'iterativeCalculationSettings.maxIterations,iterativeCalculationSettings.convergenceThreshold'
+          }
+        }
+      ]
+    }
+  })
+}
+
+function buildLeadContactedAtFormula(
+  rowNumber: number,
+  leadContactedColumnIndex: number,
+  leadContactedAtColumnIndex: number
+) {
+  const leadContactedCell = `${getColumnLetter(leadContactedColumnIndex + 1)}${rowNumber}`
+  const leadContactedAtCell = `${getColumnLetter(leadContactedAtColumnIndex + 1)}${rowNumber}`
+
+  return `=IF(${leadContactedCell},IF(${leadContactedAtCell}="",NOW(),${leadContactedAtCell}),"")`
+}
+
+async function syncLeadContactedTimestampColumn(
+  sheets: any,
+  spreadsheetId: string,
+  sheetName: string,
+  headers: string[],
+  dataRowCount: number
+) {
+  const leadContactedColumnIndex = getColumnIndex(headers, LEAD_CONTACTED_HEADER)
+  const leadContactedAtColumnIndex = getColumnIndex(headers, LEAD_CONTACTED_AT_HEADER)
+
+  if (leadContactedColumnIndex < 0 || leadContactedAtColumnIndex < 0 || dataRowCount < 1) {
+    return
+  }
+
+  await ensureIterativeCalculationEnabled(sheets, spreadsheetId)
+
+  const leadContactedAtColumnLetter = getColumnLetter(leadContactedAtColumnIndex + 1)
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: getSheetRange(sheetName, `${leadContactedAtColumnLetter}2:${leadContactedAtColumnLetter}${dataRowCount + 1}`)
+  })
+  const existingValues = (response.data.values || []) as string[][]
+  const data = Array.from({ length: dataRowCount }, (_, index) => index + 2)
+    .filter(rowNumber => !normalizeText(existingValues[rowNumber - 2]?.[0]))
+    .map(rowNumber => ({
+      range: getSheetRange(sheetName, `${leadContactedAtColumnLetter}${rowNumber}`),
+      values: [[buildLeadContactedAtFormula(rowNumber, leadContactedColumnIndex, leadContactedAtColumnIndex)]]
+    }))
+
+  if (helper.isEmpty(data)) {
+    return
+  }
+
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      valueInputOption: 'USER_ENTERED',
+      data
+    }
+  })
 }
 
 async function formatWorksheetLayout(
@@ -1051,6 +1193,7 @@ async function formatWorksheet(
 
   await formatWorksheetLayout(sheets, spreadsheetId, sheetId, headers, dataRowCount)
   await sortWorksheetRows(sheets, spreadsheetId, sheetId, headers, dataRowCount)
+  await syncLeadContactedTimestampColumn(sheets, spreadsheetId, sheetName, headers, dataRowCount)
   await formatLeadColumns(sheets, spreadsheetId, sheetId, sheetName, headers)
 }
 
@@ -1282,8 +1425,8 @@ export default {
       required: true
     }
   ],
-  run: async ({ config, submission, form, team }) => {
-    const payload = buildLeadCapturePayload(form, submission, team)
+  run: async ({ config, submission, form, team, project }) => {
+    const payload = buildLeadCapturePayload(form, submission, team, project)
     const result = await writeLeadRow(config, payload)
 
     return {

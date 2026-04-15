@@ -1,4 +1,8 @@
 import {
+  GMAIL_IMPERSONATED_USER,
+  GMAIL_SERVICE_ACCOUNT_EMAIL,
+  GMAIL_SERVICE_ACCOUNT_PRIVATE_KEY,
+  MAIL_PROVIDER,
   SMTP_HOST,
   SMTP_IGNORE_CERT,
   SMTP_PASSWORD,
@@ -7,7 +11,7 @@ import {
   SMTP_SERVERNAME,
   SMTP_USER
 } from '@environments'
-import { SmtpOptions } from '@utils'
+import { GmailOptions, MailOptions, SmtpOptions } from '@utils'
 
 export const SmtpOptionsFactory = (): SmtpOptions => ({
   host: SMTP_HOST,
@@ -19,4 +23,16 @@ export const SmtpOptionsFactory = (): SmtpOptions => ({
   ignoreCert: SMTP_IGNORE_CERT,
   pool: true,
   logger: false
+})
+
+export const GmailOptionsFactory = (): GmailOptions => ({
+  serviceAccountEmail: GMAIL_SERVICE_ACCOUNT_EMAIL,
+  privateKey: GMAIL_SERVICE_ACCOUNT_PRIVATE_KEY,
+  impersonatedUser: GMAIL_IMPERSONATED_USER
+})
+
+export const MailOptionsFactory = (): MailOptions => ({
+  provider: MAIL_PROVIDER,
+  smtp: SmtpOptionsFactory(),
+  gmail: GmailOptionsFactory()
 })

@@ -110,6 +110,11 @@ export interface PublicFormType extends FormModel {
   integrations?: Record<string, string>
 }
 
+export interface PublicRenderType {
+  form: PublicFormType
+  experimentId?: string
+}
+
 export interface FormFieldType extends FormField {
   isCollapsed?: boolean
   parent?: FormFieldType

@@ -2,12 +2,12 @@ import { Process, Processor } from '@nestjs/bull'
 
 import { APP_HOMEPAGE_URL } from '@environments'
 import { FormStatusEnum } from '@heyform-inc/shared-types-enums'
-import { date, helper, timestamp, toFixed } from '@heyform-inc/utils'
+import { date, helper, timestamp } from '@heyform-inc/utils'
 import { ProjectModel, TeamModel } from '@model'
 import {
-  ExperimentService,
   FormService,
   MailService,
+  ProjectEmailService,
   ProjectService,
   SubmissionService,
   TeamService
@@ -307,7 +307,7 @@ export class LeadReportSchedule extends BaseQueue {
   constructor(
     private readonly teamService: TeamService,
     private readonly projectService: ProjectService,
-    private readonly experimentService: ExperimentService,
+    private readonly projectEmailService: ProjectEmailService,
     private readonly formService: FormService,
     private readonly submissionService: SubmissionService,
     private readonly mailService: MailService
@@ -493,174 +493,6 @@ export class LeadReportSchedule extends BaseQueue {
   }
 
   private async sendProjectLeadReport(project: ProjectModel, team: TeamModel): Promise<void> {
-    const recipients = resolveLeadReportRecipients(project.leadNotificationEmails, team.leadNotificationEmails)
-    const timeZone = normalizeTimeZone(project.reportingTimezone || team.reportingTimezone)
-
-    if (!project.enableLeadReport || recipients.length < 1) {
-      return
-    }
-
-    if (!shouldSendMonthlyReport(timeZone, project.leadReportLastSentAt)) {
-      return
-    }
-
-    const forms = (await this.formService.findAll(project.id, FormStatusEnum.NORMAL)).filter(
-      form => !form.suspended
-    )
-    const rangeDays = resolveLeadReportRangeDays(project.leadReportRangeDays, team.leadReportRangeDays)
-    const endAt = timestamp()
-    const startAt = date().subtract(rangeDays, 'days').unix()
-    const formIds = forms.map(form => form.id)
-    const submissions = await this.submissionService.findAllInFormsByDateRange(formIds, startAt, endAt)
-    const formMap = new Map(forms.map(form => [form.id, form]))
-    const leads = submissions
-      .map(submission => {
-        const form = formMap.get(submission.formId)
-
-        if (!form) {
-          return undefined
-        }
-
-        return buildLeadCapturePayload(form, submission, team, project)
-      })
-      .filter(Boolean)
-    const scoredLeads = leads.filter(lead => helper.isValid(lead!.leadScore))
-    const averageScore = scoredLeads.length
-      ? (scoredLeads.reduce((sum, lead) => sum + (lead!.leadScore || 0), 0) / scoredLeads.length).toFixed(1)
-      : '0'
-    const topForms = Array.from(
-      submissions.reduce((accumulator, submission) => {
-        accumulator.set(submission.formId, (accumulator.get(submission.formId) || 0) + 1)
-        return accumulator
-      }, new Map<string, number>())
-    )
-      .map(([formId, count]) => ({
-        name: formMap.get(formId)?.name || formId,
-        count
-      }))
-      .sort((left, right) => right.count - left.count)
-      .slice(0, TOP_FORMS_LIMIT)
-    const recentLeads = leads.slice(0, RECENT_LEADS_LIMIT).map(lead => ({
-      formName: lead!.formName,
-      respondentName: lead!.respondentName,
-      respondentEmail: lead!.respondentEmail,
-      respondentPhone: lead!.respondentPhone,
-      leadLevel: lead!.leadLevel,
-      leadPriority: lead!.leadPriority,
-      leadScore: lead!.leadScore,
-      submittedAt: lead!.submittedAt
-    }))
-    const metricGrid = renderMetricGrid([
-      {
-        label: 'Total leads',
-        value: String(submissions.length),
-        caption: `${forms.length} active forms monitored`
-      },
-      {
-        label: 'Forms with leads',
-        value: String(new Set(submissions.map(submission => submission.formId)).size),
-        caption: 'Forms that produced at least one lead'
-      },
-      {
-        label: 'Average score',
-        value: averageScore,
-        caption: scoredLeads.length ? `${scoredLeads.length} scored submissions` : 'No scored submissions'
-      },
-      {
-        label: 'Priority mix',
-        value: `${leads.filter(lead => lead!.leadLevel === 'high').length}/${leads.filter(lead => lead!.leadLevel === 'medium').length}/${leads.filter(lead => lead!.leadLevel === 'low').length}`,
-        caption: 'High / Medium / Low'
-      }
-    ])
-    const workspaceLabel = helper.isValid(team.clientName) ? team.clientName! : team.name
-    const projectLabel = helper.isValid(project.name) ? project.name : 'Untitled project'
-    const dateRangeLabel = `${formatTimestamp(startAt, timeZone)} - ${formatTimestamp(endAt, timeZone)}`
-    const workspaceUrl = `${APP_HOMEPAGE_URL}/workspace/${team.id}/project/${project.id}`
-    const formsWithLeadsCount = new Set(submissions.map(submission => submission.formId)).size
-    const reportStartMs = startAt * 1000
-    const reportEndMs = endAt * 1000
-    const relevantExperiments = (await this.experimentService.findAllInProject(project.id)).filter(
-      experiment => experiment.startAt <= reportEndMs && experiment.endAt >= reportStartMs
-    )
-    const experimentEntries = await Promise.all(
-      relevantExperiments.slice(0, 3).map(async experiment => {
-        const evaluation = await this.experimentService.evaluateWinner(experiment)
-        const rankedMetrics = [...evaluation.metrics].sort((left, right) => {
-          if (right.conversionRate !== left.conversionRate) {
-            return right.conversionRate - left.conversionRate
-          }
-
-          if (right.submissions !== left.submissions) {
-            return right.submissions - left.submissions
-          }
-
-          return left.averageTime - right.averageTime
-        })
-        const leader = rankedMetrics[0]
-        const leaderName = leader ? formMap.get(leader.formId)?.name || leader.formId : 'No leading form yet'
-
-        if (evaluation.winnerFormId && leader) {
-          return {
-            title: `A/B result: ${experiment.name}`,
-            body: `${leaderName} led with ${toFixed(leader.conversionRate)}% conversion from ${leader.visits} visits and ${leader.submissions} submissions.`,
-            tone: 'success' as const
-          }
-        }
-
-        if (experiment.status === 'running' && leader) {
-          return {
-            title: `A/B test still running: ${experiment.name}`,
-            body: `Traffic is still split across ${rankedMetrics.length} variants. Current leader: ${leaderName} at ${toFixed(leader.conversionRate)}% conversion from ${leader.visits} visits.`,
-            tone: 'info' as const
-          }
-        }
-
-        return {
-          title: `A/B test completed: ${experiment.name}`,
-          body:
-            evaluation.promotionBlockedReason ||
-            'The test window closed without a promotable winner in this reporting period.',
-          tone: 'warning' as const
-        }
-      })
-    )
-    const activityLog = renderActivityLog(
-      [
-        formsWithLeadsCount > 1
-          ? {
-              title: 'Multiple forms were live in this reporting window',
-              body: `${formsWithLeadsCount} forms captured leads between ${dateRangeLabel}. Top contributors: ${topForms
-                .slice(0, 3)
-                .map(form => `${form.name} (${form.count})`)
-                .join(', ')}.`,
-              tone: 'info' as const
-            }
-          : topForms[0]
-            ? {
-                title: 'One form drove the campaign window',
-                body: `${topForms[0].name} generated ${topForms[0].count} submissions in this reporting window.`,
-                tone: 'info' as const
-              }
-            : undefined,
-        ...experimentEntries
-      ].filter(Boolean) as Array<{ title: string; body: string; tone?: 'info' | 'success' | 'warning' }>
-    )
-
-    await this.mailService.sendDirect(recipients, {
-      subject: `${workspaceLabel} - ${projectLabel} monthly lead report - ${dateRangeLabel}`,
-      html: renderLeadReportEmail({
-        title: projectLabel,
-        subtitle: `${workspaceLabel} | ${dateRangeLabel} | Timezone ${timeZone}`,
-        metricGrid,
-        activityLogHtml: activityLog,
-        topFormsTable: renderTopForms(topForms),
-        recentLeadsTable: renderRecentLeads(recentLeads, timeZone),
-        workspaceUrl
-      })
-    })
-
-    await this.projectService.update(project.id, {
-      leadReportLastSentAt: endAt
-    })
+    await this.projectEmailService.sendProjectLeadReport(project, team)
   }
 }

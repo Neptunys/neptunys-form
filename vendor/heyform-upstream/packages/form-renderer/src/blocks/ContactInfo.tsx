@@ -3,10 +3,10 @@ import { isValidPhoneNumber } from 'libphonenumber-js'
 import type { FC } from 'react'
 import { useMemo, useState } from 'react'
 
-import { initialValue, useTranslation } from '../utils'
+import { getPrefilledContactInfo, initialValue, useTranslation } from '../utils'
 import { helper } from '@heyform-inc/utils'
 
-import { FormField, Input, PhoneNumberInput } from '../components'
+import { ConsentCheckbox, FormField, Input, PhoneNumberInput } from '../components'
 import { useStore } from '../store'
 import type { BlockProps } from './Block'
 import { Block } from './Block'
@@ -46,12 +46,33 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
   const showPhoneNumber = field.properties?.showPhoneNumber ?? true
   const showEmail = field.properties?.showEmail ?? true
   const showCompany = field.properties?.showCompany ?? true
+  const showConsent = field.properties?.showConsent ?? false
+  const consentText = field.properties?.consentText || 'I consent to being contacted about my enquiry.'
+  const consentLinkLabel = field.properties?.consentLinkLabel
+  const consentLinkUrl = field.properties?.consentLinkUrl
   const legacyRequired = Boolean(field.validations?.required)
   const firstNameRequired = showFirstName && (field.properties?.firstNameRequired ?? legacyRequired)
   const lastNameRequired = showLastName && (field.properties?.lastNameRequired ?? legacyRequired)
   const phoneNumberRequired = showPhoneNumber && (field.properties?.phoneNumberRequired ?? legacyRequired)
   const emailRequired = showEmail && (field.properties?.emailRequired ?? legacyRequired)
   const companyRequired = showCompany && (field.properties?.companyRequired ?? false)
+  const storedValue = normalizeContactInfoValue(state.values[field.id])
+  const prefilledContactInfo = useMemo(() => getPrefilledContactInfo(state.query), [state.query])
+  const initialFormValues = useMemo(
+    () =>
+      initialValue({
+        ...prefilledContactInfo,
+        ...storedValue,
+        ...(showConsent
+          ? {
+              consentAccepted: Object.prototype.hasOwnProperty.call(storedValue, 'consentAccepted')
+                ? helper.isTrue((storedValue as any).consentAccepted)
+                : helper.isTrue(field.properties?.defaultChecked)
+            }
+          : {})
+      }),
+    [field.properties?.defaultChecked, prefilledContactInfo, showConsent, storedValue]
+  )
   const hasRequiredFields =
     firstNameRequired || lastNameRequired || phoneNumberRequired || emailRequired || companyRequired
 
@@ -69,7 +90,19 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
 
   function getValues(values: any) {
     const normalizedValue = normalizeContactInfoValue(values)
-    return hasFilled(normalizedValue) ? normalizedValue : undefined
+
+    if (!hasFilled(normalizedValue)) {
+      return undefined
+    }
+
+    return {
+      firstName: normalizedValue.firstName,
+      lastName: normalizedValue.lastName,
+      email: normalizedValue.email,
+      phoneNumber: normalizedValue.phoneNumber,
+      company: normalizedValue.company,
+      ...(showConsent ? { consentAccepted: helper.isTrue((normalizedValue as any).consentAccepted) } : {})
+    }
   }
 
   function handleValuesChange(_: any, values: any) {
@@ -97,7 +130,8 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
       {...restProps}
     >
       <Form
-        initialValues={initialValue(normalizeContactInfoValue(state.values[field.id]))}
+        initialValues={initialFormValues}
+        autoComplete="on"
         field={field}
         getValues={getValues}
         onValuesChange={handleValuesChange}
@@ -115,7 +149,7 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
                   }
                 ]}
               >
-                <Input placeholder={t('First Name')} />
+                <Input name="given-name" autoComplete="given-name" placeholder={t('First Name')} />
               </FormField>
             )}
 
@@ -130,7 +164,7 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
                   }
                 ]}
               >
-                <Input placeholder={t('Last Name')} />
+                <Input name="family-name" autoComplete="family-name" placeholder={t('Last Name')} />
               </FormField>
             )}
           </div>
@@ -165,6 +199,8 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
                 ]}
               >
                 <PhoneNumberInput
+                  name="tel"
+                  autoComplete="tel"
                   defaultCountryCode={field.properties?.defaultCountryCode}
                   hideCountrySelect={field.properties?.hideCountrySelect ?? false}
                   onDropdownVisibleChange={setIsDropdownShown}
@@ -201,7 +237,7 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
                 }
               ]}
             >
-              <Input type="email" placeholder="email@example.com" />
+              <Input name="email" autoComplete="email" type="email" placeholder="email@example.com" />
             </FormField>
           )}
 
@@ -215,7 +251,17 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
                 }
               ]}
             >
-              <Input placeholder={t('Company')} />
+              <Input name="organization" autoComplete="organization" placeholder={t('Company')} />
+            </FormField>
+          )}
+
+          {showConsent && (
+            <FormField name="consentAccepted">
+              <ConsentCheckbox
+                label={consentText}
+                linkLabel={consentLinkLabel}
+                linkUrl={consentLinkUrl}
+              />
             </FormField>
           )}
         </div>

@@ -1,4 +1,4 @@
-import { IsArray, IsBoolean, IsIn, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator'
+import { IsArray, IsBoolean, IsEmail, IsIn, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator'
 import { GraphQLJSONObject } from 'graphql-type-json'
 
 import { TeamDetailInput } from './team.graphql'
@@ -64,6 +64,27 @@ export class UpdateProjectInput extends ProjectDetailInput {
   @IsArray()
   leadNotificationEmails?: string[]
 
+  @Field(type => [String], { nullable: true })
+  @IsOptional()
+  @IsArray()
+  @IsEmail({}, { each: true })
+  leadReportEmails?: string[]
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsBoolean()
+  enableRespondentNotification?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  respondentNotificationSubject?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  respondentNotificationMessage?: string
+
   @Field({ nullable: true })
   @IsOptional()
   @IsBoolean()
@@ -71,10 +92,25 @@ export class UpdateProjectInput extends ProjectDetailInput {
 
   @Field({ nullable: true })
   @IsOptional()
+  @IsIn(['daily', 'weekly', 'biweekly', 'monthly'])
+  leadReportFrequency?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
   @IsNumber()
   @Min(1)
   @Max(365)
   leadReportRangeDays?: number
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  leadReportSubject?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  leadReportMessage?: string
 
   @Field({ nullable: true })
   @IsOptional()
@@ -95,6 +131,21 @@ export class UpdateProjectInput extends ProjectDetailInput {
 export class TestProjectGoogleSheetsInput extends ProjectDetailInput {
   @Field(type => GraphQLJSONObject)
   googleSheetsLeadConfig: Record<string, any>
+}
+
+@InputType()
+export class SendProjectEmailTestInput extends ProjectDetailInput {
+  @Field()
+  @IsIn(['confirmation', 'recap'])
+  emailType: string
+
+  @Field()
+  @IsEmail()
+  recipientEmail: string
+
+  @Field(type => GraphQLJSONObject, { nullable: true })
+  @IsOptional()
+  settingsOverride?: Record<string, any>
 }
 
 @InputType()
@@ -165,11 +216,32 @@ export class ProjectType {
   @Field(type => [String], { nullable: true })
   leadNotificationEmails?: string[]
 
+  @Field(type => [String], { nullable: true })
+  leadReportEmails?: string[]
+
+  @Field({ nullable: true })
+  enableRespondentNotification?: boolean
+
+  @Field({ nullable: true })
+  respondentNotificationSubject?: string
+
+  @Field({ nullable: true })
+  respondentNotificationMessage?: string
+
   @Field({ nullable: true })
   enableLeadReport?: boolean
 
   @Field({ nullable: true })
+  leadReportFrequency?: string
+
+  @Field({ nullable: true })
   leadReportRangeDays?: number
+
+  @Field({ nullable: true })
+  leadReportSubject?: string
+
+  @Field({ nullable: true })
+  leadReportMessage?: string
 
   @Field({ nullable: true })
   leadReportLastSentAt?: number
@@ -198,11 +270,32 @@ export class ProjectLeadFlowType {
   @Field(type => [String], { nullable: true })
   leadNotificationEmails?: string[]
 
+  @Field(type => [String], { nullable: true })
+  leadReportEmails?: string[]
+
+  @Field({ nullable: true })
+  enableRespondentNotification?: boolean
+
+  @Field({ nullable: true })
+  respondentNotificationSubject?: string
+
+  @Field({ nullable: true })
+  respondentNotificationMessage?: string
+
   @Field({ nullable: true })
   enableLeadReport?: boolean
 
   @Field({ nullable: true })
+  leadReportFrequency?: string
+
+  @Field({ nullable: true })
   leadReportRangeDays?: number
+
+  @Field({ nullable: true })
+  leadReportSubject?: string
+
+  @Field({ nullable: true })
+  leadReportMessage?: string
 
   @Field({ nullable: true })
   leadReportLastSentAt?: number

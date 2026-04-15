@@ -3,7 +3,27 @@ import { Answer, CHOICES_FIELD_KINDS, FieldKindEnum, FormField } from '@heyform-
 import { helper } from '@heyform-inc/utils'
 
 import { fieldsToValidateRules } from './fields-to-validate-rules'
+import { normalizePhoneNumber } from './helper'
 import { validate } from './validate'
+
+function normalizeAnswerValue(rule: any, value: any) {
+  if (rule.kind === FieldKindEnum.PHONE_NUMBER) {
+    return normalizePhoneNumber(value, rule.properties?.defaultCountryCode) || value
+  }
+
+  if (rule.kind === FieldKindEnum.CONTACT_INFO && helper.isObject(value) && helper.isValid(value.phoneNumber)) {
+    const phoneNumber = normalizePhoneNumber(value.phoneNumber, rule.properties?.defaultCountryCode)
+
+    if (phoneNumber) {
+      return {
+        ...value,
+        phoneNumber
+      }
+    }
+  }
+
+  return value
+}
 
 export function fieldValuesToAnswers(
   fields: FormField[],
@@ -20,6 +40,7 @@ export function fieldValuesToAnswers(
       try {
         // Validate the value, if it fails, an exception will be thrown
         validate(rule, value)
+        value = normalizeAnswerValue(rule, value)
 
         answers.push({
           id: rule.id,
@@ -36,6 +57,7 @@ export function fieldValuesToAnswers(
 
     // Validate the value, if it fails, an exception will be thrown
     validate(rule, value)
+    value = normalizeAnswerValue(rule, value)
 
     if (helper.isEmpty(value)) {
       if (CHOICES_FIELD_KINDS.includes(rule.kind)) {

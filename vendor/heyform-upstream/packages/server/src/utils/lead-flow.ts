@@ -349,7 +349,11 @@ function normalizePhoneIdentity(value: unknown): string | undefined {
 }
 
 function createLeadIdentityHash(value: string): string {
-  return createHash('sha1').update(value).digest('hex').slice(0, 10)
+  return createHash('sha1').update(value).digest('hex').slice(0, 12)
+}
+
+function buildOpaqueLeadUserId(source: string, value: string): string {
+  return `lead_${createLeadIdentityHash(`${source}:${value}`)}`
 }
 
 function buildLeadUserIdentity({
@@ -367,7 +371,7 @@ function buildLeadUserIdentity({
 
   if (normalizedEmail) {
     return {
-      userId: `email:${normalizedEmail}`,
+      userId: buildOpaqueLeadUserId('email', normalizedEmail),
       userIdSource: 'email' as const
     }
   }
@@ -376,7 +380,7 @@ function buildLeadUserIdentity({
 
   if (normalizedPhone) {
     return {
-      userId: `phone:${normalizedPhone}`,
+      userId: buildOpaqueLeadUserId('phone', normalizedPhone),
       userIdSource: 'phone' as const
     }
   }
@@ -387,7 +391,7 @@ function buildLeadUserIdentity({
     const loweredName = normalizedName.toLowerCase()
 
     return {
-      userId: `name:${toTokenSlug(loweredName)}-${createLeadIdentityHash(loweredName)}`,
+      userId: buildOpaqueLeadUserId('name', loweredName),
       userIdSource: 'name' as const
     }
   }
@@ -395,7 +399,7 @@ function buildLeadUserIdentity({
   const fallbackSubmissionId = normalizeString(submissionId) || 'unknown-submission'
 
   return {
-    userId: `submission:${fallbackSubmissionId}`,
+    userId: buildOpaqueLeadUserId('submission', fallbackSubmissionId),
     userIdSource: 'submission' as const
   }
 }
@@ -812,6 +816,7 @@ export function buildTestLeadCapturePayloads(
 export function buildLeadSheetRow(payload: LeadCapturePayload) {
   const row: Record<string, string | number | boolean> = {
     'Lead Contacted': false,
+    'Lead Contacted At': '',
     'Submission ID': payload.submissionId,
     'Form ID': payload.formId,
     'User ID': payload.userId,

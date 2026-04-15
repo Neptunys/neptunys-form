@@ -12,6 +12,12 @@ export const LEAD_SCORE_OPTIONS = Array.from({ length: MAX_LEAD_SCORE - MIN_LEAD
   }
 )
 
+export const LEAD_SCORE_LABEL_CLASSNAME =
+  'min-w-10 text-[11px] font-medium uppercase tracking-[0.08em] text-[color:var(--heyform-answer-color)] opacity-50'
+
+export const LEAD_SCORE_SELECT_CLASSNAME =
+  'w-32 border-[color:var(--heyform-answer-color)] text-[color:var(--heyform-answer-color)] opacity-50 [&_[data-slot=icon]_svg]:text-[color:var(--heyform-answer-color)] [&_[data-slot=placeholder]]:text-[color:var(--heyform-answer-color)] [&_[data-slot=value]]:text-[color:var(--heyform-answer-color)]'
+
 export function normalizeLeadScore(value: unknown): number | undefined {
   if (value === null || value === undefined || value === '') {
     return undefined

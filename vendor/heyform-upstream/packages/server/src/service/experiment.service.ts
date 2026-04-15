@@ -1,5 +1,5 @@
 import { InjectModel } from '@nestjs/mongoose'
-import { Injectable } from '@nestjs/common'
+import { BadRequestException, Injectable } from '@nestjs/common'
 import { Model } from 'mongoose'
 import { createHash } from 'crypto'
 
@@ -28,6 +28,41 @@ export class ExperimentService {
 
   async findById(experimentId: string): Promise<ExperimentModel | null> {
     return this.experimentModel.findById(experimentId)
+  }
+
+  async resolvePublicExperiment(
+    experimentId: string,
+    anonymousId?: string,
+    previewVariantFormId?: string
+  ) {
+    const experiment = await this.findById(experimentId)
+
+    if (!experiment) {
+      throw new BadRequestException('The experiment does not exist')
+    }
+
+    const isExpired = experiment.endAt <= timestamp()
+    let winnerFormId = experiment.winnerFormId
+
+    if (experiment.status === ExperimentStatusEnum.RUNNING && isExpired) {
+      const result = await this.evaluateWinner(experiment)
+      winnerFormId = result.winnerFormId
+    }
+
+    const previewVariant = helper.isValid(previewVariantFormId)
+      ? experiment.variants?.find(variant => variant.formId === previewVariantFormId)
+      : undefined
+    const formId =
+      previewVariant?.formId ||
+      (helper.isValid(winnerFormId)
+        ? winnerFormId!
+        : await this.assignVariant(experiment, anonymousId || 'anonymous'))
+
+    return {
+      experimentId: experiment.id,
+      formId,
+      winnerFormId
+    }
   }
 
   async findAllInProject(projectId: string): Promise<ExperimentModel[]> {

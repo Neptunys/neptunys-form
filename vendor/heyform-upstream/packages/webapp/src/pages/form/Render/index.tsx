@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { getPreferredLanguage } from './utils/brower-language'
 import { FormService } from '@/services'
-import { PublicFormType } from '@/types'
+import { PublicFormType, PublicRenderType } from '@/types'
 import { useParam, useQuery } from '@/utils'
 
 import { Async } from '@/components'
@@ -40,41 +40,25 @@ export default function FormRender({ resolveDomainRoot = false }: { resolveDomai
   const [form, setForm] = useState<PublicFormType | null>(null)
   const [activeExperimentId, setActiveExperimentId] = useState<string | undefined>(experimentId)
   const [locale, setLocale] = useState<string>()
+  const previewVariantFormId =
+    typeof query.variant === 'string'
+      ? query.variant
+      : Array.isArray(query.variant)
+        ? query.variant[0]
+        : undefined
 
   async function fetchData() {
-    let resolvedFormId = formId
-    let resolvedExperimentId = experimentId
+    const result = (await FormService.publicRender({
+      formId,
+      experimentId,
+      hostname: window.location.hostname,
+      slug: resolveDomainRoot ? undefined : publicSlug,
+      previewVariantFormId
+    })) as PublicRenderType
 
-    if (!resolvedFormId && !resolvedExperimentId) {
-      const publicRoute = await FormService.publicRouteByDomain(
-        window.location.hostname,
-        resolveDomainRoot ? undefined : publicSlug
-      )
-
-      if (publicRoute?.kind === 'experiment' && publicRoute.experimentId) {
-        resolvedExperimentId = publicRoute.experimentId
-      }
-
-      if (publicRoute?.kind === 'form' && publicRoute.formId) {
-        resolvedFormId = publicRoute.formId
-      }
-    }
-
-    if (!resolvedFormId && resolvedExperimentId) {
-      const experiment = await FormService.publicExperiment(resolvedExperimentId)
-      resolvedFormId = experiment.formId
-    }
-
-    const result = resolvedFormId
-      ? await FormService.publicForm(resolvedFormId)
-      : await FormService.publicFormByDomain(
-          window.location.hostname,
-          resolveDomainRoot ? undefined : publicSlug
-        )
-
-    setForm(result)
-      setActiveExperimentId(resolvedExperimentId)
-    setLocale(resolveRenderLocale(result))
+    setForm(result.form)
+    setActiveExperimentId(previewVariantFormId ? undefined : result.experimentId)
+    setLocale(resolveRenderLocale(result.form))
 
     return true
   }
