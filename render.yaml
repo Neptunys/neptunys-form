@@ -23,6 +23,8 @@ services:
         value: "false"
       - key: VERIFY_USER_EMAIL
         value: "true"
+      - key: MAIL_PROVIDER
+        value: gmail
       - key: ADMIN_APPROVAL_EMAIL
         value: contact@neptunys.com
       - key: BULL_JOB_TIMEOUT
@@ -50,6 +52,12 @@ services:
       - key: SMTP_SECURE
         sync: false
       - key: SMTP_IGNORE_CERT
+        sync: false
+      - key: GMAIL_SERVICE_ACCOUNT_EMAIL
+        sync: false
+      - key: GMAIL_SERVICE_ACCOUNT_PRIVATE_KEY
+        sync: false
+      - key: GMAIL_IMPERSONATED_USER
         sync: false
       - key: S3_ENDPOINT
         sync: false

@@ -108,6 +108,12 @@ export class MailService {
     }, undefined, true)
   }
 
+  async resetPasswordRequest(to: string, code: string) {
+    await this.addQueue('reset_password_request', to, {
+      code
+    }, undefined, true)
+  }
+
   async formInvitation(to: string, link: string) {
     await this.addQueue('form_invitation', to, {
       link

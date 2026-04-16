@@ -13,6 +13,23 @@ import {
 } from '@environments'
 import { GmailOptions, MailOptions, SmtpOptions } from '@utils'
 
+function hasConfigValue(value?: string) {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
+function resolveMailProvider(gmail: GmailOptions) {
+  if (
+    MAIL_PROVIDER === 'smtp' &&
+    hasConfigValue(gmail.serviceAccountEmail) &&
+    hasConfigValue(gmail.privateKey) &&
+    hasConfigValue(gmail.impersonatedUser)
+  ) {
+    return 'gmail'
+  }
+
+  return MAIL_PROVIDER
+}
+
 export const SmtpOptionsFactory = (): SmtpOptions => ({
   host: SMTP_HOST,
   port: SMTP_PORT,
@@ -31,8 +48,13 @@ export const GmailOptionsFactory = (): GmailOptions => ({
   impersonatedUser: GMAIL_IMPERSONATED_USER
 })
 
-export const MailOptionsFactory = (): MailOptions => ({
-  provider: MAIL_PROVIDER,
-  smtp: SmtpOptionsFactory(),
-  gmail: GmailOptionsFactory()
-})
+export const MailOptionsFactory = (): MailOptions => {
+  const smtp = SmtpOptionsFactory()
+  const gmail = GmailOptionsFactory()
+
+  return {
+    provider: resolveMailProvider(gmail),
+    smtp,
+    gmail
+  }
+}
