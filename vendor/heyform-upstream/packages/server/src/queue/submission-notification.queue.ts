@@ -9,6 +9,7 @@ import {
   buildLeadTemplateValues,
   escapeHtml,
   interpolateLeadTemplate,
+  resolveRespondentNotificationTemplates,
   renderLeadTemplateHtml
 } from '@utils'
 
@@ -107,16 +108,22 @@ export class SubmissionNotificationQueue extends BaseQueue {
       : project?.enableRespondentNotification
 
     if (respondentNotificationEnabled && helper.isValid(payload.respondentEmail)) {
+      const respondentTemplates = resolveRespondentNotificationTemplates(payload, {
+        subject: formSettings.respondentNotificationSubject || project?.respondentNotificationSubject,
+        message: formSettings.respondentNotificationMessage || project?.respondentNotificationMessage,
+        negativeSubject:
+          formSettings.respondentNegativeNotificationSubject ||
+          project?.respondentNegativeNotificationSubject,
+        negativeMessage:
+          formSettings.respondentNegativeNotificationMessage ||
+          project?.respondentNegativeNotificationMessage
+      })
       const subject = interpolateLeadTemplate(
-        formSettings.respondentNotificationSubject ||
-          project?.respondentNotificationSubject ||
-          'We received your submission for {formName}',
+        respondentTemplates.subjectTemplate,
         values
       )
       const body = renderLeadTemplateHtml(
-        formSettings.respondentNotificationMessage ||
-          project?.respondentNotificationMessage ||
-          'Hi {respondentName},\n\nThanks for your submission to {formName}. We received it on {submittedAt}. A team member will review it and follow up if needed.',
+        respondentTemplates.messageTemplate,
         values
       )
 

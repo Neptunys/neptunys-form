@@ -77,7 +77,9 @@ export default function ContactInfoSettings({ field }: RequiredSettingsProps) {
   const showPhoneNumber = field.properties?.showPhoneNumber ?? true
   const showEmail = field.properties?.showEmail ?? true
   const showCompany = field.properties?.showCompany ?? true
+  const showFieldIcons = field.properties?.showFieldIcons ?? false
   const showConsent = field.properties?.showConsent ?? false
+  const consentStyle = field.properties?.consentStyle ?? 'subtle'
   const hasMedia = isRenderableImageSource(field.layout?.mediaUrl)
   const legacyRequired = Boolean(field.validations?.required)
 
@@ -229,6 +231,15 @@ export default function ContactInfoSettings({ field }: RequiredSettingsProps) {
 
       <div className="hf-card-muted space-y-3 rounded-xl px-3 py-3">
         <div className="flex items-center justify-between">
+          <label className="text-sm/6 font-medium">Show field icons</label>
+
+          <Switch
+            value={showFieldIcons}
+            onChange={value => updateProperties({ showFieldIcons: value })}
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
           <label className="text-sm/6 font-medium">Consent block</label>
 
           <Switch
@@ -239,6 +250,29 @@ export default function ContactInfoSettings({ field }: RequiredSettingsProps) {
 
         {showConsent && (
           <>
+            <div className="space-y-1">
+              <label className="text-sm/6">Consent style</label>
+
+              <Select
+                className="w-full"
+                value={consentStyle}
+                options={[
+                  {
+                    label: 'Subtle',
+                    value: 'subtle'
+                  },
+                  {
+                    label: 'Boxed',
+                    value: 'boxed'
+                  }
+                ]}
+                contentProps={{
+                  position: 'popper'
+                }}
+                onChange={value => updateProperties({ consentStyle: value })}
+              />
+            </div>
+
             <div className="space-y-1">
               <label className="text-sm/6">Consent label</label>
 

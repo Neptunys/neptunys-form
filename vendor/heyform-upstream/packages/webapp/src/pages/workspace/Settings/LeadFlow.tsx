@@ -7,7 +7,7 @@ import { WorkspaceService } from '@/services'
 import { getTimeZone, useParam } from '@/utils'
 import { helper } from '@heyform-inc/utils'
 
-import { Form, Input, Select, Switch } from '@/components'
+import { Button, Form, Input, Select, Switch, useToast } from '@/components'
 import { useWorkspaceStore } from '@/store'
 import { WorkspaceLeadFlowType } from '@/types'
 
@@ -32,6 +32,8 @@ export default function WorkspaceLeadFlow() {
   const { t } = useTranslation()
   const { workspaceId } = useParam()
   const { workspace, updateWorkspace } = useWorkspaceStore()
+  const toast = useToast()
+  const [leadFlowForm] = Form.useForm()
 
   const { data, refreshAsync } = useRequest(
     async () => WorkspaceService.leadFlow(workspaceId),
@@ -58,8 +60,8 @@ export default function WorkspaceLeadFlow() {
     [leadFlow, workspace?.clientName, workspace?.enableLeadReport, workspace?.leadNotificationEmails, workspace?.leadReportRangeDays, workspace?.reportingTimezone]
   )
 
-  async function fetch(values: AnyMap) {
-    const updates = {
+  function normalizeLeadFlowValues(values: AnyMap) {
+    return {
       clientName: helper.isValid(values.clientName) ? values.clientName.trim() : undefined,
       enableLeadReport: Boolean(values.enableLeadReport),
       leadReportRangeDays: helper.isValid(values.leadReportRangeDays)
@@ -70,6 +72,10 @@ export default function WorkspaceLeadFlow() {
         : undefined,
       leadNotificationEmails: parseEmailList(values.leadNotificationEmailsText)
     }
+  }
+
+  async function fetch(values: AnyMap) {
+    const updates = normalizeLeadFlowValues(values)
 
     updateWorkspace(workspaceId, {
       clientName: updates.clientName,
@@ -80,6 +86,39 @@ export default function WorkspaceLeadFlow() {
     })
     await WorkspaceService.update(workspaceId, updates)
     await refreshAsync()
+  }
+
+  const { loading: sendReportLoading, runAsync: runSendReportAsync } = useRequest(
+    async () => {
+      const values = leadFlowForm.getFieldsValue(true)
+      const updates = normalizeLeadFlowValues(values)
+
+      if (updates.leadNotificationEmails.length < 1) {
+        throw new Error('Add at least one default lead recipient before sending a report')
+      }
+
+      await WorkspaceService.sendLeadReport(workspaceId, updates)
+    },
+    {
+      manual: true
+    }
+  )
+
+  async function handleSendReportNow() {
+    try {
+      await runSendReportAsync()
+      toast({
+        title: 'Workspace report sent',
+        message:
+          'A workspace lead report was sent to the current default recipients using the values shown here.'
+      })
+    } catch (error: any) {
+      toast({
+        title: t('components.error.title'),
+        message: error.message || 'Unable to send the workspace report right now.',
+        duration: 7000
+      })
+    }
   }
 
   if (!leadFlow) {
@@ -107,6 +146,7 @@ export default function WorkspaceLeadFlow() {
 
         <Form.Simple
           key={`${workspaceId}:${JSON.stringify(initialValues)}`}
+          form={leadFlowForm}
           className="space-y-6"
           initialValues={initialValues}
           fetch={fetch}
@@ -170,6 +210,21 @@ export default function WorkspaceLeadFlow() {
           >
             <Input.TextArea rows={5} placeholder={'sales@example.com\nrevops@example.com'} />
           </Form.Item>
+
+          <div className="space-y-3 rounded-2xl border border-accent-light p-5">
+            <div>
+              <h3 className="text-base font-semibold">Send on demand</h3>
+              <p className="text-secondary mt-1 text-sm/6">
+                Send the workspace lead report immediately to the default recipients using the values currently shown here, even if you have not saved them yet. This does not reset the next scheduled report.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button.Ghost size="md" loading={sendReportLoading} onClick={handleSendReportNow}>
+                Send report now
+              </Button.Ghost>
+            </div>
+          </div>
         </Form.Simple>
       </div>
     </section>

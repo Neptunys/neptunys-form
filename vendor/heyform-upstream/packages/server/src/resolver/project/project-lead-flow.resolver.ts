@@ -18,6 +18,8 @@ export class ProjectLeadFlowResolver {
       enableRespondentNotification: project.enableRespondentNotification,
       respondentNotificationSubject: project.respondentNotificationSubject,
       respondentNotificationMessage: project.respondentNotificationMessage,
+      respondentNegativeNotificationSubject: project.respondentNegativeNotificationSubject,
+      respondentNegativeNotificationMessage: project.respondentNegativeNotificationMessage,
       enableLeadReport: project.enableLeadReport,
       leadReportFrequency: project.leadReportFrequency,
       leadReportRangeDays: project.leadReportRangeDays,

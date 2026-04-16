@@ -11,13 +11,14 @@ import {
 } from '@config'
 import {
   SESSION_KEY,
+  REMEMBER_ME_SESSION_MAX_AGE,
   SESSION_MAX_AGE,
   VERIFICATION_CODE_EXPIRE,
   VERIFICATION_CODE_LIMIT,
   VERIFY_EMAIL_RESEND_COOLDOWN,
   VERIFY_EMAIL_RESEND_DAILY_LIMIT
 } from '@environments'
-import { helper, hs, isDateExpired, parseNumber, random, timestamp } from '@heyform-inc/utils'
+import { helper, hs, isDateExpired, ms, parseNumber, random, timestamp } from '@heyform-inc/utils'
 import { UserActivityKindEnum, UserActivityModel } from '@model'
 import { aesDecryptObject, aesEncryptObject } from '@utils'
 import { UserAgent } from '@utils'
@@ -34,6 +35,7 @@ interface LoginOptions {
   res: any
   userId: string
   deviceId: string
+  rememberMe?: boolean
 }
 
 interface AttemptsCheckOptions {
@@ -47,8 +49,16 @@ const DEFAULT_ATTEMPTS_OPTIONS = {
 }
 const NUMERIC_ALPHABET = '0123456789'
 
+function resolveSessionDuration(rememberMe?: boolean) {
+  return rememberMe ? REMEMBER_ME_SESSION_MAX_AGE : SESSION_MAX_AGE
+}
+
 @Injectable()
 export class AuthService {
+  static sessionDuration(rememberMe?: boolean) {
+    return resolveSessionDuration(rememberMe)
+  }
+
   constructor(
     @InjectModel(UserActivityModel.name)
     private readonly userActivityModel: Model<UserActivityModel>,
@@ -68,16 +78,17 @@ export class AuthService {
     return Object.keys(result as object)
   }
 
-  async login({ res, userId, deviceId }: LoginOptions): Promise<void> {
+  async login({ res, userId, deviceId, rememberMe }: LoginOptions): Promise<void> {
     const maxLoginNum = 20
     const loginAt = timestamp()
     const key = AuthService.sessionKey(userId)
+    const sessionDuration = resolveSessionDuration(rememberMe)
 
     await this.redisService.hset({
       key,
       field: deviceId,
       value: loginAt,
-      duration: SESSION_MAX_AGE
+      duration: sessionDuration
     })
 
     const devices = await this.devices(userId)
@@ -93,14 +104,27 @@ export class AuthService {
     this.setSession(res, {
       loginAt: timestamp(),
       deviceId,
-      id: userId
-    })
-    res.cookie(COOKIE_LOGIN_IN_NAME, true, CookieOptionsFactory())
+      id: userId,
+      rememberMe: Boolean(rememberMe)
+    }, sessionDuration)
+    res.cookie(
+      COOKIE_LOGIN_IN_NAME,
+      true,
+      CookieOptionsFactory({
+        maxAge: ms(sessionDuration)
+      })
+    )
   }
 
-  setSession(res: any, jsonObject: Record<string, any>): void {
+  setSession(res: any, jsonObject: Record<string, any>, sessionDuration = SESSION_MAX_AGE): void {
     const value = aesEncryptObject(jsonObject, SESSION_KEY)
-    res.cookie(COOKIE_SESSION_NAME, value, SessionOptionsFactory())
+    res.cookie(
+      COOKIE_SESSION_NAME,
+      value,
+      SessionOptionsFactory({
+        maxAge: ms(sessionDuration)
+      })
+    )
   }
 
   getSession(req: any): any {
@@ -138,7 +162,7 @@ export class AuthService {
     res.cookie(COOKIE_LOGIN_IN_NAME, '', loginCookieOptions)
   }
 
-  async isExpired(userId: string, deviceId: string): Promise<boolean> {
+  async isExpired(userId: string, deviceId: string, rememberMe?: boolean): Promise<boolean> {
     const key = `sess:${userId}`
     const result = await this.redisService.hget({
       key,
@@ -150,10 +174,10 @@ export class AuthService {
       return true
     }
 
-    return isDateExpired(loginAt, timestamp(), SESSION_MAX_AGE)
+    return isDateExpired(loginAt, timestamp(), resolveSessionDuration(rememberMe))
   }
 
-  async renew(userId: string, deviceId: string): Promise<void> {
+  async renew(userId: string, deviceId: string, rememberMe?: boolean): Promise<void> {
     const key = `sess:${userId}`
     const now = timestamp()
 
@@ -161,7 +185,7 @@ export class AuthService {
       key,
       field: deviceId,
       value: now,
-      duration: SESSION_MAX_AGE
+      duration: resolveSessionDuration(rememberMe)
     })
   }
 

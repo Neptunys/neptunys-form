@@ -3,11 +3,11 @@ import { Trans, useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 import { AuthService } from '@/services'
-import { useRouter } from '@/utils'
+import { clearCookie, getCookie, useRouter } from '@/utils'
 import { helper } from '@heyform-inc/utils'
 
 import { Form, Input, PasswordStrength } from '@/components'
-import { VERIFY_USER_EMAIL } from '@/consts'
+import { REDIRECT_COOKIE_NAME, VERIFY_USER_EMAIL } from '@/consts'
 import { useUserStore } from '@/store'
 
 import SocialLogin from './SocialLogin'
@@ -44,6 +44,16 @@ const SignUp = () => {
       setTemporaryEmail(values.email)
       setVerifyEmailSentAt(Date.now())
       router.replace('/verify-email')
+      return
+    }
+
+    const redirectUri = getCookie(REDIRECT_COOKIE_NAME) as string
+
+    if (redirectUri) {
+      clearCookie(REDIRECT_COOKIE_NAME)
+      router.redirect(redirectUri, {
+        extend: false
+      })
       return
     }
 

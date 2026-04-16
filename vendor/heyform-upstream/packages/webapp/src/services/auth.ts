@@ -3,7 +3,7 @@ import { apollo } from '@/utils'
 import { LOGIN_GQL, RESET_PASSWORD_GQL, SEND_RESET_EMAIL_GQL, SIGN_UP_GQL } from '@/consts'
 
 export class AuthService {
-  static async login(input: { email: string; password: string }) {
+  static async login(input: { email: string; password: string; rememberMe?: boolean }) {
     return apollo.query({
       query: LOGIN_GQL,
       variables: {

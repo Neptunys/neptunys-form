@@ -14,6 +14,7 @@ import {
   REMOVE_WORKSPACE_MEMBER_GQL,
   RESET_WORKSPACE_INVITE_CODE_GQL,
   SEARCH_WORKSPACE_GQL,
+  SEND_TEAM_LEAD_REPORT_GQL,
   TRANSFER_WORKSPACE_GQL,
   UPDATE_BRAND_KIT_GQL,
   UPDATE_WORKSPACE_GQL,
@@ -110,6 +111,18 @@ export class WorkspaceService {
         }
       },
       fetchPolicy: 'network-only'
+    })
+  }
+
+  static sendLeadReport(teamId: string, settingsOverride?: AnyMap) {
+    return apollo.mutate({
+      mutation: SEND_TEAM_LEAD_REPORT_GQL,
+      variables: {
+        input: {
+          teamId,
+          settingsOverride
+        }
+      }
     })
   }
 

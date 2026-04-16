@@ -33,7 +33,7 @@ import { QueueModules, QueueProviders } from './queue'
     ...Object.values(ScheduleProviders),
     ...Object.values(Services)
   ],
-  exports: [...Object.values(Services)]
+  exports: [...Object.values(Services), ...Object.values(ScheduleProviders)]
 })
 class ServiceModule {}
 

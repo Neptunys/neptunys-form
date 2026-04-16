@@ -1,6 +1,7 @@
+import { IconBuilding, IconMail, IconPhone, IconUser } from '@tabler/icons-react'
 import clsx from 'clsx'
 import { isValidPhoneNumber } from 'libphonenumber-js'
-import type { FC } from 'react'
+import type { FC, ReactNode } from 'react'
 import { useMemo, useState } from 'react'
 
 import { getPrefilledContactInfo, initialValue, useTranslation } from '../utils'
@@ -36,6 +37,31 @@ function hasFilled(values: any) {
   ].some(helper.isValid)
 }
 
+function ContactFieldShell({
+  className,
+  icon,
+  enabled,
+  children
+}: {
+  className?: string
+  icon: ReactNode
+  enabled: boolean
+  children: ReactNode
+}) {
+  if (!enabled) {
+    return <div className={className}>{children}</div>
+  }
+
+  return (
+    <div className={clsx('heyform-contact-field-shell', className)}>
+      <span className="heyform-contact-field-icon" aria-hidden="true">
+        {icon}
+      </span>
+      <div className="heyform-contact-field-control">{children}</div>
+    </div>
+  )
+}
+
 export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
   const { state, dispatch } = useStore()
   const { t } = useTranslation()
@@ -46,7 +72,9 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
   const showPhoneNumber = field.properties?.showPhoneNumber ?? true
   const showEmail = field.properties?.showEmail ?? true
   const showCompany = field.properties?.showCompany ?? true
+  const showFieldIcons = field.properties?.showFieldIcons ?? false
   const showConsent = field.properties?.showConsent ?? false
+  const consentStyle = field.properties?.consentStyle ?? 'subtle'
   const consentText = field.properties?.consentText || 'I consent to being contacted about my enquiry.'
   const consentLinkLabel = field.properties?.consentLinkLabel
   const consentLinkUrl = field.properties?.consentLinkUrl
@@ -139,43 +167,97 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
         <div className="space-y-4">
           <div className="flex w-full flex-col items-start justify-items-stretch gap-4 sm:flex-row">
             {showFirstName && (
-              <FormField
+              <ContactFieldShell
+                enabled={showFieldIcons}
+                icon={<IconUser />}
                 className={showBothNameFields ? 'w-full sm:flex-1' : 'w-full'}
-                name="firstName"
-                rules={[
-                  {
-                    required: Boolean(isRequired && firstNameRequired),
-                    message: t('This field is required')
-                  }
-                ]}
               >
-                <Input name="given-name" autoComplete="given-name" placeholder={t('First Name')} />
-              </FormField>
+                <FormField
+                  className="w-full"
+                  name="firstName"
+                  rules={[
+                    {
+                      required: Boolean(isRequired && firstNameRequired),
+                      message: t('This field is required')
+                    }
+                  ]}
+                >
+                  <Input name="given-name" autoComplete="given-name" placeholder={t('First Name')} />
+                </FormField>
+              </ContactFieldShell>
             )}
 
             {showLastName && (
-              <FormField
+              <ContactFieldShell
+                enabled={showFieldIcons}
+                icon={<IconUser />}
                 className={showBothNameFields ? 'w-full sm:flex-1' : 'w-full'}
-                name="lastName"
-                rules={[
-                  {
-                    required: Boolean(isRequired && lastNameRequired),
-                    message: t('This field is required')
-                  }
-                ]}
               >
-                <Input name="family-name" autoComplete="family-name" placeholder={t('Last Name')} />
-              </FormField>
+                <FormField
+                  className="w-full"
+                  name="lastName"
+                  rules={[
+                    {
+                      required: Boolean(isRequired && lastNameRequired),
+                      message: t('This field is required')
+                    }
+                  ]}
+                >
+                  <Input name="family-name" autoComplete="family-name" placeholder={t('Last Name')} />
+                </FormField>
+              </ContactFieldShell>
             )}
           </div>
 
           {showPhoneNumber && (
-            <div className="heyform-phone-number">
+            <ContactFieldShell enabled={showFieldIcons} icon={<IconPhone />} className="w-full">
+              <div className="heyform-phone-number">
+                <FormField
+                  name="phoneNumber"
+                  rules={[
+                    {
+                      required: Boolean(isRequired && phoneNumberRequired),
+                      validator(rule, value) {
+                        return new Promise<void>((resolve, reject) => {
+                          if (helper.isEmpty(value)) {
+                            if (rule.required) {
+                              reject(t('This field is required'))
+                            } else {
+                              resolve()
+                            }
+
+                            return
+                          }
+
+                          if (isValidPhoneNumber(value)) {
+                            resolve()
+                          } else {
+                            reject(t('Please enter a valid mobile phone number'))
+                          }
+                        })
+                      }
+                    }
+                  ]}
+                >
+                  <PhoneNumberInput
+                    name="tel"
+                    autoComplete="tel"
+                    defaultCountryCode={field.properties?.defaultCountryCode}
+                    hideCountrySelect={field.properties?.hideCountrySelect ?? false}
+                    onDropdownVisibleChange={setIsDropdownShown}
+                  />
+                </FormField>
+              </div>
+            </ContactFieldShell>
+          )}
+
+          {showEmail && (
+            <ContactFieldShell enabled={showFieldIcons} icon={<IconMail />} className="w-full">
               <FormField
-                name="phoneNumber"
+                name="email"
                 rules={[
                   {
-                    required: Boolean(isRequired && phoneNumberRequired),
+                    required: Boolean(isRequired && emailRequired),
                     validator(rule, value) {
                       return new Promise<void>((resolve, reject) => {
                         if (helper.isEmpty(value)) {
@@ -188,76 +270,41 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
                           return
                         }
 
-                        if (isValidPhoneNumber(value)) {
+                        if (helper.isEmail(value)) {
                           resolve()
                         } else {
-                          reject(t('Please enter a valid mobile phone number'))
+                          reject(t('Please enter a valid email address'))
                         }
                       })
                     }
                   }
                 ]}
               >
-                <PhoneNumberInput
-                  name="tel"
-                  autoComplete="tel"
-                  defaultCountryCode={field.properties?.defaultCountryCode}
-                  hideCountrySelect={field.properties?.hideCountrySelect ?? false}
-                  onDropdownVisibleChange={setIsDropdownShown}
-                />
+                <Input name="email" autoComplete="email" type="email" placeholder="email@example.com" />
               </FormField>
-            </div>
-          )}
-
-          {showEmail && (
-            <FormField
-              name="email"
-              rules={[
-                {
-                  required: Boolean(isRequired && emailRequired),
-                  validator(rule, value) {
-                    return new Promise<void>((resolve, reject) => {
-                      if (helper.isEmpty(value)) {
-                        if (rule.required) {
-                          reject(t('This field is required'))
-                        } else {
-                          resolve()
-                        }
-
-                        return
-                      }
-
-                      if (helper.isEmail(value)) {
-                        resolve()
-                      } else {
-                        reject(t('Please enter a valid email address'))
-                      }
-                    })
-                  }
-                }
-              ]}
-            >
-              <Input name="email" autoComplete="email" type="email" placeholder="email@example.com" />
-            </FormField>
+            </ContactFieldShell>
           )}
 
           {showCompany && (
-            <FormField
-              name="company"
-              rules={[
-                {
-                  required: Boolean(isRequired && companyRequired),
-                  message: t('This field is required')
-                }
-              ]}
-            >
-              <Input name="organization" autoComplete="organization" placeholder={t('Company')} />
-            </FormField>
+            <ContactFieldShell enabled={showFieldIcons} icon={<IconBuilding />} className="w-full">
+              <FormField
+                name="company"
+                rules={[
+                  {
+                    required: Boolean(isRequired && companyRequired),
+                    message: t('This field is required')
+                  }
+                ]}
+              >
+                <Input name="organization" autoComplete="organization" placeholder={t('Company')} />
+              </FormField>
+            </ContactFieldShell>
           )}
 
           {showConsent && (
             <FormField name="consentAccepted">
               <ConsentCheckbox
+                variant={consentStyle}
                 label={consentText}
                 linkLabel={consentLinkLabel}
                 linkUrl={consentLinkUrl}

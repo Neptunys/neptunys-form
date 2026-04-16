@@ -42,11 +42,17 @@
     --hf-dashboard-border: 57, 57, 63;
     --hf-dashboard-muted: 161, 161, 170;
     --hf-dashboard-shadow: none;
+    color-scheme: dark;
   }
 }
 
 body {
-  @apply text-primary antialiased lg:bg-background;
+  @apply bg-background text-primary antialiased;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
 }
 
 @layer components {

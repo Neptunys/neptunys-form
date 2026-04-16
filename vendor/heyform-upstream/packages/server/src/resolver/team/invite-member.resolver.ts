@@ -33,18 +33,24 @@ export class InviteMemberResolver {
 
     if (helper.isValid(members)) {
       exists = (await this.userService.findAll(members.map(member => member.memberId))).map(
-        row => row.email
+        row => row.email.toLowerCase()
       )
     }
 
-    const emails = helper.uniqueArray(input.emails.filter(email => !exists.includes(email)))
+    const emails = helper.uniqueArray(
+      input.emails
+        .map(email => email.trim().toLowerCase())
+        .filter(email => helper.isEmail(email) && !exists.includes(email))
+    )
+
+    await this.teamService.createInvitations(input.teamId, emails)
 
     await Promise.all(
       emails.map(email =>
         this.mailService.teamInvitation(email, {
-        userName: user.name,
-        teamName: team.name,
-        link: `${APP_HOMEPAGE_URL}/workspace/${team.id}/invitation/${team.inviteCode}`
+          userName: user.name,
+          teamName: team.name,
+          link: `${APP_HOMEPAGE_URL}/workspace/${team.id}/invitation/${team.inviteCode}`
         })
       )
     )

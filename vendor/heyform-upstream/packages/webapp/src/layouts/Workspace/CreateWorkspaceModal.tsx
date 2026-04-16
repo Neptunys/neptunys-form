@@ -3,13 +3,12 @@ import { FC, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 
 import { WorkspaceService } from '@/services'
-import { clearCookie, getCookie, useRouter } from '@/utils'
+import { canCreateWorkspace, clearCookie, getCookie, useRouter } from '@/utils'
 import { helper } from '@heyform-inc/utils'
 
 import { Form, ImageFormPicker, Input, Modal, SimpleFormProps } from '@/components'
 import { DEFAULT_PROJECT_NAMES, REDIRECT_COOKIE_NAME } from '@/consts'
-import { useModal, useUserStore } from '@/store'
-import { useAppStore } from '@/store'
+import { useAppStore, useModal, useUserStore, useWorkspaceStore } from '@/store'
 
 export const CreateWorkspaceForm: FC<
   Pick<SimpleFormProps, 'onLoadingChange'> & { onSuccess?: () => void }
@@ -18,12 +17,18 @@ export const CreateWorkspaceForm: FC<
 
   const router = useRouter()
   const { user } = useUserStore()
+  const { workspaces } = useWorkspaceStore()
   const { closeModal } = useAppStore()
 
   const redirectUri = getCookie(REDIRECT_COOKIE_NAME) as string
   const [name, setName] = useState<string>('H')
+  const canCreate = canCreateWorkspace(workspaces)
 
   async function fetch(values: any) {
+    if (!canCreate) {
+      throw new Error('Invited members cannot create new workspaces')
+    }
+
     const projectName = (DEFAULT_PROJECT_NAMES[i18n.language] || DEFAULT_PROJECT_NAMES.en).replace(
       '{name}',
       user.name
@@ -52,6 +57,14 @@ export const CreateWorkspaceForm: FC<
     if (changes.name) {
       setName(changes.name)
     }
+  }
+
+  if (!canCreate) {
+    return (
+      <div className="text-secondary text-sm/6">
+        Invited members can only access the workspaces they were added to.
+      </div>
+    )
   }
 
   return (

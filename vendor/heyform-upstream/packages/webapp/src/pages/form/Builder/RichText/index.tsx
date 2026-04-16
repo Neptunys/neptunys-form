@@ -51,7 +51,7 @@ export const RichText: FC<RichTextProps> = ({
       debounce(() => {
         onChange?.(innerRef.current!.innerHTML)
       }, 300),
-    []
+    [innerRef, onChange]
   )
 
   function handleComposition(event: any) {
@@ -220,10 +220,16 @@ export const RichText: FC<RichTextProps> = ({
   const hideToolbarCallback = useCallback(hideToolbar, [])
 
   useEffect(() => {
-    if (innerRef.current && helper.isValid(value)) {
-      innerRef.current.innerHTML = value!
+    if (!innerRef.current) {
+      return
     }
-  }, [innerRef])
+
+    const nextValue = value || ''
+
+    if (innerRef.current.innerHTML !== nextValue) {
+      innerRef.current.innerHTML = nextValue
+    }
+  }, [innerRef, value])
 
   useEffect(() => {
     function handleSelectionChange() {
@@ -269,7 +275,7 @@ export const RichText: FC<RichTextProps> = ({
         visible={isToolbarOpen}
         range={toolbarRange}
         onClose={hideToolbarCallback}
-        onChange={console.log}
+        onChange={() => handleUpdateCallback()}
       />
     </>
   )

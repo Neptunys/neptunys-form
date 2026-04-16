@@ -18,6 +18,11 @@ export class CreateBrandKitResolver {
     const brandKit = await this.brandKitService.findByTeamId(team.id)
 
     if (brandKit) {
+      await this.brandKitService.update(team.id, {
+        logo: input.logo,
+        theme: input.theme
+      })
+
       return brandKit.id
     }
 

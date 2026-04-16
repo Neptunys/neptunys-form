@@ -19,6 +19,8 @@ export interface ProjectType {
   enableRespondentNotification?: boolean
   respondentNotificationSubject?: string
   respondentNotificationMessage?: string
+  respondentNegativeNotificationSubject?: string
+  respondentNegativeNotificationMessage?: string
   enableLeadReport?: boolean
   leadReportFrequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly'
   leadReportRangeDays?: number
@@ -104,6 +106,8 @@ export interface ProjectLeadFlowType {
   enableRespondentNotification?: boolean
   respondentNotificationSubject?: string
   respondentNotificationMessage?: string
+  respondentNegativeNotificationSubject?: string
+  respondentNegativeNotificationMessage?: string
   enableLeadReport?: boolean
   leadReportFrequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly'
   leadReportRangeDays?: number

@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { WorkspaceService } from '@/services'
-import { cn, useParam, useRouter } from '@/utils'
+import { canCreateWorkspace, cn, useParam, useRouter } from '@/utils'
 import { helper, toJSON } from '@heyform-inc/utils'
 
 import { Button, Loader, Modal } from '@/components'
@@ -90,6 +90,8 @@ const SearchModalComponent = () => {
   const router = useRouter()
   const { workspaceId } = useParam()
   const { openModal, closeModal } = useAppStore()
+  const { workspaces } = useWorkspaceStore()
+  const showCreateWorkspace = canCreateWorkspace(workspaces)
 
   const defaultGroups: GroupType[] = useMemo(
     () => [
@@ -97,11 +99,15 @@ const SearchModalComponent = () => {
         type: 'action',
         heading: t('dashboard.search.actions'),
         items: [
-          {
-            value: 'newWorkspace',
-            icon: IconSquareRotated,
-            title: t('dashboard.search.newWorkspace')
-          },
+          ...(showCreateWorkspace
+            ? [
+                {
+                  value: 'newWorkspace',
+                  icon: IconSquareRotated,
+                  title: t('dashboard.search.newWorkspace')
+                }
+              ]
+            : []),
           {
             value: 'newProject',
             icon: IconFolder,
@@ -111,7 +117,7 @@ const SearchModalComponent = () => {
         ]
       }
     ],
-    [t]
+    [showCreateWorkspace, t]
   )
 
   const [activePage, setActivePage] = useState('home')

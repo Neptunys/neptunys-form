@@ -2,6 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common'
 
 import { Auth, User } from '@decorator'
 import { JoinTeamInput } from '@graphql'
+import { timestamp } from '@heyform-inc/utils'
 import { TeamRoleEnum, UserModel } from '@model'
 import { Args, Mutation, Resolver } from '@nestjs/graphql'
 import { MailService, TeamService, UserService } from '@service'
@@ -27,8 +28,19 @@ export class JoinTeamResolver {
       throw new BadRequestException('The invitation code of the workspace does not match')
     }
 
-    if (!team.allowJoinByInviteLink) {
-      throw new BadRequestException('The workspace is not allowed to join')
+    if (!user.email) {
+      throw new BadRequestException('This workspace invitation requires an email-based account')
+    }
+
+    const invitation = await this.teamService.findInvitation(input.teamId, user.email)
+
+    if (!invitation) {
+      throw new BadRequestException('This workspace invitation is not valid for your account')
+    }
+
+    if (invitation.expireAt <= timestamp()) {
+      await this.teamService.deleteInvitation(invitation.id)
+      throw new BadRequestException('This workspace invitation has expired')
     }
 
     const teamMember = await this.teamService.findMemberById(input.teamId, user.id)
@@ -42,6 +54,8 @@ export class JoinTeamResolver {
       memberId: user.id,
       role: TeamRoleEnum.COLLABORATOR
     })
+
+    await this.teamService.deleteInvitation(invitation.id)
 
     const teamOwner = await this.userService.findById(team.ownerId)
 

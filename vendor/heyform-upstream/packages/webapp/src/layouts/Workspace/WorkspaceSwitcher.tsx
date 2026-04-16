@@ -3,7 +3,7 @@ import { IconCheck, IconChevronDown, IconPlus } from '@tabler/icons-react'
 import { FC } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { useRouter } from '@/utils'
+import { canCreateWorkspace, useRouter } from '@/utils'
 
 import { Avatar, Button } from '@/components'
 import { useAppStore, useWorkspaceStore } from '@/store'
@@ -47,6 +47,7 @@ export default function WorkspaceSwitcher() {
   const router = useRouter()
   const { workspaces, workspace } = useWorkspaceStore()
   const { openModal } = useAppStore()
+  const canCreate = canCreateWorkspace(workspaces)
 
   function handleClick(newWorkspaceId: string) {
     router.push(`/workspace/${newWorkspaceId}/`)
@@ -91,12 +92,14 @@ export default function WorkspaceSwitcher() {
 
           <DropdownMenu.Separator className="bg-accent-light mx-2 mb-1 mt-2 h-px sm:mx-2" />
 
-          <DropdownMenu.Item onClick={() => openModal('CreateWorkspaceModal')}>
-            <Button.Link className="w-full [&_[data-slot=button]]:justify-start">
-              <IconPlus className="h-[1.125rem] w-[1.125rem]" />
-              <span>{t('workspace.creation.title')}</span>
-            </Button.Link>
-          </DropdownMenu.Item>
+          {canCreate && (
+            <DropdownMenu.Item onClick={() => openModal('CreateWorkspaceModal')}>
+              <Button.Link className="w-full [&_[data-slot=button]]:justify-start">
+                <IconPlus className="h-[1.125rem] w-[1.125rem]" />
+                <span>{t('workspace.creation.title')}</span>
+              </Button.Link>
+            </DropdownMenu.Item>
+          )}
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>

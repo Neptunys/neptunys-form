@@ -11,6 +11,7 @@ interface ConsentCheckboxProps extends Omit<IComponentProps<HTMLButtonElement>, 
   label: string
   linkLabel?: string
   linkUrl?: string
+  variant?: 'subtle' | 'boxed'
   value?: boolean
   onChange?: (value: boolean) => void
 }
@@ -20,6 +21,7 @@ export const ConsentCheckbox: FC<ConsentCheckboxProps> = ({
   label,
   linkLabel,
   linkUrl,
+  variant = 'boxed',
   value = false,
   onChange,
   ...restProps
@@ -51,6 +53,7 @@ export const ConsentCheckbox: FC<ConsentCheckboxProps> = ({
       className={clsx(
         'heyform-consent-option',
         {
+          'heyform-consent-option-subtle': variant === 'subtle',
           'heyform-consent-option-selected': value
         },
         className

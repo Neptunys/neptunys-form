@@ -174,7 +174,9 @@ export function getPropertiesFromKind(properties: Property, newKind: FieldKindEn
       props.emailRequired = props.emailRequired ?? true
       props.showCompany = props.showCompany ?? true
       props.companyRequired = props.companyRequired ?? false
+      props.showFieldIcons = props.showFieldIcons ?? false
       props.showConsent = props.showConsent ?? false
+      props.consentStyle = props.consentStyle ?? 'subtle'
       props.consentText = props.consentText ?? 'I consent to being contacted about my enquiry.'
       props.consentLinkLabel = props.consentLinkLabel ?? undefined
       props.consentLinkUrl = props.consentLinkUrl ?? undefined
@@ -300,7 +302,9 @@ export function getFieldFromKind(kind: FieldKindEnum | string): FormFieldType {
       field.properties!.emailRequired = true
       field.properties!.showCompany = true
       field.properties!.companyRequired = false
+      field.properties!.showFieldIcons = false
       field.properties!.showConsent = false
+      field.properties!.consentStyle = 'subtle'
       field.properties!.consentText = 'I consent to being contacted about my enquiry.'
       field.properties!.consentLinkLabel = undefined
       field.properties!.consentLinkUrl = undefined

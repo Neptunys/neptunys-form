@@ -48,6 +48,8 @@ export const COOKIE_MAX_AGE: string = process.env.COOKIE_MAX_AGE || '1y'
 export const COOKIE_DOMAIN: string = process.env.COOKIE_DOMAIN || new URL(APP_HOMEPAGE_URL).hostname
 export const SESSION_KEY: string = process.env.SESSION_KEY
 export const SESSION_MAX_AGE: string = process.env.SESSION_MAX_AGE || '15d'
+export const REMEMBER_ME_SESSION_MAX_AGE: string =
+  process.env.REMEMBER_ME_SESSION_MAX_AGE || '30d'
 
 // Email templates
 export const EMAIL_TEMPLATES_DIR: string = resolve(ROOT_PATH, 'resources/email-templates')

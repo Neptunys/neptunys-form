@@ -71,7 +71,8 @@ export class LoginResolver {
     await this.authService.login({
       res,
       userId: user.id,
-      deviceId: client.deviceId
+      deviceId: client.deviceId,
+      rememberMe: input.rememberMe
     })
 
     return true

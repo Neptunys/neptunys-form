@@ -1,5 +1,5 @@
 import { LayoutProps } from '@heyooo-inc/react-router'
-import { FC, useEffect } from 'react'
+import { FC, useLayoutEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { helper } from '@heyform-inc/utils'
@@ -13,7 +13,7 @@ const APP_NAME = 'NeptunysForm'
 export const AuthLayout: FC<LayoutProps> = ({ options, children }) => {
   const { t } = useTranslation()
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = document.documentElement
     const hadDarkClass = root.classList.contains('dark')
 

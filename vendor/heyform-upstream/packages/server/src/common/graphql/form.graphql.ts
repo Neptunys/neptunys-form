@@ -219,7 +219,16 @@ class SharedPropertyInput {
 
   @Field({ nullable: true })
   @IsOptional()
+  showFieldIcons?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
   mapToContacts?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsIn(['subtle', 'boxed'])
+  consentStyle?: string
 
   @Field({ nullable: true })
   defaultCountryCode?: string
@@ -290,6 +299,15 @@ class SharedPropertyInput {
 
 @InputType()
 export class PropertyInput extends SharedPropertyInput {
+  @Field({ nullable: true })
+  @IsOptional()
+  showFieldIcons?: boolean
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsIn(['subtle', 'boxed'])
+  consentStyle?: string
+
   @Field(type => [FormChildFieldInput], { nullable: true })
   fields?: FormField[]
 }
@@ -881,6 +899,14 @@ export class UpdateFormInput extends FormDetailInput {
 
   @Field({ nullable: true })
   @IsOptional()
+  respondentNegativeNotificationSubject?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  respondentNegativeNotificationMessage?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
   enableOperatorNotification?: boolean
 
   @Field(type => [String], { nullable: true })
@@ -1366,7 +1392,13 @@ export class PropertyType {
   companyRequired?: boolean
 
   @Field({ nullable: true })
+  showFieldIcons?: boolean
+
+  @Field({ nullable: true })
   mapToContacts?: boolean
+
+  @Field({ nullable: true })
+  consentStyle?: string
 
   @Field({ nullable: true })
   defaultCountryCode?: string
@@ -1569,6 +1601,12 @@ export class FormSettingType {
 
   @Field({ nullable: true })
   respondentNotificationMessage?: string
+
+  @Field({ nullable: true })
+  respondentNegativeNotificationSubject?: string
+
+  @Field({ nullable: true })
+  respondentNegativeNotificationMessage?: string
 
   @Field({ nullable: true })
   enableOperatorNotification?: boolean

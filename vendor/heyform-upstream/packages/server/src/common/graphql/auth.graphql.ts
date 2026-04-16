@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, Length, Matches } from 'class-validator'
+import { IsBoolean, IsEmail, IsOptional, Length, Matches } from 'class-validator'
 
 import { Field, InputType, ObjectType } from '@nestjs/graphql'
 import { LowerCase } from '@utils'
@@ -19,6 +19,11 @@ export class LoginInput extends SendResetPasswordEmailInput {
     message: 'Invalid password'
   })
   password: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsBoolean()
+  rememberMe?: boolean
 }
 
 @InputType()

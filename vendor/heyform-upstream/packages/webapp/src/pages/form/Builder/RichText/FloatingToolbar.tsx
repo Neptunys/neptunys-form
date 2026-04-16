@@ -7,7 +7,7 @@ import { getStyleFromRect } from './utils'
 import { nextTick } from '@/utils'
 import { helper } from '@heyform-inc/utils'
 
-import { Button, Form, Input, Portal } from '@/components'
+import { Button, ColorPicker, Form, Input, Portal, Select } from '@/components'
 
 interface FloatingToolbarProps extends Omit<ComponentProps, 'onChange'> {
   visible?: boolean
@@ -21,7 +21,24 @@ interface ActiveState {
   isItalic: boolean
   isStrikethrough: boolean
   isUnderline: boolean
+  textColor?: string
+  fontSizePx?: number
   link?: string
+}
+
+const FONT_SIZE_OPTIONS = [14, 16, 18, 20, 24, 28, 32].map(value => ({
+  label: `${value}px`,
+  value
+}))
+
+function getSelectionElement(sel: Selection | null) {
+  const anchorNode = sel?.anchorNode
+
+  if (!anchorNode) {
+    return
+  }
+
+  return anchorNode instanceof Element ? anchorNode : anchorNode.parentElement || undefined
 }
 
 function getActiveState() {
@@ -30,10 +47,21 @@ function getActiveState() {
     isItalic: document.queryCommandState('italic'),
     isStrikethrough: document.queryCommandState('strikethrough'),
     isUnderline: document.queryCommandState('underline'),
+    textColor: undefined,
+    fontSizePx: undefined,
     link: undefined
   }
 
   const sel = window.getSelection()
+  const element = getSelectionElement(sel)
+
+  if (element) {
+    const computedStyle = window.getComputedStyle(element)
+    const fontSizePx = Math.round(parseFloat(computedStyle.fontSize))
+
+    state.textColor = computedStyle.color
+    state.fontSizePx = Number.isFinite(fontSizePx) ? fontSizePx : undefined
+  }
 
   if (sel) {
     state.link = sel.anchorNode?.parentElement?.closest('a')?.href
@@ -54,6 +82,58 @@ export const FloatingToolbar: FC<FloatingToolbarProps> = ({
   const [portalStyle, setPortalStyle] = useState<CSSProperties>()
   const [activeState, setActiveState] = useState({} as ActiveState)
   const [linkBubbleVisible, setLinkBubbleVisible] = useState(false)
+  const activeFontSize = helper.isNumber(activeState.fontSizePx)
+    ? FONT_SIZE_OPTIONS.find(option => option.value === activeState.fontSizePx)?.value
+    : undefined
+
+  function selectNodeContents(node: Node) {
+    const sel = window.getSelection()
+
+    if (!sel) {
+      return
+    }
+
+    const newRange = document.createRange()
+    newRange.selectNodeContents(node)
+    sel.removeAllRanges()
+    sel.addRange(newRange)
+  }
+
+  function applyInlineSpanStyle(style: Record<string, string>) {
+    if (!range) {
+      return
+    }
+
+    handleSelectRange()
+
+    const sel = window.getSelection()
+
+    if (!sel || sel.rangeCount < 1) {
+      return
+    }
+
+    const activeRange = sel.getRangeAt(0)
+
+    if (activeRange.collapsed) {
+      return
+    }
+
+    const fragment = activeRange.extractContents()
+    const wrapper = document.createElement('span')
+
+    Object.entries(style).forEach(([key, value]) => {
+      wrapper.style.setProperty(key, value, 'important')
+    })
+
+    wrapper.appendChild(fragment)
+    activeRange.insertNode(wrapper)
+    selectNodeContents(wrapper)
+
+    nextTick(() => {
+      setActiveState(getActiveState())
+      onChange()
+    })
+  }
 
   function handleBold() {
     document.execCommand('bold')
@@ -68,6 +148,18 @@ export const FloatingToolbar: FC<FloatingToolbarProps> = ({
   function handleUnderline() {
     document.execCommand('underline')
     onChange()
+  }
+
+  function handleTextColor(color: string) {
+    applyInlineSpanStyle({
+      color
+    })
+  }
+
+  function handleFontSize(fontSizePx: number) {
+    applyInlineSpanStyle({
+      'font-size': `${fontSizePx}px`
+    })
   }
 
   function handleLinkOpen() {
@@ -196,6 +288,34 @@ export const FloatingToolbar: FC<FloatingToolbarProps> = ({
                   <IconUnlink className="h-5 w-5" />
                 </Button.Link>
               )}
+
+              <Select
+                className="ml-1 w-[5.75rem]"
+                type="number"
+                value={activeFontSize}
+                options={FONT_SIZE_OPTIONS}
+                placeholder="Size"
+                contentProps={{
+                  side: 'bottom',
+                  align: 'end'
+                }}
+                onChange={value => {
+                  if (helper.isNumber(value)) {
+                    handleFontSize(value)
+                  }
+                }}
+              />
+
+              <div className="ml-1">
+                <ColorPicker
+                  value={activeState.textColor || '#ffffff'}
+                  contentProps={{
+                    side: 'bottom',
+                    align: 'end'
+                  }}
+                  onChange={handleTextColor}
+                />
+              </div>
             </>
           )}
         </div>

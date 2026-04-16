@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common'
 
 import { COOKIE_DEVICE_ID_NAME } from '@config'
-import { SESSION_MAX_AGE } from '@environments'
 import { helper, hs, timestamp } from '@heyform-inc/utils'
 import { GqlExecutionContext } from '@nestjs/graphql'
 import { AuthService, UserService } from '@service'
@@ -35,7 +34,7 @@ export class AuthGuard implements CanActivate {
         throw new ForbiddenException('Forbidden request error')
       }
 
-      const isExpired = await this.authService.isExpired(user.id, user.deviceId)
+      const isExpired = await this.authService.isExpired(user.id, user.deviceId, user.rememberMe)
 
       if (!isExpired) {
         const detail = await this.userService.findById(user.id)
@@ -44,14 +43,14 @@ export class AuthGuard implements CanActivate {
           req.user = detail
 
           const now = timestamp()
-          const expire = hs(SESSION_MAX_AGE)
+          const expire = hs(AuthService.sessionDuration(user.rememberMe))
 
           if (now - Number(user.loginAt) > expire / 2) {
-            await this.authService.renew(user.id, user.deviceId)
+            await this.authService.renew(user.id, user.deviceId, user.rememberMe)
             this.authService.setSession(req.res, {
               ...user,
               loginAt: now
-            })
+            }, AuthService.sessionDuration(user.rememberMe))
           }
 
           return true

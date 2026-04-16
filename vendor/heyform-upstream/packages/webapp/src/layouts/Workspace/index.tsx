@@ -10,7 +10,7 @@ import { clearAuthState, clearCookie, cn, getCookie, useParam, useRouter } from 
 import { helper, timestamp } from '@heyform-inc/utils'
 
 import brandLogo from '@/assets/neptunys-logo.png'
-import { Button, useAlert } from '@/components'
+import { AppStateScreen, Button, useAlert } from '@/components'
 import { REDIRECT_COOKIE_NAME, VERIFY_USER_EMAIL } from '@/consts'
 import { useAppStore, useUserStore, useWorkspaceStore } from '@/store'
 
@@ -29,15 +29,6 @@ import WorkspaceAccount from './WorkspaceAccount'
 import WorkspaceSidebar, { WorkspaceSidebarModal } from './WorkspaceSidebar'
 
 const APP_NAME = 'NeptunysForm'
-
-const GuardScreen: FC<{ title: string; message?: string }> = ({ title, message }) => (
-  <div className="bg-foreground flex min-h-screen items-center justify-center p-6">
-    <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-black/20 p-6 text-center">
-      <h1 className="text-primary text-xl font-semibold">{title}</h1>
-      {message && <p className="text-secondary mt-2 text-sm/6">{message}</p>}
-    </div>
-  </div>
-)
 
 function shouldResetSession(err: any) {
   const message = String(err?.message || '').toLowerCase()
@@ -113,11 +104,11 @@ export const LoginGuard: FC<LayoutProps> = ({ options, children }) => {
   }, [options, t])
 
   if (isCheckingUser) {
-    return <GuardScreen title="Loading workspace" message="Checking your session..." />
+    return <AppStateScreen title="Loading workspace" message="Checking your session..." />
   }
 
   if (guardError) {
-    return <GuardScreen title="App failed to load" message={guardError} />
+    return <AppStateScreen title="App failed to load" message={guardError} status="error" />
   }
 
   return <>{children}</>
@@ -239,10 +230,10 @@ export const WorkspaceGuard: FC<LayoutProps> = ({ options, children }) => {
 
   return (
     <LoginGuard>
-      {!isMounted && <GuardScreen title="Loading workspace" message="Fetching workspaces..." />}
-      {isMounted && guardError && <GuardScreen title="Workspace failed to load" message={guardError} />}
+      {!isMounted && <AppStateScreen title="Loading workspace" message="Fetching workspaces..." />}
+      {isMounted && guardError && <AppStateScreen title="Workspace failed to load" message={guardError} status="error" />}
       {isMounted && !guardError && options?.isHomePage && (
-        <GuardScreen title="Opening workspace" message="Redirecting to your last workspace..." />
+        <AppStateScreen title="Opening workspace" message="Redirecting to your last workspace..." />
       )}
       {isMounted && !guardError && !options?.isHomePage && children}
 
@@ -318,7 +309,7 @@ const LayoutComponent: FC<LayoutProps> = ({ options, children }) => {
   }, [currentProjectId, projectId, selectProject])
 
   if (workspaceId && helper.isEmpty(workspaces)) {
-    return <GuardScreen title="Loading workspace" message="Preparing your workspace..." />
+    return <AppStateScreen title="Loading workspace" message="Preparing your workspace..." />
   }
 
   if (!matchedWorkspace) {

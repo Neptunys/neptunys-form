@@ -38,7 +38,7 @@ export default function FormSettingsEmailNotification() {
     }))
 
   const templateFooter =
-    'Supported tokens: {formName}, {respondentName}, {respondentEmail}, {respondentPhone}, {leadScore}, {leadQuality}, {leadPriority}, {submittedAt}, {submissionId}. {leadQuality} follows your configured grade labels and {leadPriority} follows your configured priority labels.'
+    'Supported tokens: {formName}, {respondentName}, {respondentEmail}, {respondentPhone}, {leadScore}, {leadResult}, {leadQuality}, {leadPriority}, {submittedAt}, {submissionId}. {leadResult} becomes negative when any selected scored answer has a score of 0. {leadQuality} follows your configured grade labels and {leadPriority} follows your configured priority labels.'
 
   return (
     <section id="emailNotification" className="pt-10">
@@ -216,6 +216,27 @@ export default function FormSettingsEmailNotification() {
             <Input.TextArea
               rows={6}
               placeholder={'Hi {respondentName},\n\nThanks for your submission to {formName}. We received it on {submittedAt}.'}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="respondentNegativeNotificationSubject"
+            label="Negative result subject"
+            footer="Used when a submission includes any selected scored answer with score 0."
+          >
+            <Input placeholder="Your result for {formName}" />
+          </Form.Item>
+
+          <Form.Item
+            name="respondentNegativeNotificationMessage"
+            label="Negative result message"
+            footer={templateFooter}
+          >
+            <Input.TextArea
+              rows={6}
+              placeholder={
+                'Hi {respondentName},\n\nThanks for completing {formName}. Based on your answers, this result is negative right now. We recorded your submission on {submittedAt}.'
+              }
             />
           </Form.Item>
         </div>

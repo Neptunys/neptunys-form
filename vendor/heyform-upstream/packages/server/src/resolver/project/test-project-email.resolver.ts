@@ -31,12 +31,15 @@ export class TestProjectEmailResolver {
       ? input.settingsOverride
       : undefined
 
-    if (input.emailType === 'confirmation') {
+    if (input.emailType === 'confirmation' || input.emailType === 'negative_confirmation') {
       await this.projectEmailService.sendProjectRespondentTestEmail(
         project,
         team,
         input.recipientEmail,
-        settingsOverride
+        {
+          settingsOverride,
+          simulateNegativeResult: input.emailType === 'negative_confirmation'
+        }
       )
 
       return true

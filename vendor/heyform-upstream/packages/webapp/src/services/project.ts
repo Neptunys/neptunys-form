@@ -180,7 +180,7 @@ export class ProjectService {
   static testEmail(
     projectId: string,
     input: {
-      emailType: 'confirmation' | 'recap'
+      emailType: 'confirmation' | 'negative_confirmation' | 'recap'
       recipientEmail: string
       settingsOverride?: AnyMap
     }

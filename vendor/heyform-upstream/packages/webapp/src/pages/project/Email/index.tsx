@@ -47,7 +47,7 @@ const REPORT_FREQUENCY_OPTIONS = [
 ]
 
 const confirmationTemplateFooter =
-  'Supported tokens: {formName}, {projectName}, {workspaceName}, {respondentName}, {respondentEmail}, {respondentPhone}, {leadScore}, {leadQuality}, {leadPriority}, {submittedAt}, {submissionId}.'
+  'Supported tokens: {formName}, {projectName}, {workspaceName}, {respondentName}, {respondentEmail}, {respondentPhone}, {leadScore}, {leadResult}, {leadQuality}, {leadPriority}, {submittedAt}, {submissionId}. {leadResult} becomes negative when any selected scored answer has a score of 0.'
 
 const recapTemplateFooter =
   'Supported tokens: {projectName}, {workspaceName}, {clientName}, {leadCount}, {startDate}, {endDate}, {dateRange}, {reportingTimezone}, {frequencyLabel}, {activeFormCount}, {formsWithLeadsCount}, {averageScore}, {highLeadCount}, {mediumLeadCount}, {lowLeadCount}, {lastReportAt}.'
@@ -58,7 +58,7 @@ export default function ProjectEmail() {
   const { project, workspace, updateProject } = useWorkspaceStore()
   const toast = useToast()
   const [emailForm] = Form.useForm()
-  const [testKind, setTestKind] = useState<'confirmation' | 'recap' | null>(null)
+  const [testKind, setTestKind] = useState<'confirmation' | 'negative_confirmation' | 'recap' | null>(null)
 
   const { data, error, loading, refreshAsync } = useRequest(
     async () => ProjectService.leadFlow(projectId),
@@ -81,6 +81,8 @@ export default function ProjectEmail() {
       enableRespondentNotification: Boolean(leadFlow?.enableRespondentNotification),
       respondentNotificationSubject: leadFlow?.respondentNotificationSubject ?? '',
       respondentNotificationMessage: leadFlow?.respondentNotificationMessage ?? '',
+      respondentNegativeNotificationSubject: leadFlow?.respondentNegativeNotificationSubject ?? '',
+      respondentNegativeNotificationMessage: leadFlow?.respondentNegativeNotificationMessage ?? '',
       enableLeadReport: Boolean(leadFlow?.enableLeadReport),
       leadReportEmailsText: (leadFlow?.leadReportEmails || []).join('\n'),
       leadReportFrequency: leadFlow?.leadReportFrequency ?? 'monthly',
@@ -103,6 +105,8 @@ export default function ProjectEmail() {
       leadFlow?.leadReportRangeDays,
       leadFlow?.leadReportSubject,
       leadFlow?.reportingTimezone,
+      leadFlow?.respondentNegativeNotificationMessage,
+      leadFlow?.respondentNegativeNotificationSubject,
       leadFlow?.respondentNotificationMessage,
       leadFlow?.respondentNotificationSubject,
       project?.leadNotificationEmails,
@@ -113,7 +117,7 @@ export default function ProjectEmail() {
   )
 
   const { loading: testLoading, runAsync: runTestAsync } = useRequest(
-    async (kind: 'confirmation' | 'recap') => {
+    async (kind: 'confirmation' | 'negative_confirmation' | 'recap') => {
       const values = emailForm.getFieldsValue(true)
       const normalizedValues = normalizeProjectEmailValues(values)
 
@@ -140,6 +144,12 @@ export default function ProjectEmail() {
         : '',
       respondentNotificationMessage: helper.isValid(values.respondentNotificationMessage)
         ? values.respondentNotificationMessage
+        : '',
+      respondentNegativeNotificationSubject: helper.isValid(values.respondentNegativeNotificationSubject)
+        ? values.respondentNegativeNotificationSubject
+        : '',
+      respondentNegativeNotificationMessage: helper.isValid(values.respondentNegativeNotificationMessage)
+        ? values.respondentNegativeNotificationMessage
         : '',
       enableLeadReport: Boolean(values.enableLeadReport),
       leadReportEmails: parseEmailList(values.leadReportEmailsText),
@@ -173,6 +183,16 @@ export default function ProjectEmail() {
       respondentNotificationMessage: helper.isValid(normalizedValues.respondentNotificationMessage)
         ? normalizedValues.respondentNotificationMessage
         : null,
+      respondentNegativeNotificationSubject: helper.isValid(
+        normalizedValues.respondentNegativeNotificationSubject
+      )
+        ? normalizedValues.respondentNegativeNotificationSubject
+        : null,
+      respondentNegativeNotificationMessage: helper.isValid(
+        normalizedValues.respondentNegativeNotificationMessage
+      )
+        ? normalizedValues.respondentNegativeNotificationMessage
+        : null,
       leadReportSubject: helper.isValid(normalizedValues.leadReportSubject)
         ? normalizedValues.leadReportSubject
         : null,
@@ -188,6 +208,16 @@ export default function ProjectEmail() {
         : undefined,
       respondentNotificationMessage: helper.isValid(normalizedValues.respondentNotificationMessage)
         ? normalizedValues.respondentNotificationMessage
+        : undefined,
+      respondentNegativeNotificationSubject: helper.isValid(
+        normalizedValues.respondentNegativeNotificationSubject
+      )
+        ? normalizedValues.respondentNegativeNotificationSubject
+        : undefined,
+      respondentNegativeNotificationMessage: helper.isValid(
+        normalizedValues.respondentNegativeNotificationMessage
+      )
+        ? normalizedValues.respondentNegativeNotificationMessage
         : undefined,
       enableLeadReport: normalizedValues.enableLeadReport,
       leadReportEmails:
@@ -216,17 +246,28 @@ export default function ProjectEmail() {
     })
   }
 
-  async function handleTest(kind: 'confirmation' | 'recap') {
+  async function handleTest(kind: 'confirmation' | 'negative_confirmation' | 'recap') {
     setTestKind(kind)
 
     try {
       await runTestAsync(kind)
-      toast({
-        title: kind === 'confirmation' ? 'Confirmation test sent' : 'Campaign recap test sent',
-        message:
-          kind === 'confirmation'
-            ? 'A sample lead confirmation email was sent to the designated address.'
+
+      const title =
+        kind === 'confirmation'
+          ? 'Confirmation test sent'
+          : kind === 'negative_confirmation'
+            ? 'Negative confirmation test sent'
+            : 'Campaign recap test sent'
+      const message =
+        kind === 'confirmation'
+          ? 'A sample lead confirmation email was sent to the designated address.'
+          : kind === 'negative_confirmation'
+            ? 'A sample negative-result confirmation email was sent to the designated address.'
             : 'A campaign recap preview was sent to the designated address.'
+
+      toast({
+        title,
+        message
       })
     } catch (testError: any) {
       toast({
@@ -328,6 +369,27 @@ export default function ProjectEmail() {
                   rows={6}
                   placeholder={
                     'Hi {respondentName},\n\nThanks for your submission to {formName}. We received it on {submittedAt}. A team member will review it and follow up if needed.'
+                  }
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="respondentNegativeNotificationSubject"
+                label="Negative result subject"
+                footer="Used when a submission includes any selected scored answer with score 0."
+              >
+                <Input placeholder="Your result for {formName}" />
+              </Form.Item>
+
+              <Form.Item
+                name="respondentNegativeNotificationMessage"
+                label="Negative result message"
+                footer={confirmationTemplateFooter}
+              >
+                <Input.TextArea
+                  rows={6}
+                  placeholder={
+                    'Hi {respondentName},\n\nThanks for completing {formName}. Based on your answers, this result is negative right now. We recorded your submission on {submittedAt}.'
                   }
                 />
               </Form.Item>
@@ -445,6 +507,14 @@ export default function ProjectEmail() {
                 >
                   Send confirmation test
                 </Button>
+
+                <Button.Ghost
+                  size="md"
+                  loading={testLoading && testKind === 'negative_confirmation'}
+                  onClick={() => handleTest('negative_confirmation')}
+                >
+                  Send negative confirmation test
+                </Button.Ghost>
 
                 <Button.Ghost
                   size="md"

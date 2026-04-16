@@ -7,7 +7,6 @@ import {
   IsNumber,
   IsObject,
   IsOptional,
-  IsUrl,
   Length,
   Max,
   Min
@@ -86,7 +85,6 @@ export class TeamCdnTokenInput {
 @InputType()
 export class CreateBrandKitInput extends TeamDetailInput {
   @Field({ nullable: true })
-  @IsUrl()
   @IsOptional()
   logo: string
 
@@ -98,7 +96,6 @@ export class CreateBrandKitInput extends TeamDetailInput {
 @InputType()
 export class UpdateBrandKitInput extends TeamDetailInput {
   @Field({ nullable: true })
-  @IsUrl()
   @IsOptional()
   logo: string
 
@@ -118,7 +115,6 @@ export class UpdateTeamInput extends TeamDetailInput {
   name?: string
 
   @Field({ nullable: true })
-  @IsUrl()
   @IsOptional()
   avatar?: string
 
@@ -161,6 +157,14 @@ export class UpdateTeamInput extends TeamDetailInput {
   @IsObject()
   @IsOptional()
   googleSheetsLeadConfig?: Record<string, any>
+}
+
+@InputType()
+export class SendTeamLeadReportInput extends TeamDetailInput {
+  @Field(type => GraphQLJSONObject, { nullable: true })
+  @IsObject()
+  @IsOptional()
+  settingsOverride?: Record<string, any>
 }
 
 @InputType()

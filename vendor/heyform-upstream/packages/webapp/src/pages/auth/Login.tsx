@@ -2,10 +2,10 @@ import { Trans, useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 import { AuthService } from '@/services'
-import { useQuery, useRouter } from '@/utils'
+import { clearCookie, getCookie, useQuery, useRouter } from '@/utils'
 
-import { Form, Input } from '@/components'
-import { isRegistrationDisabled } from '@/consts'
+import { Checkbox, Form, Input } from '@/components'
+import { isRegistrationDisabled, REDIRECT_COOKIE_NAME } from '@/consts'
 
 import SocialLogin from './SocialLogin'
 
@@ -43,6 +43,16 @@ const Login = () => {
 
   async function fetch(values: any) {
     await AuthService.login(values)
+
+    const redirectUri = getCookie(REDIRECT_COOKIE_NAME) as string
+
+    if (redirectUri) {
+      clearCookie(REDIRECT_COOKIE_NAME)
+      return router.redirect(redirectUri, {
+        extend: false
+      })
+    }
+
     router.replace('/')
   }
 
@@ -78,7 +88,10 @@ const Login = () => {
       <Form.Simple
         className="space-y-4"
         fetch={fetch}
-        initialValues={email ? { email } : undefined}
+        initialValues={{
+          email,
+          rememberMe: true
+        }}
         submitProps={{
           label: t('login.title'),
           className: 'w-full'
@@ -119,6 +132,18 @@ const Login = () => {
           ]}
         >
           <Input.Password />
+        </Form.Item>
+
+        <Form.Item name="rememberMe" validateTrigger={[]}>
+          {(control: any) => (
+            <label className="flex cursor-pointer items-center gap-3 text-sm/6 select-none">
+              <Checkbox
+                value={Boolean(control.value)}
+                onChange={value => control.onChange(value)}
+              />
+              <span className="text-secondary">Remember me on this device</span>
+            </label>
+          )}
         </Form.Item>
       </Form.Simple>
     </div>

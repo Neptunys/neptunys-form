@@ -15,7 +15,7 @@ import { ReactSortable } from 'react-sortablejs'
 import { cn, isRenderableImageSource } from '@/utils'
 import { clone, excludeObject, helper, nanoid } from '@heyform-inc/utils'
 
-import { ImagePicker, ImagePickerRef } from '@/components'
+import { ImagePicker, ImagePickerRef, Select } from '@/components'
 
 import {
   LEAD_SCORE_LABEL_CLASSNAME,

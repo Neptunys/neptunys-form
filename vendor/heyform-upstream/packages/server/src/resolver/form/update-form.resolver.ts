@@ -64,6 +64,8 @@ export class UpdateFormResolver {
       ['enableRespondentNotification', 'settings.enableRespondentNotification'],
       ['respondentNotificationSubject', 'settings.respondentNotificationSubject'],
       ['respondentNotificationMessage', 'settings.respondentNotificationMessage'],
+      ['respondentNegativeNotificationSubject', 'settings.respondentNegativeNotificationSubject'],
+      ['respondentNegativeNotificationMessage', 'settings.respondentNegativeNotificationMessage'],
       ['enableOperatorNotification', 'settings.enableOperatorNotification'],
       ['operatorNotificationSubject', 'settings.operatorNotificationSubject'],
       ['operatorNotificationMessage', 'settings.operatorNotificationMessage']

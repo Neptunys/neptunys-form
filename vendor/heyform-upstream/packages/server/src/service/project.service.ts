@@ -58,6 +58,12 @@ function normalizeProjectLaunchPath(value?: string) {
   return normalized || undefined
 }
 
+function buildFormStatusFilter(status: FormStatusEnum) {
+  return {
+    $in: Array.from(new Set([FormStatusEnum[status], status, String(status)]))
+  }
+}
+
 @Injectable()
 export class ProjectService {
   constructor(
@@ -224,7 +230,7 @@ export class ProjectService {
     const form = await this.formModel.findOne({
       teamId: team.id,
       slug: normalizedPath,
-      status: FormStatusEnum.NORMAL
+      status: buildFormStatusFilter(FormStatusEnum.NORMAL)
     })
 
     if (!form) {
@@ -254,7 +260,7 @@ export class ProjectService {
       this.formModel.exists({
         teamId,
         slug: launchPath,
-        status: FormStatusEnum.NORMAL
+        status: buildFormStatusFilter(FormStatusEnum.NORMAL)
       })
     ])
 

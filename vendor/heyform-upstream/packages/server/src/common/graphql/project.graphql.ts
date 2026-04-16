@@ -87,6 +87,16 @@ export class UpdateProjectInput extends ProjectDetailInput {
 
   @Field({ nullable: true })
   @IsOptional()
+  @IsString()
+  respondentNegativeNotificationSubject?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  respondentNegativeNotificationMessage?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
   @IsBoolean()
   enableLeadReport?: boolean
 
@@ -136,7 +146,7 @@ export class TestProjectGoogleSheetsInput extends ProjectDetailInput {
 @InputType()
 export class SendProjectEmailTestInput extends ProjectDetailInput {
   @Field()
-  @IsIn(['confirmation', 'recap'])
+  @IsIn(['confirmation', 'negative_confirmation', 'recap'])
   emailType: string
 
   @Field()
@@ -229,6 +239,12 @@ export class ProjectType {
   respondentNotificationMessage?: string
 
   @Field({ nullable: true })
+  respondentNegativeNotificationSubject?: string
+
+  @Field({ nullable: true })
+  respondentNegativeNotificationMessage?: string
+
+  @Field({ nullable: true })
   enableLeadReport?: boolean
 
   @Field({ nullable: true })
@@ -281,6 +297,12 @@ export class ProjectLeadFlowType {
 
   @Field({ nullable: true })
   respondentNotificationMessage?: string
+
+  @Field({ nullable: true })
+  respondentNegativeNotificationSubject?: string
+
+  @Field({ nullable: true })
+  respondentNegativeNotificationMessage?: string
 
   @Field({ nullable: true })
   enableLeadReport?: boolean

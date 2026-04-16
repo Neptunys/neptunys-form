@@ -1,7 +1,7 @@
 import { COUNTRIES, FlagIcon } from '@heyform-inc/form-renderer'
-import { IconCheck, IconChevronDown, IconChevronRight } from '@tabler/icons-react'
+import { IconBuilding, IconCheck, IconChevronDown, IconChevronRight, IconMail, IconPhone, IconUser } from '@tabler/icons-react'
 import clsx from 'clsx'
-import type { FC } from 'react'
+import type { FC, ReactNode } from 'react'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -9,6 +9,31 @@ import { FakeSelect } from '../FakeSelect'
 import { FakeSubmit } from '../FakeSubmit'
 import type { BlockProps } from './Block'
 import { Block } from './Block'
+
+function ContactFieldShell({
+  className,
+  icon,
+  enabled,
+  children
+}: {
+  className?: string
+  icon: ReactNode
+  enabled: boolean
+  children: ReactNode
+}) {
+  if (!enabled) {
+    return <div className={className}>{children}</div>
+  }
+
+  return (
+    <div className={clsx('heyform-contact-field-shell', className)}>
+      <span className="heyform-contact-field-icon" aria-hidden="true">
+        {icon}
+      </span>
+      <div className="heyform-contact-field-control">{children}</div>
+    </div>
+  )
+}
 
 export const ContactInfo: FC<BlockProps> = ({ field, locale, ...restProps }) => {
   const { t } = useTranslation()
@@ -18,7 +43,9 @@ export const ContactInfo: FC<BlockProps> = ({ field, locale, ...restProps }) => 
   const showPhoneNumber = field.properties?.showPhoneNumber ?? true
   const showEmail = field.properties?.showEmail ?? true
   const showCompany = field.properties?.showCompany ?? true
+  const showFieldIcons = field.properties?.showFieldIcons ?? false
   const showConsent = field.properties?.showConsent ?? false
+  const consentStyle = field.properties?.consentStyle ?? 'subtle'
   const consentText = field.properties?.consentText || 'I consent to being contacted about my enquiry.'
   const consentLinkLabel = field.properties?.consentLinkLabel
   const consentLinkUrl = field.properties?.consentLinkUrl
@@ -34,57 +61,79 @@ export const ContactInfo: FC<BlockProps> = ({ field, locale, ...restProps }) => 
       <div className="space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row">
           {showFirstName && (
-            <input
-              type="text"
-              className={clsx('heyform-input', showBothNameFields ? 'w-full sm:flex-1' : 'w-full')}
-              placeholder={t('First Name', { lng: locale })}
-              disabled={true}
-            />
+            <ContactFieldShell
+              enabled={showFieldIcons}
+              icon={<IconUser />}
+              className={showBothNameFields ? 'w-full sm:flex-1' : 'w-full'}
+            >
+              <input
+                type="text"
+                className="heyform-input"
+                placeholder={t('First Name', { lng: locale })}
+                disabled={true}
+              />
+            </ContactFieldShell>
           )}
 
           {showLastName && (
-            <input
-              type="text"
-              className={clsx('heyform-input', showBothNameFields ? 'w-full sm:flex-1' : 'w-full')}
-              placeholder={t('Last Name', { lng: locale })}
-              disabled={true}
-            />
+            <ContactFieldShell
+              enabled={showFieldIcons}
+              icon={<IconUser />}
+              className={showBothNameFields ? 'w-full sm:flex-1' : 'w-full'}
+            >
+              <input
+                type="text"
+                className="heyform-input"
+                placeholder={t('Last Name', { lng: locale })}
+                disabled={true}
+              />
+            </ContactFieldShell>
           )}
         </div>
 
         {showPhoneNumber && (
-          <div className="heyform-phone-number">
-            <div className="flex items-center">
-              <div className="heyform-calling-code">
-                <FlagIcon countryCode={selectedCountry?.value} />
-                {field.properties?.hideCountrySelect ? (
-                  <span className="heyform-phone-static-code">+{selectedCountry?.callingCode}</span>
-                ) : (
-                  <IconChevronDown className="heyform-phone-arrow-icon" />
-                )}
+          <ContactFieldShell enabled={showFieldIcons} icon={<IconPhone />} className="w-full">
+            <div className="heyform-phone-number">
+              <div className="flex items-center">
+                <div className="heyform-calling-code">
+                  <FlagIcon countryCode={selectedCountry?.value} />
+                  {field.properties?.hideCountrySelect ? (
+                    <span className="heyform-phone-static-code">+{selectedCountry?.callingCode}</span>
+                  ) : (
+                    <IconChevronDown className="heyform-phone-arrow-icon" />
+                  )}
+                </div>
+                <input type="text" className="heyform-input" placeholder={selectedCountry?.example} disabled={true} />
               </div>
-              <input type="text" className="heyform-input" placeholder={selectedCountry?.example} disabled={true} />
             </div>
-          </div>
+          </ContactFieldShell>
         )}
 
         {showEmail && (
-          <input type="email" className="heyform-input" placeholder="email@example.com" disabled={true} />
+          <ContactFieldShell enabled={showFieldIcons} icon={<IconMail />} className="w-full">
+            <input type="email" className="heyform-input" placeholder="email@example.com" disabled={true} />
+          </ContactFieldShell>
         )}
 
         {showCompany && (
-          <input
-            type="text"
-            className="heyform-input"
-            placeholder={t('Company', { lng: locale })}
-            disabled={true}
-          />
+          <ContactFieldShell enabled={showFieldIcons} icon={<IconBuilding />} className="w-full">
+            <input
+              type="text"
+              className="heyform-input"
+              placeholder={t('Company', { lng: locale })}
+              disabled={true}
+            />
+          </ContactFieldShell>
         )}
 
         {showConsent && (
-          <div className="w-full max-w-[28rem] pt-1">
+          <div className={clsx('w-full pt-1', consentStyle === 'boxed' ? 'max-w-[28rem]' : 'max-w-[22rem]')}>
             <div
-              className={`heyform-consent-option${field.properties?.defaultChecked ? ' heyform-consent-option-selected' : ''}`}
+              className={clsx(
+                'heyform-consent-option',
+                consentStyle === 'subtle' && 'heyform-consent-option-subtle',
+                field.properties?.defaultChecked && 'heyform-consent-option-selected'
+              )}
             >
               <span className="heyform-consent-box" aria-hidden="true">
                 <IconCheck className="heyform-consent-box-icon" />

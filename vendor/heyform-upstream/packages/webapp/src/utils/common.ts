@@ -3,6 +3,8 @@ import { twMerge } from 'tailwind-merge'
 
 import { helper, toURLQuery } from '@heyform-inc/utils'
 
+import type { WorkspaceType } from '@/types'
+
 import { getDeviceId } from './auth'
 
 export function cn(...inputs: ClassValue[]) {
@@ -77,6 +79,14 @@ export function scrollIntoViewIfNeeded(container: HTMLElement, target: HTMLEleme
 
 export function uniqueArray<T>(arr: T[]) {
   return Array.from(new Set(arr))
+}
+
+export function canCreateWorkspace(workspaces?: Array<Pick<WorkspaceType, 'isOwner'>>) {
+  if (!helper.isValidArray(workspaces)) {
+    return true
+  }
+
+  return workspaces.length < 1 || workspaces.some(workspace => workspace.isOwner)
 }
 
 export function getDecoratedURL(url: string, query: Record<string, string>) {

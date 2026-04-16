@@ -58,6 +58,49 @@ function normalizeEnumValue<T extends Record<string, string | number>>(
   return value
 }
 
+function buildEnumFilter<T extends Record<string, string | number>>(
+  enumType: T,
+  value: string | number | undefined
+) {
+  const normalizedValue = normalizeEnumValue(enumType, value)
+  const values = [normalizedValue]
+
+  if (value !== undefined && value !== null) {
+    values.push(value)
+
+    if (typeof value === 'number') {
+      values.push(String(value))
+    }
+
+    if (typeof value === 'string' && /^\d+$/.test(value)) {
+      values.push(Number(value))
+    }
+  }
+
+  const uniqueValues = Array.from(
+    new Set(values.filter((candidate): candidate is string | number => candidate !== undefined))
+  )
+
+  if (uniqueValues.length <= 1) {
+    return normalizedValue
+  }
+
+  return {
+    $in: uniqueValues
+  }
+}
+
+function normalizeFormUpdates(updates: Record<string, any>) {
+  if (!Object.prototype.hasOwnProperty.call(updates, 'status')) {
+    return updates
+  }
+
+  return {
+    ...updates,
+    status: normalizeEnumValue(FormStatusEnum, updates.status)
+  }
+}
+
 function normalizeDomainHostname(value?: string) {
   if (!helper.isValid(value)) {
     return undefined
@@ -138,10 +181,9 @@ export class FormService {
     limit = 10,
     status = FormStatusEnum.NORMAL
   ): Promise<FormModel[]> {
-    const normalizedStatus = normalizeEnumValue(FormStatusEnum, status)
     const conditions: Record<string, any> = {
       teamId,
-      status: normalizedStatus
+      status: buildEnumFilter(FormStatusEnum, status)
     }
 
     if (helper.isValidArray(projectIds)) {
@@ -181,7 +223,7 @@ export class FormService {
         $lte: timestamp(),
         $gt: 0
       },
-      status: normalizeEnumValue(FormStatusEnum, FormStatusEnum.TRASH)
+      status: buildEnumFilter(FormStatusEnum, FormStatusEnum.TRASH)
     })
   }
 
@@ -190,10 +232,9 @@ export class FormService {
     status: FormStatusEnum,
     keyword?: string
   ): Promise<FormModel[]> {
-    const normalizedStatus = normalizeEnumValue(FormStatusEnum, status)
     const conditions: any = {
       projectId,
-      status: normalizedStatus
+      status: buildEnumFilter(FormStatusEnum, status)
     }
 
     if (helper.isValidArray(projectId)) {
@@ -280,24 +321,26 @@ export class FormService {
     updates: Record<string, any>,
     conditions?: Record<string, any>
   ): Promise<boolean> {
+    const normalizedUpdates = normalizeFormUpdates(updates)
     const result = await this.formModel.updateOne(
       {
         _id: formId,
         ...conditions
       },
-      updates
+      normalizedUpdates
     )
     return result.acknowledged
   }
 
   public async updateMany(formIds: string[], updates: Record<string, any>): Promise<boolean> {
+    const normalizedUpdates = normalizeFormUpdates(updates)
     const result = await this.formModel.updateMany(
       {
         _id: {
           $in: formIds
         }
       },
-      updates
+      normalizedUpdates
     )
     return result.acknowledged
   }
@@ -310,12 +353,12 @@ export class FormService {
         _id: {
           $in: formId as string[]
         },
-        status: FormStatusEnum.TRASH
+        status: buildEnumFilter(FormStatusEnum, FormStatusEnum.TRASH)
       })
     } else {
       result = await this.formModel.deleteOne({
         _id: formId as string,
-        status: FormStatusEnum.TRASH
+        status: buildEnumFilter(FormStatusEnum, FormStatusEnum.TRASH)
       })
     }
 

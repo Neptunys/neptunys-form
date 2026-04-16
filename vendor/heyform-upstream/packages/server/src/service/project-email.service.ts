@@ -6,10 +6,12 @@ import { helper, timestamp, toFixed } from '@heyform-inc/utils'
 import { ProjectModel, TeamModel } from '@model'
 import {
   buildLeadCapturePayload,
+  LeadCapturePayload,
   buildLeadTemplateValues,
   buildTestLeadCapturePayload,
   escapeHtml,
   interpolateLeadTemplate,
+  resolveRespondentNotificationTemplates,
   renderLeadTemplateHtml
 } from '@utils'
 
@@ -34,6 +36,11 @@ interface SendProjectLeadReportOptions {
   persistLastSentAt?: boolean
   skipScheduleCheck?: boolean
   settingsOverride?: ProjectEmailOverrides
+}
+
+interface SendProjectRespondentTestEmailOptions {
+  settingsOverride?: ProjectEmailOverrides
+  simulateNegativeResult?: boolean
 }
 
 function hasOwn(overrides: ProjectEmailOverrides | undefined, key: string) {
@@ -677,37 +684,45 @@ export class ProjectEmailService {
     project: ProjectModel,
     team: TeamModel,
     recipientEmail: string,
-    settingsOverride?: ProjectEmailOverrides
+    options: SendProjectRespondentTestEmailOptions = {}
   ): Promise<void> {
     if (!helper.isValid(recipientEmail)) {
       throw new BadRequestException('A valid recipient email is required')
     }
 
-    const settings = this.resolveSettings(project, settingsOverride)
+    const settings = this.resolveSettings(project, options.settingsOverride)
     const forms = (await this.formService.findAll(project.id, FormStatusEnum.NORMAL)).filter(
       form => !form.suspended
     )
     const activeForm = forms[0]
-    const payload = activeForm
-      ? {
-          ...buildTestLeadCapturePayload(activeForm, team),
-          projectId: project.id,
-          projectName: project.name,
-          respondentEmail: recipientEmail,
-          reportingTimezone: normalizeOptionalString(project.reportingTimezone || team.reportingTimezone)
-        }
-      : this.buildFallbackConfirmationPayload(project, team, recipientEmail)
+    const payload = this.applyRespondentTestResultVariant(
+      activeForm
+        ? {
+            ...buildTestLeadCapturePayload(activeForm, team),
+            projectId: project.id,
+            projectName: project.name,
+            respondentEmail: recipientEmail,
+            reportingTimezone: normalizeOptionalString(project.reportingTimezone || team.reportingTimezone)
+          }
+        : this.buildFallbackConfirmationPayload(project, team, recipientEmail),
+      options.simulateNegativeResult
+    )
     const values = buildLeadTemplateValues(payload, {
       workspaceName: team.name,
       projectName: project.name
     })
+    const respondentTemplates = resolveRespondentNotificationTemplates(payload, {
+      subject: settings.respondentNotificationSubject,
+      message: settings.respondentNotificationMessage,
+      negativeSubject: settings.respondentNegativeNotificationSubject,
+      negativeMessage: settings.respondentNegativeNotificationMessage
+    })
     const subject = interpolateLeadTemplate(
-      settings.respondentNotificationSubject || 'We received your submission for {formName}',
+      respondentTemplates.subjectTemplate,
       values
     )
     const body = renderLeadTemplateHtml(
-      settings.respondentNotificationMessage ||
-        'Hi {respondentName},\n\nThanks for your submission to {formName}. We received it on {submittedAt}. A team member will review it and follow up if needed.',
+      respondentTemplates.messageTemplate,
       values
     )
 
@@ -749,6 +764,7 @@ export class ProjectEmailService {
       leadScoreVariableId: undefined,
       leadScoreVariableName: 'Lead Score',
       leadLevel: 'medium' as const,
+      hasZeroScoreAnswer: false,
       leadQuality: 'Review',
       leadPriority: 'Warm',
       answersByTitle: {
@@ -762,6 +778,24 @@ export class ProjectEmailService {
       answersPlain: `What’s your first name?\nSample Lead\n\nBest email address?\n${recipientEmail}`,
       answersHtml: `What’s your first name?<br />Sample Lead<br /><br />Best email address?<br />${escapeHtml(recipientEmail)}`,
       reportingTimezone: normalizeOptionalString(project.reportingTimezone || team.reportingTimezone)
+    }
+  }
+
+  private applyRespondentTestResultVariant(
+    payload: LeadCapturePayload,
+    simulateNegativeResult?: boolean
+  ): LeadCapturePayload {
+    if (!simulateNegativeResult) {
+      return payload
+    }
+
+    return {
+      ...payload,
+      hasZeroScoreAnswer: true,
+      leadScore: 0,
+      leadLevel: 'low',
+      leadQuality: 'Low',
+      leadPriority: 'Low priority'
     }
   }
 
@@ -779,6 +813,12 @@ export class ProjectEmailService {
       respondentNotificationMessage: hasOwn(overrides, 'respondentNotificationMessage')
         ? normalizeOptionalString(overrides?.respondentNotificationMessage)
         : project.respondentNotificationMessage,
+      respondentNegativeNotificationSubject: hasOwn(overrides, 'respondentNegativeNotificationSubject')
+        ? normalizeOptionalString(overrides?.respondentNegativeNotificationSubject)
+        : project.respondentNegativeNotificationSubject,
+      respondentNegativeNotificationMessage: hasOwn(overrides, 'respondentNegativeNotificationMessage')
+        ? normalizeOptionalString(overrides?.respondentNegativeNotificationMessage)
+        : project.respondentNegativeNotificationMessage,
       enableLeadReport: hasOwn(overrides, 'enableLeadReport')
         ? Boolean(overrides?.enableLeadReport)
         : project.enableLeadReport,

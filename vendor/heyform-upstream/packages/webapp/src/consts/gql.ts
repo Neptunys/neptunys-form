@@ -56,6 +56,12 @@ export const UPDATE_WORKSPACE_GQL = gql`
   }
 `
 
+export const SEND_TEAM_LEAD_REPORT_GQL = gql`
+  mutation sendTeamLeadReport($input: SendTeamLeadReportInput!) {
+    sendTeamLeadReport(input: $input)
+  }
+`
+
 export const DISSOLVE_WORKSPACE_CODE_GQL = gql`
   query dissolveTeamCode($input: TeamDetailInput!) {
     dissolveTeamCode(input: $input)
@@ -105,6 +111,8 @@ export const WORKSPACES_GQL = gql`
         enableRespondentNotification
         respondentNotificationSubject
         respondentNotificationMessage
+        respondentNegativeNotificationSubject
+        respondentNegativeNotificationMessage
         enableLeadReport
         leadReportFrequency
         leadReportRangeDays
@@ -414,6 +422,8 @@ export const PROJECT_LEAD_FLOW_GQL = gql`
       enableRespondentNotification
       respondentNotificationSubject
       respondentNotificationMessage
+      respondentNegativeNotificationSubject
+      respondentNegativeNotificationMessage
       enableLeadReport
       leadReportFrequency
       leadReportRangeDays
@@ -770,6 +780,8 @@ export const FORM_DETAIL_GQL = gql`
         enableRespondentNotification
         respondentNotificationSubject
         respondentNotificationMessage
+        respondentNegativeNotificationSubject
+        respondentNegativeNotificationMessage
         enableOperatorNotification
         operatorNotificationEmails
         operatorNotificationSubject

@@ -6,7 +6,7 @@ import {
 } from '@heyform-inc/form-renderer'
 import { IconChevronRight } from '@tabler/icons-react'
 import { useRequest } from 'ahooks'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { insertThemeStyle } from '@/pages/form/Builder/utils'
@@ -41,6 +41,7 @@ const ModalComponent = () => {
     return DEFAULT_THEME
   }, [workspace?.brandKits])
   const [values, setValues] = useState(brandKit)
+  const brandKitIdRef = useRef<string | undefined>(brandKit?.id)
 
   const options = useMemo(
     () => [
@@ -74,6 +75,10 @@ const ModalComponent = () => {
 
   function handleValuesChange(_changes: AnyMap, values: AnyMap) {
     setValues(values)
+
+    if (Object.prototype.hasOwnProperty.call(_changes, 'logo')) {
+      run(values)
+    }
   }
 
   const { run, loading } = useRequest(
@@ -83,16 +88,18 @@ const ModalComponent = () => {
         theme: pickObject(newValues, [], ['logo'])
       }
 
-      let brandKitId = brandKit?.id
+      let brandKitId = brandKitIdRef.current
 
       if (!brandKitId) {
         brandKitId = await WorkspaceService.createBrandKit({
           teamId: workspaceId,
           ...updates
         })
+        brandKitIdRef.current = brandKitId
       } else {
         await WorkspaceService.updateBrandKit({
           teamId: workspaceId,
+          id: brandKitId,
           ...updates
         })
       }
@@ -117,6 +124,11 @@ const ModalComponent = () => {
     insertThemeStyle(values)
   }, [values])
 
+  useEffect(() => {
+    brandKitIdRef.current = brandKit?.id
+    setValues(brandKit)
+  }, [brandKit])
+
   return (
     <div className="flex h-full">
       <div className="scrollbar border-accent-light bg-foreground h-full w-full border-r px-4 py-6 sm:w-80">
@@ -136,16 +148,7 @@ const ModalComponent = () => {
           <div className="mt-4 space-y-8">
             <div>
               <h3 className="text-sm/6 font-semibold">{t('settings.branding.logo.title')}</h3>
-              <Form.Item
-                className="mt-2"
-                name="logo"
-                rules={[
-                  {
-                    type: 'url',
-                    message: t('settings.branding.logo.invalid')
-                  }
-                ]}
-              >
+              <Form.Item className="mt-2" name="logo">
                 <ImageFormPicker
                   className="[&_[data-slot=avatar]]:h-8 [&_[data-slot=avatar]]:w-auto [&_[data-slot=avatar]]:after:hidden [&_[data-slot=avatar]_img]:aspect-auto [&_[data-slot=avatar]_img]:w-auto [&_[data-slot=avatar]_img]:rounded-none"
                   resize={{

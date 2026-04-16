@@ -181,14 +181,36 @@ export class TeamService {
     return this.teamInvitationModel.findById(invitationId)
   }
 
+  async findInvitation(teamId: string, email: string): Promise<TeamInvitationModel | null> {
+    return this.teamInvitationModel.findOne({
+      teamId,
+      email: email.toLowerCase()
+    })
+  }
+
   async createInvitations(teamId: string, emails: string[]): Promise<any> {
     const expireAt = timestamp() + hs('7d')
 
-    return this.teamInvitationModel.insertMany(
+    if (emails.length < 1) {
+      return []
+    }
+
+    return this.teamInvitationModel.bulkWrite(
       emails.map(email => ({
-        teamId,
-        email,
-        expireAt
+        updateOne: {
+          filter: {
+            teamId,
+            email: email.toLowerCase()
+          },
+          update: {
+            $set: {
+              teamId,
+              email: email.toLowerCase(),
+              expireAt
+            }
+          },
+          upsert: true
+        }
       }))
     )
   }

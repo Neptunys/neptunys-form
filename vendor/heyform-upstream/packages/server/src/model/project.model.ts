@@ -53,6 +53,12 @@ export class ProjectModel extends Document {
   respondentNotificationMessage?: string
 
   @Prop()
+  respondentNegativeNotificationSubject?: string
+
+  @Prop()
+  respondentNegativeNotificationMessage?: string
+
+  @Prop()
   enableLeadReport?: boolean
 
   @Prop()

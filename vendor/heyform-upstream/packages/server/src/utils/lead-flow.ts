@@ -3,6 +3,7 @@ import { createHash } from 'crypto'
 import { answersToHtml, htmlUtils, parsePlainAnswer } from '@heyform-inc/answer-utils'
 import {
   Answer,
+  CHOICE_FIELD_KINDS,
   ContactInfoValue,
   FieldKindEnum,
   FormField,
@@ -23,6 +24,13 @@ const DEFAULT_LEAD_QUALITY_LABELS = {
   medium: 'Review',
   low: 'Low fit'
 }
+
+const DEFAULT_RESPONDENT_NOTIFICATION_SUBJECT = 'We received your submission for {formName}'
+const DEFAULT_RESPONDENT_NOTIFICATION_MESSAGE =
+  'Hi {respondentName},\n\nThanks for your submission to {formName}. We received it on {submittedAt}. A team member will review it and follow up if needed.'
+const DEFAULT_NEGATIVE_RESPONDENT_NOTIFICATION_SUBJECT = 'Your result for {formName}'
+const DEFAULT_NEGATIVE_RESPONDENT_NOTIFICATION_MESSAGE =
+  'Hi {respondentName},\n\nThanks for completing {formName}. Based on your answers, this result is negative right now. We recorded your submission on {submittedAt}.'
 
 const NON_QUESTION_FIELD_KINDS = [
   FieldKindEnum.GROUP,
@@ -85,6 +93,8 @@ interface LeadFlowSettings {
   enableRespondentNotification?: boolean
   respondentNotificationSubject?: string
   respondentNotificationMessage?: string
+  respondentNegativeNotificationSubject?: string
+  respondentNegativeNotificationMessage?: string
   enableOperatorNotification?: boolean
   operatorNotificationEmails?: string[]
   operatorNotificationSubject?: string
@@ -159,6 +169,7 @@ export interface LeadCapturePayload {
   leadScoreVariableId?: string
   leadScoreVariableName?: string
   leadLevel?: LeadLevel
+  hasZeroScoreAnswer?: boolean
   leadQuality?: string
   leadPriority?: string
   answersByTitle: Record<string, string>
@@ -513,6 +524,63 @@ function resolveScoreVariable(
   return undefined
 }
 
+function getSelectedChoiceIds(value: unknown): string[] {
+  if (helper.isObject(value) && Object.prototype.hasOwnProperty.call(value, 'value')) {
+    return getSelectedChoiceIds((value as { value?: unknown }).value)
+  }
+
+  if (helper.isArray(value)) {
+    return value
+      .map(entry => normalizeString(entry))
+      .filter((entry): entry is string => helper.isValid(entry))
+  }
+
+  const normalized = normalizeString(value)
+  return normalized ? [normalized] : []
+}
+
+function hasAnswerValue(answer: Answer): boolean {
+  if (helper.isValid(normalizeString(parsePlainAnswer(answer)))) {
+    return true
+  }
+
+  if (helper.isArray(answer.value)) {
+    return answer.value.length > 0
+  }
+
+  if (helper.isObject(answer.value)) {
+    return Object.values(answer.value as Record<string, unknown>).some(value => {
+      if (helper.isArray(value)) {
+        return value.length > 0
+      }
+
+      return helper.isValid(normalizeString(value)) || helper.isBool(value)
+    })
+  }
+
+  return !helper.isNil(answer.value)
+}
+
+export function hasZeroScoreAnswer(answers: Answer[]): boolean {
+  return answers.some(answer => {
+    if (!hasAnswerValue(answer)) {
+      return false
+    }
+
+    if (CHOICE_FIELD_KINDS.includes(answer.kind) && helper.isValidArray(answer.properties?.choices)) {
+      const selectedChoiceIds = getSelectedChoiceIds(answer.value)
+
+      if (selectedChoiceIds.length > 0) {
+        return answer.properties!.choices!.some(choice => {
+          return selectedChoiceIds.includes(choice.id) && normalizeNumber(choice.score) === 0
+        })
+      }
+    }
+
+    return normalizeNumber(answer.properties?.score) === 0
+  })
+}
+
 export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -567,6 +635,7 @@ export function buildLeadTemplateValues(
     respondentPhone: payload.respondentPhone,
     leadScore: helper.isNil(payload.leadScore) ? undefined : String(payload.leadScore),
     leadLevel: payload.leadLevel,
+    leadResult: payload.hasZeroScoreAnswer ? 'negative' : 'standard',
     leadQuality: payload.leadQuality,
     leadPriority: payload.leadPriority,
     leadScoreVariableName: payload.leadScoreVariableName,
@@ -652,6 +721,7 @@ export function buildLeadCapturePayload(
   const leadMediumThreshold = normalizeNumber(settings.leadMediumThreshold) ?? 50
   const leadHighThreshold = normalizeNumber(settings.leadHighThreshold) ?? 80
   const leadLevel = getLeadLevel(leadScore, leadMediumThreshold, leadHighThreshold)
+  const negativeLead = hasZeroScoreAnswer(submission.answers)
   const respondentName = getRespondentName(respondentNameAnswer)
   const respondentEmail = getRespondentEmail(respondentEmailAnswer)
   const respondentPhone = getRespondentPhone(respondentPhoneAnswer)
@@ -699,6 +769,7 @@ export function buildLeadCapturePayload(
     leadScoreVariableId: scoreVariable?.id,
     leadScoreVariableName: scoreVariable?.name,
     leadLevel,
+    hasZeroScoreAnswer: negativeLead,
     leadQuality,
     leadPriority,
     answersByTitle,
@@ -795,6 +866,7 @@ export function buildTestLeadCapturePayload(
     leadScoreVariableId: scoreVariable?.id,
     leadScoreVariableName: scoreVariable?.name,
     leadLevel: resolvedLeadLevel,
+    hasZeroScoreAnswer: false,
     leadQuality,
     leadPriority,
     answersByTitle,
@@ -811,6 +883,38 @@ export function buildTestLeadCapturePayloads(
   team?: LeadAwareTeam
 ): LeadCapturePayload[] {
   return TEST_LEAD_LEVELS.map(level => buildTestLeadCapturePayload(form, team, level))
+}
+
+export function resolveRespondentNotificationTemplates(
+  payload: Pick<LeadCapturePayload, 'hasZeroScoreAnswer'>,
+  settings: {
+    subject?: string
+    message?: string
+    negativeSubject?: string
+    negativeMessage?: string
+  }
+) {
+  const isNegative = Boolean(payload.hasZeroScoreAnswer)
+
+  if (isNegative) {
+    return {
+      isNegative,
+      subjectTemplate:
+        normalizeString(settings.negativeSubject) ||
+        DEFAULT_NEGATIVE_RESPONDENT_NOTIFICATION_SUBJECT,
+      messageTemplate:
+        normalizeString(settings.negativeMessage) ||
+        DEFAULT_NEGATIVE_RESPONDENT_NOTIFICATION_MESSAGE
+    }
+  }
+
+  return {
+    isNegative,
+    subjectTemplate:
+      normalizeString(settings.subject) || DEFAULT_RESPONDENT_NOTIFICATION_SUBJECT,
+    messageTemplate:
+      normalizeString(settings.message) || DEFAULT_RESPONDENT_NOTIFICATION_MESSAGE
+  }
 }
 
 export function buildLeadSheetRow(payload: LeadCapturePayload) {

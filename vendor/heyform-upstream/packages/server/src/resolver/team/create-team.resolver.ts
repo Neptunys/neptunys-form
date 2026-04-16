@@ -1,3 +1,5 @@
+import { BadRequestException } from '@nestjs/common'
+
 import { Auth, User } from '@decorator'
 import { CreateTeamInput } from '@graphql'
 import { TeamRoleEnum, UserModel } from '@model'
@@ -17,6 +19,14 @@ export class CreateTeamResolver {
     @User() user: UserModel,
     @Args('input') input: CreateTeamInput
   ): Promise<string> {
+    const memberships = await this.teamService.findAll(user.id)
+    const canCreateWorkspace =
+      memberships.length < 1 || memberships.some(team => team.ownerId === user.id)
+
+    if (!canCreateWorkspace) {
+      throw new BadRequestException('Invited members cannot create new workspaces')
+    }
+
     const teamId = await this.teamService.create({
       ownerId: user.id,
       name: input.name,

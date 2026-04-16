@@ -72,6 +72,8 @@ export interface FormSettings {
   enableRespondentNotification?: boolean
   respondentNotificationSubject?: string
   respondentNotificationMessage?: string
+  respondentNegativeNotificationSubject?: string
+  respondentNegativeNotificationMessage?: string
   enableOperatorNotification?: boolean
   operatorNotificationEmails?: string[]
   operatorNotificationSubject?: string
@@ -171,7 +173,9 @@ export interface Property {
   emailRequired?: boolean
   showCompany?: boolean
   companyRequired?: boolean
+  showFieldIcons?: boolean
   showConsent?: boolean
+  consentStyle?: 'subtle' | 'boxed'
   mapToContacts?: boolean
 
   // PhoneNumber

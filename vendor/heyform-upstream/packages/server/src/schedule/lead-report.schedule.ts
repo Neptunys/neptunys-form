@@ -43,6 +43,35 @@ function resolveLeadReportRangeDays(primary?: number, fallback?: number) {
   return 30
 }
 
+function hasOwn(overrides: Record<string, any> | undefined, key: string) {
+  return Boolean(overrides && Object.prototype.hasOwnProperty.call(overrides, key))
+}
+
+function normalizeOptionalString(value: unknown) {
+  if (!helper.isValid(value)) {
+    return undefined
+  }
+
+  return String(value).trim()
+}
+
+function normalizeEmailList(value: unknown): string[] | undefined {
+  if (!helper.isArray(value)) {
+    return undefined
+  }
+
+  const emails = Array.from(
+    new Set(
+      value
+        .filter(helper.isValid)
+        .map(email => String(email).trim())
+        .filter(Boolean)
+    )
+  )
+
+  return emails.length > 0 ? emails : []
+}
+
 function normalizeTimeZone(timeZone?: string) {
   const fallback = 'UTC'
 
@@ -302,6 +331,13 @@ function renderLeadReportEmail(options: {
   `
 }
 
+interface SendWorkspaceLeadReportOptions {
+  persistLastSentAt?: boolean
+  skipScheduleCheck?: boolean
+  requireRecipients?: boolean
+  settingsOverride?: Record<string, any>
+}
+
 @Processor('LeadReportSchedule')
 export class LeadReportSchedule extends BaseQueue {
   constructor(
@@ -313,6 +349,27 @@ export class LeadReportSchedule extends BaseQueue {
     private readonly mailService: MailService
   ) {
     super()
+  }
+
+  private resolveTeamSettings(team: TeamModel, overrides?: Record<string, any>) {
+    return {
+      clientName: hasOwn(overrides, 'clientName')
+        ? normalizeOptionalString(overrides?.clientName)
+        : team.clientName,
+      leadNotificationEmails: hasOwn(overrides, 'leadNotificationEmails')
+        ? normalizeEmailList(overrides?.leadNotificationEmails)
+        : team.leadNotificationEmails,
+      enableLeadReport: hasOwn(overrides, 'enableLeadReport')
+        ? Boolean(overrides?.enableLeadReport)
+        : team.enableLeadReport,
+      leadReportRangeDays:
+        hasOwn(overrides, 'leadReportRangeDays') && helper.isValid(overrides?.leadReportRangeDays)
+          ? Number(overrides?.leadReportRangeDays)
+          : team.leadReportRangeDays,
+      reportingTimezone: hasOwn(overrides, 'reportingTimezone')
+        ? normalizeOptionalString(overrides?.reportingTimezone)
+        : team.reportingTimezone
+    }
   }
 
   @Process()
@@ -371,22 +428,45 @@ export class LeadReportSchedule extends BaseQueue {
     }
   }
 
-  private async sendWorkspaceLeadReport(team: TeamModel): Promise<void> {
-    const recipients = resolveLeadReportRecipients(team.leadNotificationEmails)
-    const timeZone = normalizeTimeZone(team.reportingTimezone)
+  async sendWorkspaceLeadReport(
+    team: TeamModel,
+    options: SendWorkspaceLeadReportOptions = {}
+  ): Promise<void> {
+    const settings = this.resolveTeamSettings(team, options.settingsOverride)
+    const recipients = resolveLeadReportRecipients(settings.leadNotificationEmails)
+    const timeZone = normalizeTimeZone(settings.reportingTimezone)
 
-    if (!team.enableLeadReport || recipients.length < 1) {
+    if (recipients.length < 1) {
+      if (options.requireRecipients) {
+        throw new Error('Add at least one default lead recipient before sending a report')
+      }
+
       return
     }
 
-    if (!shouldSendMonthlyReport(timeZone, team.leadReportLastSentAt)) {
-      return
+    if (!options.skipScheduleCheck) {
+      if (!settings.enableLeadReport) {
+        return
+      }
+
+      if (!shouldSendMonthlyReport(timeZone, team.leadReportLastSentAt)) {
+        return
+      }
     }
+
+    const effectiveTeam = {
+      ...team,
+      clientName: settings.clientName,
+      leadNotificationEmails: settings.leadNotificationEmails,
+      enableLeadReport: settings.enableLeadReport,
+      leadReportRangeDays: settings.leadReportRangeDays,
+      reportingTimezone: settings.reportingTimezone
+    } as TeamModel
 
     const forms = (await this.formService.findAllInTeam(team.id)).filter(
       form => form.status === FormStatusEnum.NORMAL && !form.suspended
     )
-    const rangeDays = resolveLeadReportRangeDays(team.leadReportRangeDays)
+    const rangeDays = resolveLeadReportRangeDays(settings.leadReportRangeDays)
     const endAt = timestamp()
     const startAt = date().subtract(rangeDays, 'days').unix()
     const formIds = forms.map(form => form.id)
@@ -400,7 +480,7 @@ export class LeadReportSchedule extends BaseQueue {
           return undefined
         }
 
-        return buildLeadCapturePayload(form, submission, team)
+        return buildLeadCapturePayload(form, submission, effectiveTeam)
       })
       .filter(Boolean)
     const scoredLeads = leads.filter(lead => helper.isValid(lead!.leadScore))
@@ -451,7 +531,7 @@ export class LeadReportSchedule extends BaseQueue {
         caption: 'High / Medium / Low'
       }
     ])
-    const workspaceLabel = helper.isValid(team.clientName) ? team.clientName! : team.name
+    const workspaceLabel = helper.isValid(settings.clientName) ? settings.clientName! : team.name
     const dateRangeLabel = `${formatTimestamp(startAt, timeZone)} - ${formatTimestamp(endAt, timeZone)}`
     const workspaceUrl = `${APP_HOMEPAGE_URL}/workspace/${team.id}`
     const formsWithLeadsCount = new Set(submissions.map(submission => submission.formId)).size
@@ -487,9 +567,11 @@ export class LeadReportSchedule extends BaseQueue {
       })
     })
 
-    await this.teamService.update(team.id, {
-      leadReportLastSentAt: endAt
-    })
+    if (options.persistLastSentAt !== false) {
+      await this.teamService.update(team.id, {
+        leadReportLastSentAt: endAt
+      })
+    }
   }
 
   private async sendProjectLeadReport(project: ProjectModel, team: TeamModel): Promise<void> {

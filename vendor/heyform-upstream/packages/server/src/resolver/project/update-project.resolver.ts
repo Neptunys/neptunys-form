@@ -60,6 +60,22 @@ export class UpdateProjectResolver {
         : null
     }
 
+    if (Object.prototype.hasOwnProperty.call(input, 'respondentNegativeNotificationSubject')) {
+      updates.respondentNegativeNotificationSubject = helper.isValid(
+        input.respondentNegativeNotificationSubject
+      )
+        ? input.respondentNegativeNotificationSubject
+        : null
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, 'respondentNegativeNotificationMessage')) {
+      updates.respondentNegativeNotificationMessage = helper.isValid(
+        input.respondentNegativeNotificationMessage
+      )
+        ? input.respondentNegativeNotificationMessage
+        : null
+    }
+
     if (Object.prototype.hasOwnProperty.call(input, 'enableLeadReport')) {
       updates.enableLeadReport = input.enableLeadReport
     }
