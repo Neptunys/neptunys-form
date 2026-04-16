@@ -253,7 +253,7 @@ export class WorkspaceService {
     })
   }
 
-  static updateBrandKit(input: { teamId: string } & Partial<BrandKitType>) {
+  static updateBrandKit(input: { teamId: string } & Partial<Pick<BrandKitType, 'logo' | 'theme'>>) {
     return apollo.mutate({
       mutation: UPDATE_BRAND_KIT_GQL,
       variables: {

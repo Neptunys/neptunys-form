@@ -99,7 +99,6 @@ const ModalComponent = () => {
       } else {
         await WorkspaceService.updateBrandKit({
           teamId: workspaceId,
-          id: brandKitId,
           ...updates
         })
       }
