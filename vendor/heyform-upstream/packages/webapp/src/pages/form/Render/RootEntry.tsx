@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 
 import FormRender from './index'
 import { WorkspaceService } from '@/services'
+import { REDIRECT_COOKIE_NAME } from '@/consts'
 import { useWorkspaceStore } from '@/store'
-import { getAuthState, isCustomDomainRuntimeCandidate } from '@/utils'
+import { clearAuthState, clearCookie, getAuthState, getCookie, isCustomDomainRuntimeCandidate } from '@/utils'
 
 const RootScreen = ({ title, message }: { title: string; message: string }) => (
   <div className="flex min-h-screen items-center justify-center px-6 py-10">
@@ -47,6 +48,14 @@ export default function RootEntry() {
 
         setWorkspaces(workspaces)
 
+        const redirectUri = getCookie(REDIRECT_COOKIE_NAME) as string
+
+        if (redirectUri) {
+          clearCookie(REDIRECT_COOKIE_NAME)
+          window.location.replace(redirectUri)
+          return
+        }
+
         if (!workspaces.length) {
           window.location.replace('/workspace/create')
           return
@@ -59,10 +68,20 @@ export default function RootEntry() {
 
         window.location.replace(`/workspace/${targetWorkspaceId}`)
       } catch (err: any) {
-        if (!isCancelled) {
-          setState('error')
-          setMessage(err?.message || 'Failed to open the workspace home page.')
+        if (isCancelled) {
+          return
         }
+
+        const errorMessage = err?.message || 'Failed to open the workspace home page.'
+
+        if (/unauthorized/i.test(errorMessage)) {
+          clearAuthState()
+          window.location.replace('/login')
+          return
+        }
+
+        setState('error')
+        setMessage(errorMessage)
       }
     }
 
