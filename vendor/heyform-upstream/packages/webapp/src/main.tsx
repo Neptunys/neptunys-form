@@ -202,6 +202,7 @@ let root: Root | undefined
 const RUNTIME_CONFIG_KEYS = [
   'homepageURL',
   'websiteURL',
+  'customDomainRuntime',
   'cookieDomain',
   'stripePublishableKey',
   'googleRecaptchaKey',

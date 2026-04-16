@@ -14,11 +14,12 @@ import { TeamService } from '@service'
 export class FormController {
   constructor(private readonly teamService: TeamService) {}
 
-  private runtimeConfig() {
+  private async runtimeConfig(hostname?: string) {
     return {
       heyform: {
         homepageURL: APP_HOMEPAGE_URL,
         websiteURL: APP_HOMEPAGE_URL,
+        customDomainRuntime: await this.isCustomDomainHost(hostname),
         cookieDomain: COOKIE_DOMAIN,
         enableGoogleFonts: ENABLE_GOOGLE_FONTS,
         stripePublishableKey: STRIPE_PUBLISHABLE_KEY,
@@ -36,13 +37,13 @@ export class FormController {
   }
 
   @Get('/form/:formId')
-  async index(@Res() res: Response) {
-    return res.render('index', this.runtimeConfig())
+  async index(@Req() req: Request, @Res() res: Response) {
+    return res.render('index', await this.runtimeConfig(req.hostname))
   }
 
   @Get('/x/:experimentId')
-  async experiment(@Res() res: Response) {
-    return res.render('index', this.runtimeConfig())
+  async experiment(@Req() req: Request, @Res() res: Response) {
+    return res.render('index', await this.runtimeConfig(req.hostname))
   }
 
   @Get('/:slug')
@@ -51,6 +52,6 @@ export class FormController {
       return res.status(404).send('Not Found')
     }
 
-    return res.render('index', this.runtimeConfig())
+    return res.render('index', await this.runtimeConfig(req.hostname))
   }
 }

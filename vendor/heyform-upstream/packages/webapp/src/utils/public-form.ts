@@ -76,6 +76,10 @@ export function isLocalHostname(hostname?: string) {
 }
 
 export function isCustomDomainRuntimeCandidate(hostname = window.location.hostname) {
+  if (typeof window.heyform?.customDomainRuntime !== 'undefined') {
+    return helper.isTrue(window.heyform.customDomainRuntime)
+  }
+
   const normalizedHostname = hostname.toLowerCase()
   const configuredHostname = getConfiguredWebsiteHostname()
 

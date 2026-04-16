@@ -31,6 +31,7 @@ declare global {
       }
       homepageURL?: string
       websiteURL?: string
+      customDomainRuntime?: boolean | string
       cookieDomain?: string
       stripePublishableKey?: string
       googleRecaptchaKey?: string

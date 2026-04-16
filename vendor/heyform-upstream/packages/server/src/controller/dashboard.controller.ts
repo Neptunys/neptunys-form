@@ -17,10 +17,19 @@ import { TeamService } from '@service'
 export class DashboardController {
   constructor(private readonly teamService: TeamService) {}
 
-  private runtimeConfig() {
+  private async isCustomDomainHost(hostname?: string) {
+    if (!hostname) {
+      return false
+    }
+
+    return !!(await this.teamService.findByCustomDomain(hostname.toLowerCase()))
+  }
+
+  private async runtimeConfig(hostname?: string) {
     return {
       homepageURL: APP_HOMEPAGE_URL,
       websiteURL: APP_HOMEPAGE_URL,
+      customDomainRuntime: await this.isCustomDomainHost(hostname),
       appDisableRegistration: APP_DISABLE_REGISTRATION,
       cookieDomain: COOKIE_DOMAIN,
       enableGoogleFonts: ENABLE_GOOGLE_FONTS,
@@ -31,8 +40,8 @@ export class DashboardController {
   }
 
   @Get('/api/config')
-  config() {
-    return this.runtimeConfig()
+  async config(@Req() req: Request) {
+    return this.runtimeConfig(req.hostname)
   }
 
   @Get('/sign-up')
@@ -59,13 +68,12 @@ export class DashboardController {
   ])
   @Header('X-Frame-Options', 'SAMEORIGIN')
   async index(@Req() req: Request, @Res() res: Response) {
-    const customDomainWorkspace = await this.teamService.findByCustomDomain(
-      req.hostname?.toLowerCase()
-    )
+    const customDomainWorkspace = await this.isCustomDomainHost(req.hostname)
+    const runtimeConfig = await this.runtimeConfig(req.hostname)
 
     if (customDomainWorkspace) {
       return res.render('index', {
-        heyform: this.runtimeConfig()
+        heyform: runtimeConfig
       })
     }
 
@@ -73,7 +81,7 @@ export class DashboardController {
       title: 'NeptunysForm Dashboard - Create and Manage Custom Forms Effortlessly',
       description:
         "Simplify your form creation process with NeptunysForm's intuitive dashboard. Design, customize, and manage forms all in one place, with no coding required.",
-      heyform: this.runtimeConfig()
+      heyform: runtimeConfig
     })
   }
 }
