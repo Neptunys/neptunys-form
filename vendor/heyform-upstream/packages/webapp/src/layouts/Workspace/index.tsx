@@ -11,7 +11,7 @@ import { helper, timestamp } from '@heyform-inc/utils'
 
 import brandLogo from '@/assets/neptunys-logo.png'
 import { AppStateScreen, Button, useAlert } from '@/components'
-import { REDIRECT_COOKIE_NAME, VERIFY_USER_EMAIL } from '@/consts'
+import { DASHBOARD_URL, REDIRECT_COOKIE_NAME, VERIFY_USER_EMAIL } from '@/consts'
 import { useAppStore, useUserStore, useWorkspaceStore } from '@/store'
 
 import { FormShell } from '../Form/FormShell'
@@ -29,6 +29,16 @@ import WorkspaceAccount from './WorkspaceAccount'
 import WorkspaceSidebar, { WorkspaceSidebarModal } from './WorkspaceSidebar'
 
 const APP_NAME = 'NeptunysForm'
+
+function getDashboardHref(pathname: string) {
+  try {
+    return new URL(pathname, DASHBOARD_URL || window.location.origin).toString()
+  } catch (_) {
+    return pathname
+  }
+}
+
+const LOGOUT_HREF = getDashboardHref('/logout')
 
 function shouldResetSession(err: any) {
   const message = String(err?.message || '').toLowerCase()
@@ -61,7 +71,7 @@ export const LoginGuard: FC<LayoutProps> = ({ options, children }) => {
     } catch (err: any) {
       if (shouldResetSession(err)) {
         clearAuthState()
-        window.location.href = '/logout'
+        window.location.href = LOGOUT_HREF
         return
       }
 

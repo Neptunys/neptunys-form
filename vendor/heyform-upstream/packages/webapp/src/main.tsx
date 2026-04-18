@@ -17,6 +17,23 @@ if (!getDeviceId()) {
   setDeviceId()
 }
 
+const DASHBOARD_BASE_URL =
+  (window.heyform?.homepageURL as string) ||
+  (import.meta.env.VITE_DASHBOARD_URL as string) ||
+  window.location.origin
+
+function getDashboardHref(pathname: string) {
+  try {
+    return new URL(pathname, DASHBOARD_BASE_URL).toString()
+  } catch (_) {
+    return pathname
+  }
+}
+
+const LOGIN_HREF = getDashboardHref('/login')
+const LOGOUT_HREF = getDashboardHref('/logout')
+const HOME_HREF = getDashboardHref('/')
+
 function renderFatalScreen(message?: string) {
   const container = document.getElementById('root')
 
@@ -37,6 +54,9 @@ function renderFatalScreen(message?: string) {
     }
   })
 
+  const logoutHref = LOGOUT_HREF
+  const loginHref = LOGIN_HREF
+
   container.innerHTML = `
     <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:#f5f7fb;color:#0f172a;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
       <div style="width:100%;max-width:560px;background:#ffffff;border:1px solid #dbe1ea;border-radius:20px;padding:24px;box-shadow:0 12px 40px rgba(15,23,42,.08);text-align:center;">
@@ -44,8 +64,8 @@ function renderFatalScreen(message?: string) {
         <p style="margin:0 0 16px;color:#475569;font-size:15px;line-height:1.6;">The app hit a runtime error. Reset the session and reopen the login flow.</p>
         <div style="margin:0 auto 18px;max-width:440px;padding:12px 14px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;color:#334155;font-size:13px;line-height:1.5;word-break:break-word;">${safeMessage}</div>
         <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-          <a href="/logout" style="display:inline-flex;align-items:center;justify-content:center;min-width:160px;padding:12px 18px;border-radius:12px;background:#0f172a;color:#fff;text-decoration:none;font-weight:600;">Reset Session</a>
-          <a href="/login" style="display:inline-flex;align-items:center;justify-content:center;min-width:160px;padding:12px 18px;border-radius:12px;background:#fff;color:#0f172a;text-decoration:none;font-weight:600;border:1px solid #cbd5e1;">Open Login</a>
+          <a href="${logoutHref}" style="display:inline-flex;align-items:center;justify-content:center;min-width:160px;padding:12px 18px;border-radius:12px;background:#0f172a;color:#fff;text-decoration:none;font-weight:600;">Reset Session</a>
+          <a href="${loginHref}" style="display:inline-flex;align-items:center;justify-content:center;min-width:160px;padding:12px 18px;border-radius:12px;background:#fff;color:#0f172a;text-decoration:none;font-weight:600;border:1px solid #cbd5e1;">Open Login</a>
         </div>
       </div>
     </div>
@@ -83,13 +103,13 @@ const Fallback = ({ error }: { error?: Error }) => {
       <p className="text-secondary text-center text-sm/6">{t('components.error.message')}</p>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
         <a
-          href="/logout"
+          href={LOGOUT_HREF}
           className="inline-flex min-w-40 items-center justify-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white"
         >
           Reset session
         </a>
         <a
-          href="/login"
+          href={LOGIN_HREF}
           className="inline-flex min-w-40 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-900"
         >
           Open login
@@ -162,7 +182,7 @@ const App = ({ routes }: { routes: Route[] }) => {
         setCookie(REDIRECT_COOKIE_NAME, redirectUri, {})
         return (
           <RedirectScreen
-            to="/login"
+            to={LOGIN_HREF}
             replace
             title="Redirecting to login"
             message="Sign in first to open the workspace dashboard."
@@ -174,7 +194,7 @@ const App = ({ routes }: { routes: Route[] }) => {
       if (isLoggedIn && options?.redirectIfLogged) {
         return (
           <RedirectScreen
-            to="/"
+            to={HOME_HREF}
             replace
             title="Redirecting to workspace"
             message="Your session is active. Opening the workspace home page."

@@ -1,9 +1,6 @@
 import { helper } from '@heyform-inc/utils'
 
-const PUBLIC_DOMAIN_ROOT_FORM_FALLBACKS: Record<string, string> = {
-  // Emergency production fallback while the recovered Mongo dataset lacks customDomain metadata.
-  'form.neptunysengine.com': '5HSYliMx'
-}
+const PUBLIC_DOMAIN_ROOT_FORM_FALLBACKS: Record<string, string> = {}
 
 function normalizeDomainHostname(value?: string) {
   if (!helper.isValid(value)) {

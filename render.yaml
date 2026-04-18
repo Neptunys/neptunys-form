@@ -17,6 +17,10 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: APP_HOMEPAGE_URL
+        value: https://form.neptunysengine.com
+      - key: COOKIE_DOMAIN
+        value: form.neptunysengine.com
       - key: APP_LISTEN_PORT
         value: "10000"
       - key: ENABLE_GOOGLE_FONTS

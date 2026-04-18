@@ -93,6 +93,13 @@ const routes = [
     }
   },
   {
+    path: '/dashboard',
+    component: RootEntry,
+    options: {
+      loginRequired: false
+    }
+  },
+  {
     path: '/workspace/create',
     layout: BaseLayout,
     component: CreateWorkspace,

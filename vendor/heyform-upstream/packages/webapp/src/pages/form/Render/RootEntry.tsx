@@ -3,9 +3,20 @@ import { useEffect, useState } from 'react'
 import FormRender from './index'
 import { AppStateScreen } from '@/components'
 import { WorkspaceService } from '@/services'
-import { REDIRECT_COOKIE_NAME } from '@/consts'
+import { DASHBOARD_URL, REDIRECT_COOKIE_NAME } from '@/consts'
 import { useWorkspaceStore } from '@/store'
 import { clearAuthState, clearCookie, getAuthState, getCookie, isCustomDomainRuntimeCandidate } from '@/utils'
+
+function getDashboardHref(pathname: string) {
+  try {
+    return new URL(pathname, DASHBOARD_URL || window.location.origin).toString()
+  } catch (_) {
+    return pathname
+  }
+}
+
+const DASHBOARD_ROOT_HREF = getDashboardHref('/')
+const LOGIN_HREF = getDashboardHref('/login')
 
 export default function RootEntry() {
   const { currentWorkspaceId, setWorkspaces } = useWorkspaceStore()
@@ -16,16 +27,33 @@ export default function RootEntry() {
     let isCancelled = false
 
     async function resolveRoot() {
-      if (isCustomDomainRuntimeCandidate(window.location.hostname)) {
-        if (!isCancelled) {
-          setState('public')
-        }
+      const currentPath = window.location.pathname.replace(/\/+$/, '') || '/'
+      const isDashboardEntry = currentPath === '/dashboard'
 
-        return
+      if (isCustomDomainRuntimeCandidate(window.location.hostname)) {
+        if (getAuthState()) {
+          try {
+            const dashboardHostname = new URL(DASHBOARD_ROOT_HREF).hostname.toLowerCase()
+            const currentHostname = window.location.hostname.toLowerCase()
+
+            if (dashboardHostname !== currentHostname) {
+              window.location.replace(DASHBOARD_ROOT_HREF)
+              return
+            }
+          } catch (_) {
+            // Fall through to the dashboard resolution flow when the dashboard URL is unavailable.
+          }
+        } else if (!isDashboardEntry) {
+          if (!isCancelled) {
+            setState('public')
+          }
+
+          return
+        }
       }
 
       if (!getAuthState()) {
-        window.location.replace('/login')
+        window.location.replace(LOGIN_HREF)
         return
       }
 
@@ -68,7 +96,7 @@ export default function RootEntry() {
 
         if (/unauthorized/i.test(errorMessage)) {
           clearAuthState()
-          window.location.replace('/login')
+          window.location.replace(LOGIN_HREF)
           return
         }
 

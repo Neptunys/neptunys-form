@@ -16,9 +16,19 @@ import ApolloLinkTimeout from 'apollo-link-timeout'
 
 import { helper } from '@heyform-inc/utils'
 
-import { GRAPHQL_API_URL, IS_PROD } from '@/consts'
+import { DASHBOARD_URL, GRAPHQL_API_URL, IS_PROD } from '@/consts'
 
 import { clearAuthState, getDeviceId } from './auth'
+
+function getDashboardHref(pathname: string) {
+  try {
+    return new URL(pathname, DASHBOARD_URL || window.location.origin).toString()
+  } catch (_) {
+    return pathname
+  }
+}
+
+const LOGOUT_HREF = getDashboardHref('/logout')
 
 if (!IS_PROD) {
   loadDevMessages()
@@ -72,7 +82,7 @@ const headerLink = setContext((_, { headers }) => {
 
 function resetSession() {
   clearAuthState()
-  window.location.href = '/logout'
+  window.location.href = LOGOUT_HREF
 }
 
 const BOOTSTRAP_OPERATIONS = new Set(['userDetail'])
