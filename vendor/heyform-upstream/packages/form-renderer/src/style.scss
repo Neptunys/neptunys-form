@@ -1154,6 +1154,10 @@ button.button-icon-only {
     text-align: center;
   }
 
+  .heyform-block-main {
+    transform: translateX(var(--heyform-welcome-content-align-px, 0px));
+  }
+
   .heyform-block-title-row {
     justify-content: center;
   }
@@ -1241,6 +1245,13 @@ button.button-icon-only {
   .heyform-block-title {
     font-size: clamp(3rem, 6vw, 4.75rem);
     line-height: 1;
+  }
+}
+
+.heyform-welcome-title-custom {
+  .heyform-block-title {
+    font-size: clamp(1.5rem, var(--heyform-welcome-title-size-px), 7.5rem);
+    line-height: 1.05;
   }
 }
 

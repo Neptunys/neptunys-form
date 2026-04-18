@@ -21,6 +21,17 @@ export default function CoverAndLayout() {
 
   const isWelcome = field.kind === FieldKindEnum.WELCOME
 
+  const getLegacyTitleSizePx = (size?: string) => {
+    switch (size) {
+      case 'large':
+        return 64
+      case 'xl':
+        return 76
+      default:
+        return 52
+    }
+  }
+
   const handleChange = useCallback(
     (key: string, value: any) => {
       startTransition(() => {
@@ -34,6 +45,20 @@ export default function CoverAndLayout() {
             align: field.layout?.align || FieldLayoutAlignEnum.INLINE,
             inlineMediaPosition: field.layout?.inlineMediaPosition || 'bottom',
             inlineMediaWidth: field.layout?.inlineMediaWidth || 75
+          }
+        }
+
+        if (key === 'titleSizePx') {
+          layout = {
+            ...layout,
+            titleSize: undefined
+          }
+        }
+
+        if (key === 'contentAlignPx') {
+          layout = {
+            ...layout,
+            contentAlign: undefined
           }
         }
 
@@ -177,32 +202,37 @@ export default function CoverAndLayout() {
         <div className="border-accent-light mt-4 space-y-3 border-t pt-4">
           <div className="space-y-1">
             <label className="text-sm/6" htmlFor="#">
-              Content alignment
+              Content alignment (px)
             </label>
-            <Select
-              className="w-full"
-              options={[
-                { label: 'Center', value: 'center' },
-                { label: 'Left', value: 'left' },
-                { label: 'Right', value: 'right' }
-              ]}
-              value={field.layout?.contentAlign || 'center'}
-              onChange={value => handleChange('contentAlign', value)}
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-secondary text-xs/6">-320px</span>
+              <span className="text-secondary text-xs/6">{field.layout?.contentAlignPx ?? 0}px</span>
+              <span className="text-secondary text-xs/6">320px</span>
+            </div>
+            <Slider
+              min={-320}
+              max={320}
+              value={field.layout?.contentAlignPx ?? 0}
+              onChange={value => handleChange('contentAlignPx', value)}
             />
           </div>
+
           <div className="space-y-1">
             <label className="text-sm/6" htmlFor="#">
-              Title size
+              Title size (px)
             </label>
-            <Select
-              className="w-full"
-              options={[
-                { label: 'Normal', value: 'normal' },
-                { label: 'Large', value: 'large' },
-                { label: 'Extra large', value: 'xl' }
-              ]}
-              value={field.layout?.titleSize || 'normal'}
-              onChange={value => handleChange('titleSize', value)}
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-secondary text-xs/6">24px</span>
+              <span className="text-secondary text-xs/6">
+                {field.layout?.titleSizePx ?? getLegacyTitleSizePx(field.layout?.titleSize)}px
+              </span>
+              <span className="text-secondary text-xs/6">120px</span>
+            </div>
+            <Slider
+              min={24}
+              max={120}
+              value={field.layout?.titleSizePx ?? getLegacyTitleSizePx(field.layout?.titleSize)}
+              onChange={value => handleChange('titleSizePx', value)}
             />
           </div>
         </div>

@@ -123,6 +123,8 @@ export interface Layout {
   inlineMediaWidth?: number
   contentAlign?: 'left' | 'center' | 'right'
   titleSize?: 'normal' | 'large' | 'xl'
+  contentAlignPx?: number
+  titleSizePx?: number
 }
 
 export interface NumberPrice {

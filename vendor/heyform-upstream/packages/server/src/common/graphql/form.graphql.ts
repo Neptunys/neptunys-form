@@ -351,6 +351,30 @@ class LayoutInput {
 
   @Field({ nullable: true })
   @IsOptional()
+  @IsIn(['left', 'center', 'right'])
+  contentAlign?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsIn(['normal', 'large', 'xl'])
+  titleSize?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsNumber()
+  @Min(24)
+  @Max(120)
+  titleSizePx?: number
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsNumber()
+  @Min(-320)
+  @Max(320)
+  contentAlignPx?: number
+
+  @Field({ nullable: true })
+  @IsOptional()
   @IsIn(['top', 'bottom'])
   inlineMediaPosition?: string
 
@@ -1265,6 +1289,15 @@ export class FormThemeInput {
 
   @Field({ nullable: true })
   topProgressTrackColor?: string
+
+  @Field({ nullable: true })
+  consentTextColor?: string
+
+  @Field({ nullable: true })
+  consentLinkColor?: string
+
+  @Field({ nullable: true })
+  consentCheckboxColor?: string
 
   @Field({ nullable: true })
   customCSS?: string
