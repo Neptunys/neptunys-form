@@ -656,23 +656,35 @@ button.button-icon-only {
 }
 
 .heyform-root-embedded {
+  height: 100%;
   min-height: 100%;
 
   .heyform-wrapper {
-    height: auto;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
     min-height: 100%;
   }
 
   .heyform-header {
     position: relative;
+    inset: auto;
+    flex: 0 0 auto;
     padding-bottom: 0;
   }
 
-  .heyform-body-active,
-  .heyform-body-leaving {
+  .heyform-body-active {
     position: relative;
+    inset: auto;
+    display: flex;
+    flex: 1 1 auto;
+    width: 100%;
     height: auto;
-    min-height: 100%;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .heyform-body-leaving {
     overflow: visible;
   }
 
@@ -681,9 +693,15 @@ button.button-icon-only {
   .heyform-block-scroll,
   .heyform-scroll-wrapper,
   .heyform-scroll-container {
-    height: auto;
+    height: 100%;
     min-height: 100%;
     overflow: visible;
+  }
+
+  .heyform-block-container {
+    position: relative;
+    inset: auto;
+    flex: 1 1 auto;
   }
 
   .heyform-block {
@@ -691,9 +709,14 @@ button.button-icon-only {
     inset: auto;
   }
 
+  .heyform-block-scroll,
   .heyform-scroll-wrapper {
     display: flex;
     flex-direction: column;
+  }
+
+  .heyform-scroll-wrapper {
+    flex: 1 1 auto;
     padding-top: 0;
     overflow-y: visible;
   }
@@ -703,6 +726,7 @@ button.button-icon-only {
   }
 
   .heyform-block-main {
+    flex: 1 1 auto;
     min-height: 100%;
     display: flex;
     flex-direction: column;

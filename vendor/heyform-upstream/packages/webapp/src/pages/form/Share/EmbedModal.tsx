@@ -47,23 +47,17 @@ const FRAME_CONTENT = `
 <html>
 <head>
   <meta charset="utf-8" />
-  <style>body{margin:40px;}.container{max-width:1180px;margin-left:auto;margin-right:auto;}.mt-10{margin-top:40px;}.hf{background:rgba(15,23,42,0.05);border-radius:4px;}.hf-1{width:40%;height:40px;margin-bottom:20px;}.hf-2{width:100%;height:40px;margin-bottom:60px;}.hf-3{width:100%;height:120px;margin-top:60px;margin-bottom:40px;}.flex{display:flex;gap:40px;margin-top:40px;}.hf-4{flex:1 1 auto;height:400px;}.heyform__loading-container{display:none!important;}</style>
+  <style>html,body{margin:0;min-height:100%;background:#f8fafc;}body{font-family:Inter,system-ui,sans-serif;color:#0f172a;}.shell{min-height:100vh;padding:40px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;}.preview{width:min(1180px,100%);display:grid;gap:24px;}.hf{background:rgba(15,23,42,0.05);border-radius:8px;}.hf-1{width:40%;height:28px;}.hf-2{width:100%;height:28px;}.embed-stage{min-height:620px;padding:32px;display:flex;align-items:center;justify-content:center;border-radius:24px;background:linear-gradient(180deg,#ffffff 0%,#f1f5f9 100%);box-shadow:inset 0 0 0 1px rgba(148,163,184,0.2);}.embed-stage>div{width:100%;}.heyform__embed-standard,.heyform__embed-fullpage{margin:0 auto;}.heyform__loading-container{display:none!important;}</style>
 </head>
 <body>
-  <div class="container">
+  <div class="shell">
+    <div class="preview">
     <div class="hf hf-1"></div>
     <div class="hf hf-2"></div>
 
-    <div class="mt-10">
+    <div class="embed-stage">
       {form}
     </div>
-
-    <div class="hf hf-3"></div>
-    <div class="hf hf-2"></div>
-
-    <div class="flex">
-      <div class="hf hf-4"></div>
-      <div class="hf hf-4"></div>
     </div>
   </div>
 </body>
