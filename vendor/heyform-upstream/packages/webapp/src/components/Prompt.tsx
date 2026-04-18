@@ -13,11 +13,24 @@ export function usePrompt() {
   return useCallback((props: Omit<PromptModalProps, 'open' | 'onOpenChange'>) => {
     const dialogContainer = createContainer()
     const root = createRoot(dialogContainer)
+    let disposed = false
+
+    function dispose() {
+      if (disposed) {
+        return
+      }
+
+      disposed = true
+      root.unmount()
+
+      if (dialogContainer.parentNode === document.body) {
+        document.body.removeChild(dialogContainer)
+      }
+    }
 
     function handleOpenChange(open: boolean) {
       if (!open) {
-        root.unmount()
-        document.body.removeChild(dialogContainer)
+        dispose()
       }
     }
 

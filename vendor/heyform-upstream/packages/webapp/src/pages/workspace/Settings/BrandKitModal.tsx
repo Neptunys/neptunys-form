@@ -15,6 +15,7 @@ import { useParam } from '@/utils'
 import { helper, pickObject } from '@heyform-inc/utils'
 
 import { Button, ColorPicker, Form, ImageFormPicker, Modal, Select } from '@/components'
+import { useToast } from '@/components'
 import { useAppStore, useModal, useWorkspaceStore } from '@/store'
 
 import { BackgroundImage } from '../../form/Builder/RightSidebar/Design/Customize'
@@ -26,6 +27,7 @@ const ModalComponent = () => {
   const { workspaceId } = useParam()
   const { workspace, updateWorkspace } = useWorkspaceStore()
   const { closeModal } = useAppStore()
+  const toast = useToast()
 
   const brandKit: AnyMap = useMemo(() => {
     if (helper.isValidArray(workspace?.brandKits)) {
@@ -114,7 +116,19 @@ const ModalComponent = () => {
     },
     {
       refreshDeps: [workspaceId, brandKit?.id],
-      manual: true
+      manual: true,
+      onSuccess: () => {
+        toast({
+          title: 'Brand kit saved',
+          message: 'Your workspace branding changes have been saved.'
+        })
+      },
+      onError: (error: any) => {
+        toast({
+          title: t('components.error.title'),
+          message: error?.message || 'Unable to save the brand kit right now.'
+        })
+      }
     }
   )
 
@@ -149,6 +163,7 @@ const ModalComponent = () => {
               <h3 className="text-sm/6 font-semibold">{t('settings.branding.logo.title')}</h3>
               <Form.Item className="mt-2" name="logo">
                 <ImageFormPicker
+                  allowRemove
                   className="[&_[data-slot=avatar]]:h-8 [&_[data-slot=avatar]]:w-auto [&_[data-slot=avatar]]:after:hidden [&_[data-slot=avatar]_img]:aspect-auto [&_[data-slot=avatar]_img]:w-auto [&_[data-slot=avatar]_img]:rounded-none"
                   resize={{
                     height: 100

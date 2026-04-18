@@ -56,6 +56,7 @@ export const ConsentCheckbox: FC<ConsentCheckboxProps> = ({
           'heyform-consent-option-subtle': variant === 'subtle',
           'heyform-consent-option-selected': value
         },
+        'w-full',
         className
       )}
       onClick={handleClick}

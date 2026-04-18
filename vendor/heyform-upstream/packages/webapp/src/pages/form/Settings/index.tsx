@@ -7,7 +7,7 @@ import { FormService } from '@/services'
 import { useParam } from '@/utils'
 import { helper, toSecond } from '@heyform-inc/utils'
 
-import { AnchorNavigation, Button, Form } from '@/components'
+import { AnchorNavigation, Button, Form, useToast } from '@/components'
 import { useFormStore } from '@/store'
 
 import FormSettingsAccess from './Access'
@@ -33,6 +33,7 @@ function parseEmailList(rawValue?: string) {
 
 export default function FormSettings() {
   const { t } = useTranslation()
+  const toast = useToast()
 
   const [rcForm] = useRCForm()
   const { formId } = useParam()
@@ -100,7 +101,19 @@ export default function FormSettings() {
     },
     {
       manual: true,
-      refreshDeps: [formId]
+      refreshDeps: [formId],
+      onSuccess: () => {
+        toast({
+          title: 'Form settings saved',
+          message: 'Your form settings were updated successfully.'
+        })
+      },
+      onError: (err: any) => {
+        toast({
+          title: t('components.error.title'),
+          message: err?.message || 'Unable to save form settings right now.'
+        })
+      }
     }
   )
 

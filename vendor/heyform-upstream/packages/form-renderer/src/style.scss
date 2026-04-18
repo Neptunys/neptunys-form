@@ -655,6 +655,61 @@ button.button-icon-only {
   }
 }
 
+.heyform-root-embedded {
+  min-height: 100%;
+
+  .heyform-wrapper {
+    height: auto;
+    min-height: 100%;
+  }
+
+  .heyform-header {
+    position: relative;
+    padding-bottom: 0;
+  }
+
+  .heyform-body-active,
+  .heyform-body-leaving {
+    position: relative;
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+  }
+
+  .heyform-block-container,
+  .heyform-block,
+  .heyform-block-scroll,
+  .heyform-scroll-wrapper,
+  .heyform-scroll-container {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .heyform-block {
+    position: relative;
+    inset: auto;
+  }
+
+  .heyform-scroll-wrapper {
+    padding-top: 0;
+    overflow-y: visible;
+  }
+
+  .heyform-block-main {
+    min-height: 0;
+  }
+
+  .heyform-block-wrapper {
+    margin-top: 1.25rem;
+  }
+
+  .heyform-logo {
+    padding-top: 0;
+    padding-left: 0;
+  }
+}
+
 .heyform-wrapper {
   @apply z-10;
   transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1) 0s;
@@ -1853,8 +1908,8 @@ button.button-icon-only {
 }
 
 .heyform-consent-option-subtle {
-  width: fit-content;
-  max-width: min(100%, 30rem);
+  width: 100%;
+  max-width: 100%;
   gap: 0.625rem;
   padding: 0.35rem 0;
   border: none;

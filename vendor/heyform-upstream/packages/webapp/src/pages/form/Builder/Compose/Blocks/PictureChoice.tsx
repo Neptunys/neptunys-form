@@ -172,8 +172,8 @@ export const PictureChoice: FC<BlockProps> = ({ field, locale, ...restProps }) =
   const [choiceId, setChoiceId] = useState<string>()
 
   function handleSelectImage(id: string) {
-    imagePickerRef.current?.open()
     setChoiceId(id)
+    imagePickerRef.current?.open()
   }
 
   function handleAddChoice() {
@@ -229,6 +229,10 @@ export const PictureChoice: FC<BlockProps> = ({ field, locale, ...restProps }) =
     const choices = clone(field.properties?.choices || [])
     const index = choices.findIndex(c => c.id === id)
 
+    if (index < 0) {
+      return
+    }
+
     choices[index].label = label
 
     dispatch({
@@ -248,6 +252,10 @@ export const PictureChoice: FC<BlockProps> = ({ field, locale, ...restProps }) =
   function handleImageChange(value?: string) {
     const choices = clone(field.properties?.choices || [])
     const index = choices.findIndex(c => c.id === choiceId)
+
+    if (index < 0) {
+      return
+    }
 
     choices[index].image = value
 
@@ -269,6 +277,10 @@ export const PictureChoice: FC<BlockProps> = ({ field, locale, ...restProps }) =
     const choices = clone(field.properties?.choices || [])
     const index = choices.findIndex(c => c.id === id)
 
+    if (index < 0) {
+      return
+    }
+
     choices[index].score = normalizeLeadScore(score)
 
     dispatch({
@@ -288,6 +300,10 @@ export const PictureChoice: FC<BlockProps> = ({ field, locale, ...restProps }) =
   function handleRemoveImage(cid: string) {
     const choices = clone(field.properties?.choices || [])
     const index = choices.findIndex(c => c.id === cid)
+
+    if (index < 0) {
+      return
+    }
 
     delete choices[index].image
 

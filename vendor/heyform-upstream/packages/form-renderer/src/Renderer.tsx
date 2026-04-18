@@ -125,9 +125,16 @@ export const FormRenderer: FC<FormRendererProps> = ({
   onLeadCapture
 }) => {
   const [isAndroid, setAndroid] = useState(false)
+  const [isEmbedded, setEmbedded] = useState(false)
 
   useEffect(() => {
     setAndroid(window.heyform.device.android)
+
+    try {
+      setEmbedded(window.self !== window.top)
+    } catch {
+      setEmbedded(true)
+    }
   }, [])
 
   const allowPayment = useMemo(
@@ -256,6 +263,7 @@ export const FormRenderer: FC<FormRendererProps> = ({
           className={clsx(
             'heyform-root',
             {
+              'heyform-root-embedded': isEmbedded,
               'heyform-root-open': state.isSidebarOpen,
               'heyform-root-android': isAndroid
             },

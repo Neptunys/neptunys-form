@@ -127,7 +127,7 @@ export const ContactInfo: FC<BlockProps> = ({ field, locale, ...restProps }) => 
         )}
 
         {showConsent && (
-          <div className={clsx('w-full pt-1', consentStyle === 'boxed' ? 'max-w-[28rem]' : 'max-w-[22rem]')}>
+          <div className="w-full pt-1">
             <div
               className={clsx(
                 'heyform-consent-option',

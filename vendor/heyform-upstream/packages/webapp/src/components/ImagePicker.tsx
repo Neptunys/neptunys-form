@@ -39,12 +39,14 @@ interface ImageFormPickerProps extends Omit<Optional<ImagePickerProps, 'tabs'>, 
   className?: string
   value?: string
   fallback?: string
+  allowRemove?: boolean
 }
 
 export const ImageFormPicker: FC<ImageFormPickerProps> = ({
   className,
   value,
   fallback,
+  allowRemove = false,
   tabs = ['image'],
   resize,
   ...restProps
@@ -57,6 +59,11 @@ export const ImageFormPicker: FC<ImageFormPickerProps> = ({
       <ImagePicker tabs={tabs} {...restProps}>
         <Button.Ghost size="sm">{t('components.change')}</Button.Ghost>
       </ImagePicker>
+      {allowRemove && value && (
+        <Button.Ghost size="sm" onClick={() => restProps.onChange?.(undefined)}>
+          {t('components.remove')}
+        </Button.Ghost>
+      )}
     </div>
   )
 }
@@ -138,7 +145,7 @@ export const ImagePicker: FC<ImagePickerProps> = ({
 
   return (
     <Root open={isOpen} onOpenChange={setOpen}>
-      <Trigger asChild>{children}</Trigger>
+      {children ? <Trigger asChild>{children}</Trigger> : null}
       <Portal>
         <Overlay className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-10 bg-black/60" />
         <Content

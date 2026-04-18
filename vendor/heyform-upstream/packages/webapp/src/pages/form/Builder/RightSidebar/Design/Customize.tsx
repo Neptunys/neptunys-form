@@ -401,6 +401,7 @@ export default function Customize() {
             ]}
           >
             <ImageFormPicker
+              allowRemove
               className="[&_[data-slot=avatar]]:h-8 [&_[data-slot=avatar]]:w-auto [&_[data-slot=avatar]]:after:hidden [&_[data-slot=avatar]_img]:aspect-auto [&_[data-slot=avatar]_img]:w-auto [&_[data-slot=avatar]_img]:rounded-none"
               resize={{
                 height: 100
