@@ -35,7 +35,16 @@ export const EmptyState: FC<EmptyStateProps> = ({ className, field, onClick, ...
       isScrollable={false}
       {...restProps}
     >
-      <Submit text={field.properties?.buttonText || t('Next')} onClick={onClick} />
+      <Submit
+        className={field.properties?.buttonSubtext ? 'heyform-submit-with-helper' : undefined}
+        text={field.properties?.buttonText || t('Next')}
+        helper={
+          field.properties?.buttonSubtext ? (
+            <div className="heyform-submit-helper">{field.properties.buttonSubtext}</div>
+          ) : undefined
+        }
+        onClick={onClick}
+      />
     </Block>
   )
 }

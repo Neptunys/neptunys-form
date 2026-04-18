@@ -62,6 +62,12 @@ export default function CoverAndLayout() {
           }
         }
 
+        const currentValue = (layout as Record<string, any> | undefined)?.[key]
+
+        if (currentValue === value) {
+          return
+        }
+
         dispatch({
           type: 'updateField',
           payload: {
@@ -200,6 +206,32 @@ export default function CoverAndLayout() {
 
       {isWelcome && (
         <div className="border-accent-light mt-4 space-y-3 border-t pt-4">
+          <div className="space-y-1">
+            <label className="text-sm/6" htmlFor="#">
+              Content alignment
+            </label>
+
+            <Select
+              className="w-full"
+              options={[
+                {
+                  label: 'Left',
+                  value: 'left'
+                },
+                {
+                  label: 'Center',
+                  value: 'center'
+                },
+                {
+                  label: 'Right',
+                  value: 'right'
+                }
+              ]}
+              value={field.layout?.contentAlign || 'center'}
+              onChange={value => handleChange('contentAlign', value)}
+            />
+          </div>
+
           <div className="space-y-1">
             <label className="text-sm/6" htmlFor="#">
               Content alignment (px)

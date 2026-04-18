@@ -1169,6 +1169,20 @@ button.button-icon-only {
 
   .heyform-submit-container {
     justify-content: center;
+    align-items: center;
+  }
+
+  .heyform-submit-with-helper {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .heyform-submit-helper {
+    color: var(--heyform-question-text-color);
+    font-size: 0.875rem;
+    line-height: 1.4;
+    opacity: 0.78;
+    text-align: center;
   }
 }
 
@@ -1190,6 +1204,11 @@ button.button-icon-only {
 
   .heyform-submit-container {
     justify-content: flex-start;
+    align-items: flex-start;
+  }
+
+  .heyform-submit-helper {
+    text-align: left;
   }
 }
 
@@ -1210,6 +1229,11 @@ button.button-icon-only {
 
   .heyform-submit-container {
     justify-content: center;
+    align-items: center;
+  }
+
+  .heyform-submit-helper {
+    text-align: center;
   }
 }
 
@@ -1230,6 +1254,11 @@ button.button-icon-only {
 
   .heyform-submit-container {
     justify-content: flex-end;
+    align-items: flex-end;
+  }
+
+  .heyform-submit-helper {
+    text-align: right;
   }
 }
 

@@ -141,6 +141,7 @@ export interface Property {
   // Statement
   showButton?: boolean
   buttonText?: string
+  buttonSubtext?: string
   hideMarks?: boolean
 
   // Choice

@@ -15,7 +15,15 @@ export const Welcome: FC<BlockProps> = ({ field, locale, ...restProps }) => {
       locale={locale}
       {...restProps}
     >
-      <FakeSubmit text={field.properties?.buttonText || t('Next', { lng: locale })} />
+      <FakeSubmit
+        className={field.properties?.buttonSubtext ? 'heyform-submit-with-helper' : undefined}
+        text={field.properties?.buttonText || t('Next', { lng: locale })}
+        helper={
+          field.properties?.buttonSubtext ? (
+            <div className="heyform-submit-helper">{field.properties.buttonSubtext}</div>
+          ) : undefined
+        }
+      />
     </Block>
   )
 }

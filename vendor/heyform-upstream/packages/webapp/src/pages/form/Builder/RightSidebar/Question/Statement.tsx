@@ -56,6 +56,20 @@ export default function StatementSettings({ field }: RequiredSettingsProps) {
         value={buttonText}
         onChange={value => handleChange('buttonText', value)}
       />
+
+      {field.kind === FieldKindEnum.WELCOME && (
+        <>
+          <label className="text-sm/6" htmlFor="#">
+            Button subtext
+          </label>
+
+          <Input
+            maxLength={120}
+            value={field.properties?.buttonSubtext || ''}
+            onChange={value => handleChange('buttonSubtext', value)}
+          />
+        </>
+      )}
     </div>
   )
 }

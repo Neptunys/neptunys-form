@@ -98,6 +98,9 @@ class SharedPropertyInput {
   buttonText?: string
 
   @Field({ nullable: true })
+  buttonSubtext?: string
+
+  @Field({ nullable: true })
   hideMarks?: boolean
 
   @Field({ nullable: true })
@@ -1347,6 +1350,9 @@ export class PropertyType {
 
   @Field({ nullable: true })
   buttonText?: string
+
+  @Field({ nullable: true })
+  buttonSubtext?: string
 
   @Field({ nullable: true })
   hideMarks?: boolean
