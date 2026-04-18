@@ -47,6 +47,7 @@ export interface FormSettings {
   // Question navigation
   enableQuestionList?: boolean
   enableNavigationArrows?: boolean
+  analyticsResetAt?: number
 
   // Metadata
   metaTitle?: string

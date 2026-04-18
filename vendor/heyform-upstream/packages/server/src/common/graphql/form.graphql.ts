@@ -1530,6 +1530,9 @@ export class FormSettingType {
   enableNavigationArrows?: boolean
 
   @Field({ nullable: true })
+  analyticsResetAt?: number
+
+  @Field({ nullable: true })
   locale?: string
 
   @Field(type => [String], { nullable: true, defaultValue: [] })

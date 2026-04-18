@@ -7,7 +7,7 @@ import { FormService } from '@/services'
 import { useParam } from '@/utils'
 import { date, helper, toDuration, toFixed } from '@heyform-inc/utils'
 
-import { Button, Checkbox, Input, Select, Skeleton, useToast } from '@/components'
+import { Button, Checkbox, Input, Select, Skeleton, useAlert, useToast } from '@/components'
 
 interface TrendIndicatorProps {
   change?: number | null
@@ -104,6 +104,7 @@ export default function FormAnalyticsOverview() {
 
   const { formId } = useParam()
   const toast = useToast()
+  const alert = useAlert()
   const defaultCustomEnd = date().format('YYYY-MM-DD')
   const defaultCustomStart = date().subtract(6, 'days').format('YYYY-MM-DD')
   const [range, setRange] = useState('7d')
@@ -112,6 +113,7 @@ export default function FormAnalyticsOverview() {
   const [startDate, setStartDate] = useState(defaultCustomStart)
   const [endDate, setEndDate] = useState(defaultCustomEnd)
   const [downloadLoading, setDownloadLoading] = useState(false)
+  const [resetLoading, setResetLoading] = useState(false)
   const isCustomRange = range === 'custom'
   const analyticRanges = useMemo(
     () => [
@@ -147,7 +149,7 @@ export default function FormAnalyticsOverview() {
     [t]
   )
 
-  const { loading, data } = useRequest(
+  const { loading, data, refreshAsync } = useRequest(
     async () => {
       const [analytic, questions] = await Promise.all([
         FormService.analytic(formId, range, {
@@ -212,6 +214,41 @@ export default function FormAnalyticsOverview() {
     }
   }
 
+  function handleResetAnalytics() {
+    alert({
+      title: 'Reset analytics data?',
+      description:
+        'This will reset visits, source attribution, and question journey metrics for this form from now on. Submissions stay intact and cannot be restored in analytics.',
+      cancelProps: {
+        label: t('components.cancel')
+      },
+      confirmProps: {
+        label: 'Reset analytics',
+        className: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500'
+      },
+      async onConfirm() {
+        setResetLoading(true)
+
+        try {
+          await FormService.resetAnalytics(formId)
+          await refreshAsync()
+
+          toast({
+            title: 'Analytics reset',
+            message: 'Analytics counters were reset for this form.'
+          })
+        } catch (error: any) {
+          toast({
+            title: t('components.error.title'),
+            message: error.message || 'Unable to reset analytics right now.'
+          })
+        } finally {
+          setResetLoading(false)
+        }
+      }
+    })
+  }
+
   return (
     <>
       <div className="mt-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -222,6 +259,15 @@ export default function FormAnalyticsOverview() {
             <span>Count one visit and one submission per IP</span>
           </label>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Button
+              size="sm"
+              loading={resetLoading}
+              disabled={isInitialLoading || downloadLoading}
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={handleResetAnalytics}
+            >
+              Reset analytics
+            </Button>
             <Select
               className="w-full sm:w-44"
               value={sourceChannel}

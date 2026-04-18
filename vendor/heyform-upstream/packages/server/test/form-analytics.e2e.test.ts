@@ -439,7 +439,7 @@ function createHarness() {
         createPaymentIntent: async () => undefined
       } as any
     ),
-    formAnalyticResolver: new FormAnalyticResolver(formAnalyticService)
+    formAnalyticResolver: new FormAnalyticResolver(formAnalyticService, formService as any)
   }
 }
 

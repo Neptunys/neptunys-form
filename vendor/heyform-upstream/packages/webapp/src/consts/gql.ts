@@ -668,6 +668,12 @@ export const FORM_QUESTION_ANALYTIC_GQL = gql`
   }
 `
 
+export const RESET_FORM_ANALYTICS_GQL = gql`
+  mutation resetFormAnalytics($input: FormDetailInput!) {
+    resetFormAnalytics(input: $input)
+  }
+`
+
 export const FORM_REPORT_GQL = gql`
   query formReport($input: FormDetailInput!) {
     formReport(input: $input) {

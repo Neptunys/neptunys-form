@@ -1,5 +1,6 @@
 import { Auth, Form, FormGuard } from '@decorator'
 import {
+  FormDetailInput,
   FormAnalyticInput,
   FormAnalyticResult,
   FormAnalyticType,
@@ -7,11 +8,11 @@ import {
 } from '@graphql'
 import { flattenFields, htmlUtils } from '@heyform-inc/answer-utils'
 import { QUESTION_FIELD_KINDS } from '@heyform-inc/shared-types-enums'
-import { date, helper } from '@heyform-inc/utils'
+import { date, helper, timestamp } from '@heyform-inc/utils'
 import { FormAnalyticRangeEnum } from '@model'
-import { Args, Query, Resolver } from '@nestjs/graphql'
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql'
 import { FormModel } from '@model'
-import { FormAnalyticService } from '@service'
+import { FormAnalyticService, FormService } from '@service'
 
 function getChanges(prev: number, next: number, isInteger = true) {
   const result: FormAnalyticResult = {
@@ -119,11 +120,18 @@ function getRangeDates(input: FormAnalyticInput) {
 @Resolver()
 @Auth()
 export class FormAnalyticResolver {
-  constructor(private readonly formAnalyticService: FormAnalyticService) {}
+  constructor(
+    private readonly formAnalyticService: FormAnalyticService,
+    private readonly formService: FormService
+  ) {}
 
   @Query(returns => FormAnalyticType)
   @FormGuard()
-  async formAnalytic(@Args('input') input: FormAnalyticInput): Promise<FormAnalyticType> {
+  async formAnalytic(
+    @Args('input') input: FormAnalyticInput,
+    @Form() form?: FormModel
+  ): Promise<FormAnalyticType> {
+    const currentForm = form || await this.formService.findById(input.formId)
     const { startAt, endAt, prevStartAt, prevEndAt } = getRangeDates(input)
 
     const [prev, next] = await Promise.all([
@@ -132,7 +140,8 @@ export class FormAnalyticResolver {
         startAt: prevStartAt,
         endAt: prevEndAt,
         sourceChannel: input.sourceChannel,
-        dedupeByIp: input.dedupeByIp
+        dedupeByIp: input.dedupeByIp,
+        analyticsResetAt: currentForm?.settings?.analyticsResetAt
       }),
       this.formAnalyticService.summary({
         formId: input.formId,
@@ -140,7 +149,8 @@ export class FormAnalyticResolver {
         endAt,
         isNext: true,
         sourceChannel: input.sourceChannel,
-        dedupeByIp: input.dedupeByIp
+        dedupeByIp: input.dedupeByIp,
+        analyticsResetAt: currentForm?.settings?.analyticsResetAt
       })
     ])
 
@@ -163,9 +173,13 @@ export class FormAnalyticResolver {
 
   @Query(returns => [FormQuestionAnalyticType])
   @FormGuard()
-  async formQuestionAnalytics(@Form() form: FormModel, @Args('input') input: FormAnalyticInput) {
+  async formQuestionAnalytics(
+    @Args('input') input: FormAnalyticInput,
+    @Form() form?: FormModel
+  ) {
+    const currentForm = form || await this.formService.findById(input.formId)
     const { startAt, endAt } = getRangeDates(input)
-    const questions = flattenFields(form.fields || [])
+    const questions = flattenFields(currentForm?.fields || [])
       .filter(field => QUESTION_FIELD_KINDS.includes(field.kind))
       .map((field, index) => ({
         questionId: field.id,
@@ -184,8 +198,24 @@ export class FormAnalyticResolver {
       questions,
       {
         sourceChannel: input.sourceChannel,
-        dedupeByIp: input.dedupeByIp
+        dedupeByIp: input.dedupeByIp,
+        analyticsResetAt: currentForm?.settings?.analyticsResetAt
       }
     )
+  }
+
+  @Mutation(returns => Boolean)
+  @FormGuard()
+  async resetFormAnalytics(@Args('input') input: FormDetailInput): Promise<boolean> {
+    const analyticsResetAt = timestamp()
+
+    const [resetResult, updateResult] = await Promise.all([
+      this.formAnalyticService.reset(input.formId),
+      this.formService.update(input.formId, {
+        'settings.analyticsResetAt': analyticsResetAt
+      })
+    ])
+
+    return Boolean(resetResult && updateResult)
   }
 }

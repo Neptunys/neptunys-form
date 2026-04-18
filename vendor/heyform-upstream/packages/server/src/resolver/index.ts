@@ -51,6 +51,7 @@ export { TestIntegrationResolver } from './integration/test-integration.resolver
 export { FormsResolver } from './form/forms.resolver'
 export { SearchFormsResolver } from './form/search-forms.resolver'
 export { FormAnalyticResolver } from './form/form-analytic.resolver'
+export { ResetFormAnalyticsResolver } from './form/reset-form-analytics.resolver'
 export { CreateFormResolver } from './form/create-form.resolver'
 export { CreateFieldsWithAIResolver } from './form/create-fields-with-ai.resolver'
 export { CreateFormWithAIResolver } from './form/create-form-with-ai.resolver'

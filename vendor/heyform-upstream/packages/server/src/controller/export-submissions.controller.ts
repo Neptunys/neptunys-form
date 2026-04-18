@@ -141,11 +141,13 @@ export class ExportSubmissionsController {
         endAt,
         isNext: true,
         sourceChannel: input.sourceChannel,
-        dedupeByIp: input.dedupeByIp
+        dedupeByIp: input.dedupeByIp,
+        analyticsResetAt: form.settings?.analyticsResetAt
       }),
       this.formAnalyticService.questionAnalytics(input.formId, startAt, endAt, questionSeeds, {
         sourceChannel: input.sourceChannel,
-        dedupeByIp: input.dedupeByIp
+        dedupeByIp: input.dedupeByIp,
+        analyticsResetAt: form.settings?.analyticsResetAt
       })
     ])
     const filename = `${sanitizeFilenamePart(form.name, 'form')}-analytics-${buildAnalyticsRangeLabel(input)}.xlsx`

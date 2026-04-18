@@ -8,9 +8,10 @@ import {
   FormSessionStatusEnum
 } from '@model'
 import { helper, nanoid, timestamp } from '@heyform-inc/utils'
+import { mapTrafficSourceChannel, resolveTrafficSourceChannel, TrafficSourceChannel } from '@utils'
 
 const SESSION_REUSE_WINDOW_SECONDS = 30 * 60
-const SOURCE_CHANNEL_ORDER = [
+const SOURCE_CHANNEL_ORDER: TrafficSourceChannel[] = [
   'direct',
   'meta',
   'google',
@@ -22,7 +23,7 @@ const SOURCE_CHANNEL_ORDER = [
   'other'
 ] as const
 
-type SourceChannel = (typeof SOURCE_CHANNEL_ORDER)[number]
+type SourceChannel = TrafficSourceChannel
 
 interface AnalyticsFilterOptions {
   sourceChannel?: string
@@ -63,136 +64,6 @@ function normalizeQuestionMetrics(metrics: FormSessionQuestionMetricModel[]) {
   }))
 }
 
-function normalizeSourceValue(value?: string) {
-  if (!helper.isValid(value)) {
-    return undefined
-  }
-
-  return String(value).trim().toLowerCase()
-}
-
-function includesAny(value: string | undefined, patterns: string[]) {
-  return helper.isValid(value) && patterns.some(pattern => value!.includes(pattern))
-}
-
-function parseHostname(value?: string) {
-  if (!helper.isValid(value)) {
-    return undefined
-  }
-
-  try {
-    const url = new URL(value!)
-    return url.hostname.toLowerCase().replace(/^www\./, '')
-  } catch {
-    return undefined
-  }
-}
-
-function mapSourceChannel(value?: string): SourceChannel | undefined {
-  const normalized = normalizeSourceValue(value)
-
-  if (!helper.isValid(normalized) || normalized === 'all') {
-    return undefined
-  }
-
-  if (includesAny(normalized, ['facebook', 'instagram', 'messenger', 'whatsapp', 'meta', 'fb', 'ig'])) {
-    return 'meta'
-  }
-
-  if (includesAny(normalized, ['google', 'adwords', 'gclid', 'googleads'])) {
-    return 'google'
-  }
-
-  if (includesAny(normalized, ['linkedin', 'lnkd'])) {
-    return 'linkedin'
-  }
-
-  if (includesAny(normalized, ['twitter', 't.co', ' x ', 'x.com']) || normalized === 'x') {
-    return 'x'
-  }
-
-  if (includesAny(normalized, ['youtube', 'youtu.be'])) {
-    return 'youtube'
-  }
-
-  if (includesAny(normalized, ['tiktok'])) {
-    return 'tiktok'
-  }
-
-  if (includesAny(normalized, ['email', 'newsletter', 'mail'])) {
-    return 'email'
-  }
-
-  if (includesAny(normalized, ['direct', '(direct)', 'typed', 'none'])) {
-    return 'direct'
-  }
-
-  if (SOURCE_CHANNEL_ORDER.includes(normalized as SourceChannel)) {
-    return normalized as SourceChannel
-  }
-
-  return undefined
-}
-
-function resolveSourceChannel(source?: Record<string, any>): SourceChannel {
-  const explicitChannel = mapSourceChannel(source?.channel)
-
-  if (explicitChannel) {
-    return explicitChannel
-  }
-
-  const utmChannel = mapSourceChannel(source?.utmSource) || mapSourceChannel(source?.utmMedium)
-
-  if (utmChannel) {
-    return utmChannel
-  }
-
-  const referrerHost = parseHostname(source?.referrer)
-
-  if (!helper.isValid(referrerHost)) {
-    return 'direct'
-  }
-
-  if (
-    includesAny(referrerHost, [
-      'facebook.com',
-      'fb.com',
-      'instagram.com',
-      'messenger.com',
-      'm.me',
-      'whatsapp.com'
-    ])
-  ) {
-    return 'meta'
-  }
-
-  if (includesAny(referrerHost, ['google.', 'googlesyndication.com'])) {
-    return 'google'
-  }
-
-  if (includesAny(referrerHost, ['linkedin.com'])) {
-    return 'linkedin'
-  }
-
-  if (includesAny(referrerHost, ['twitter.com', 'x.com', 't.co'])) {
-    return 'x'
-  }
-
-  if (includesAny(referrerHost, ['youtube.com', 'youtu.be'])) {
-    return 'youtube'
-  }
-
-  if (includesAny(referrerHost, ['tiktok.com'])) {
-    return 'tiktok'
-  }
-
-  if (includesAny(referrerHost, ['mail.', 'outlook.', 'gmail.', 'yahoo.', 'proton.'])) {
-    return 'email'
-  }
-
-  return 'other'
-}
-
 function toAnalyticsSession(session: AnalyticsSession): AnalyticsSession {
   const source = {
     ...(session.source || {})
@@ -202,7 +73,7 @@ function toAnalyticsSession(session: AnalyticsSession): AnalyticsSession {
     ...session,
     source: {
       ...source,
-      channel: resolveSourceChannel(source)
+      channel: resolveTrafficSourceChannel(source)
     }
   }
 }
@@ -326,7 +197,7 @@ export class FormSessionService {
         }
       })
 
-      nextSource.channel = resolveSourceChannel(nextSource)
+      nextSource.channel = resolveTrafficSourceChannel(nextSource)
 
       await this.formOpenHistoryModel.updateOne(
         { _id: existingSession.id },
@@ -363,7 +234,7 @@ export class FormSessionService {
       lastSeenAt: now,
       source: {
         ...(options.source || {}),
-        channel: resolveSourceChannel(options.source)
+        channel: resolveTrafficSourceChannel(options.source)
       },
       questionMetrics: []
     })
@@ -431,7 +302,7 @@ export class FormSessionService {
     filters: AnalyticsFilterOptions = {}
   ) {
     let sessions = (await this.listAnalyticsSessions(formId, startAt, endAt)).map(toAnalyticsSession)
-    const requestedChannel = mapSourceChannel(filters.sourceChannel)
+    const requestedChannel = mapTrafficSourceChannel(filters.sourceChannel)
 
     if (requestedChannel) {
       sessions = sessions.filter(session => session.source?.channel === requestedChannel)

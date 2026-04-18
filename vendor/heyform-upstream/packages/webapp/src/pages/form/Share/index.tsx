@@ -55,28 +55,28 @@ export default function FormShare() {
   function handleShareEmail() {
     const url = getDecoratedURL('mailto:', {
       subject: 'Could you take a moment to fill in this NeptunysForm page?',
-      body: `We would really appreciate it if you filled in this form: ${shareLink}. Thank you.`
+      body: `We would really appreciate it if you filled in this form: ${trackedShareLink}. Thank you.`
     })
     window.open(url)
   }
 
   function handleShareFacebook() {
     const url = getDecoratedURL('https://www.facebook.com/sharer/sharer.php', {
-      u: shareLink
+      u: trackedShareLink
     })
     window.open(url)
   }
 
   function handleShareLinkedin() {
     const url = getDecoratedURL('https://www.linkedin.com/sharing/share-offsite', {
-      url: shareLink
+      url: trackedShareLink
     })
     window.open(url)
   }
 
   function handleShareTwitter() {
     const url = getDecoratedURL('https://twitter.com/share', {
-      url: shareLink,
+      url: trackedShareLink,
       title: form?.name || ''
     })
     window.open(url)
@@ -84,7 +84,7 @@ export default function FormShare() {
 
   function handleShareQrcode() {
     openModal('QRCodeModal', {
-      url: shareLink
+      url: trackedShareLink
     })
   }
 

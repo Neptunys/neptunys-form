@@ -18,6 +18,7 @@ interface FormAnalyticOptions {
   isNext?: boolean
   sourceChannel?: string
   dedupeByIp?: boolean
+  analyticsResetAt?: number
 }
 
 interface FormAnalyticResult {
@@ -37,6 +38,26 @@ interface QuestionAnalyticsSeed {
   title?: string
 }
 
+function resolveAnalyticsWindow(startAt: Date, endAt: Date, analyticsResetAt?: number) {
+  if (!helper.isNumber(analyticsResetAt) || analyticsResetAt! < 1) {
+    return {
+      startAt,
+      endAt
+    }
+  }
+
+  const resetAtDate = new Date(analyticsResetAt! * 1000)
+
+  if (resetAtDate.getTime() > endAt.getTime()) {
+    return null
+  }
+
+  return {
+    startAt: resetAtDate.getTime() > startAt.getTime() ? resetAtDate : startAt,
+    endAt
+  }
+}
+
 @Injectable()
 export class FormAnalyticService {
   constructor(
@@ -52,12 +73,25 @@ export class FormAnalyticService {
     endAt,
     isNext,
     sourceChannel,
-    dedupeByIp
+    dedupeByIp,
+    analyticsResetAt
   }: FormAnalyticOptions) {
+    const window = resolveAnalyticsWindow(startAt, endAt, analyticsResetAt)
+    const emptyResult = {
+      avgTotalVisits: 0,
+      avgSubmissionCount: 0,
+      avgAverageTime: 0,
+      sourceBreakdown: []
+    }
+
+    if (!window) {
+      return isNext ? emptyResult : ({} as FormAnalyticResult)
+    }
+
     const hasSessionFilters = helper.isValid(sourceChannel) || dedupeByIp
 
     const [sessionSummary, result, avgTotalVisits] = await Promise.all([
-      this.formSessionService.getSummary(formId, toUnixSeconds(startAt), toUnixSeconds(endAt), {
+      this.formSessionService.getSummary(formId, toUnixSeconds(window.startAt), toUnixSeconds(window.endAt), {
         sourceChannel,
         dedupeByIp
       }),
@@ -65,10 +99,10 @@ export class FormAnalyticService {
         ? Promise.resolve([])
         : this.submissionService.analytic(
             formId,
-            Math.floor(startAt.getTime() / 1000),
-            Math.floor(endAt.getTime() / 1000)
+            Math.floor(window.startAt.getTime() / 1000),
+            Math.floor(window.endAt.getTime() / 1000)
           ),
-      hasSessionFilters ? Promise.resolve(0) : this.getAverageTotalVisits(formId, startAt, endAt)
+      hasSessionFilters ? Promise.resolve(0) : this.getAverageTotalVisits(formId, window.startAt, window.endAt)
     ])
 
     const submissionSummary = result[0] || {}
@@ -116,12 +150,18 @@ export class FormAnalyticService {
     startAt: Date,
     endAt: Date,
     questions: QuestionAnalyticsSeed[] = [],
-    options: Pick<FormAnalyticOptions, 'sourceChannel' | 'dedupeByIp'> = {}
+    options: Pick<FormAnalyticOptions, 'sourceChannel' | 'dedupeByIp' | 'analyticsResetAt'> = {}
   ) {
+    const window = resolveAnalyticsWindow(startAt, endAt, options.analyticsResetAt)
+
+    if (!window) {
+      return []
+    }
+
     const sessionAnalytics = await this.formSessionService.getQuestionAnalytics(
       formId,
-      toUnixSeconds(startAt),
-      toUnixSeconds(endAt),
+      toUnixSeconds(window.startAt),
+      toUnixSeconds(window.endAt),
       options
     )
 
@@ -131,8 +171,8 @@ export class FormAnalyticService {
 
     const fallbackAnalytics = await this.formSessionService.getQuestionAnalyticsFallback(
       formId,
-      toUnixSeconds(startAt),
-      toUnixSeconds(endAt),
+      toUnixSeconds(window.startAt),
+      toUnixSeconds(window.endAt),
       questions,
       options
     )
@@ -144,8 +184,8 @@ export class FormAnalyticService {
     return this.submissionService.questionAnalytics(
       formId,
       questions,
-      toUnixSeconds(startAt),
-      toUnixSeconds(endAt)
+      toUnixSeconds(window.startAt),
+      toUnixSeconds(window.endAt)
     )
   }
 
@@ -221,5 +261,11 @@ export class FormAnalyticService {
     }
 
     return (result.deletedCount ?? 0) > 0
+  }
+
+  public async reset(formId: string): Promise<boolean> {
+    await this.formAnalyticModel.deleteMany({ formId })
+
+    return true
   }
 }

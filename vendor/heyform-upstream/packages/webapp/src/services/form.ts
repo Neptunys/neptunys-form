@@ -41,6 +41,7 @@ import {
   PUBLIC_ROUTE_BY_DOMAIN_GQL,
   PUBLISH_FORM_SQL,
   RESTORE_FORM_GQL,
+  RESET_FORM_ANALYTICS_GQL,
   SEARCH_FORM_GQL,
   TEMPLATES_GQL,
   TEMPLATE_DETAILS_GQL,
@@ -263,6 +264,17 @@ export class FormService {
         input: this.buildAnalyticInput(formId, range, options)
       },
       fetchPolicy: 'network-only'
+    })
+  }
+
+  static async resetAnalytics(formId: string) {
+    return apollo.mutate({
+      mutation: RESET_FORM_ANALYTICS_GQL,
+      variables: {
+        input: {
+          formId
+        }
+      }
     })
   }
 
