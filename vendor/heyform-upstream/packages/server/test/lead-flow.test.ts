@@ -365,29 +365,20 @@ function testLeadSheetRowUsesCompactLayout() {
   assert.strictEqual(row['View Answers'], '')
 }
 
-function testLeadAnswerSheetRowsStayNormalized() {
+function testLeadAnswerSheetRowsStaySingleLinePerLead() {
   const payload = buildLeadCapturePayload(
     createAnswerOnlyScoreForm(),
     createAnswerOnlyScoreSubmission('best_fit')
   )
   const rows = buildLeadAnswerSheetRows(payload)
 
-  assert.strictEqual(rows.length, 2)
+  assert.strictEqual(rows.length, 1)
   assert.deepStrictEqual(rows[0], {
     'Lead ID': payload.submissionId,
     'Quiz Name': payload.formName,
     'Submitted At': '2024-04-16 10:40:00 UTC',
-    'Question Order': 1,
-    Question: 'Fit check',
-    Answer: 'Best fit'
-  })
-  assert.deepStrictEqual(rows[1], {
-    'Lead ID': payload.submissionId,
-    'Quiz Name': payload.formName,
-    'Submitted At': '2024-04-16 10:40:00 UTC',
-    'Question Order': 2,
-    Question: 'Email',
-    Answer: 'lead@example.com'
+    'Fit check': 'Best fit',
+    Email: 'lead@example.com'
   })
 }
 
@@ -398,12 +389,23 @@ function testLeadAnswerSheetRowsIncludeAllQuizQuestionsInOrder() {
   )
   const rows = buildLeadAnswerSheetRows(payload)
 
-  assert.strictEqual(rows.length, 3)
-  assert.deepStrictEqual(rows.map(row => [row['Question Order'], row.Question, row.Answer]), [
-    [1, 'Which branch did you serve in?', 'Army'],
-    [2, 'What year did you leave?', ''],
-    [3, 'Email', 'lead@example.com']
+  assert.strictEqual(rows.length, 1)
+  assert.deepStrictEqual(Object.keys(rows[0]), [
+    'Lead ID',
+    'Quiz Name',
+    'Submitted At',
+    'Which branch did you serve in?',
+    'What year did you leave?',
+    'Email'
   ])
+  assert.deepStrictEqual(rows[0], {
+    'Lead ID': payload.submissionId,
+    'Quiz Name': payload.formName,
+    'Submitted At': '2024-04-16 10:40:00 UTC',
+    'Which branch did you serve in?': 'Army',
+    'What year did you leave?': '',
+    Email: 'lead@example.com'
+  })
 }
 
 function testBuildTestLeadCapturePayloadsScaleToUniqueLeadIds() {
@@ -438,7 +440,7 @@ async function run() {
   testLeadScoreFallsBackToAnswerScores()
   testLeadScoreFallsBackToFormChoiceScoresWhenSnapshotScoresAreMissing()
   testLeadSheetRowUsesCompactLayout()
-  testLeadAnswerSheetRowsStayNormalized()
+  testLeadAnswerSheetRowsStaySingleLinePerLead()
   testLeadAnswerSheetRowsIncludeAllQuizQuestionsInOrder()
   testBuildTestLeadCapturePayloadsScaleToUniqueLeadIds()
   testNegativeLeadDetectionFallsBackToFormChoiceScoresWhenSnapshotScoresAreMissing()

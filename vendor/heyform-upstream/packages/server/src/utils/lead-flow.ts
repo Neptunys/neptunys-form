@@ -197,13 +197,10 @@ export interface LeadCapturePayload {
   reportingTimezone?: string
 }
 
-export interface LeadAnswerSheetRow {
+export type LeadAnswerSheetRow = Record<string, string> & {
   'Lead ID': string
   'Quiz Name': string
   'Submitted At': string
-  'Question Order': number
-  Question: string
-  Answer: string
 }
 
 export interface LeadAnswerItem {
@@ -1143,12 +1140,15 @@ export function buildLeadAnswerSheetRows(payload: LeadCapturePayload): LeadAnswe
         answer
       }))
 
-  return answerItems.map((item, index) => ({
+  const row: LeadAnswerSheetRow = {
     'Lead ID': payload.submissionId,
     'Quiz Name': payload.formName,
-    'Submitted At': submittedAt,
-    'Question Order': index + 1,
-    Question: item.question,
-    Answer: item.answer
-  }))
+    'Submitted At': submittedAt
+  }
+
+  answerItems.forEach(item => {
+    row[item.question] = item.answer
+  })
+
+  return [row]
 }

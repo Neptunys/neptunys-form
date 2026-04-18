@@ -35,6 +35,8 @@ const QUIZ_NAME_HEADER = 'Quiz Name'
 const LEAD_SCORE_HEADER = 'Lead Score'
 const QUESTION_ORDER_HEADER = 'Question Order'
 const SUBMITTED_AT_HEADER = 'Submitted At'
+const LEGACY_QUESTION_HEADER = 'Question'
+const LEGACY_ANSWER_HEADER = 'Answer'
 const HEADER_BACKGROUND_COLOR = {
   red: 0.11,
   green: 0.15,
@@ -108,7 +110,15 @@ const BASE_LEAD_SHEET_HEADERS = [
   LEAD_ID_HEADER,
   VIEW_ANSWERS_HEADER
 ]
-const ANSWERS_SHEET_HEADERS = [LEAD_ID_HEADER, QUIZ_NAME_HEADER, SUBMITTED_AT_HEADER, QUESTION_ORDER_HEADER, 'Question', 'Answer']
+const BASE_ANSWERS_SHEET_HEADERS = [LEAD_ID_HEADER, QUIZ_NAME_HEADER, SUBMITTED_AT_HEADER]
+const LEGACY_ANSWERS_SHEET_HEADERS = [
+  LEAD_ID_HEADER,
+  QUIZ_NAME_HEADER,
+  SUBMITTED_AT_HEADER,
+  QUESTION_ORDER_HEADER,
+  LEGACY_QUESTION_HEADER,
+  LEGACY_ANSWER_HEADER
+]
 const COLUMN_WIDTH_OVERRIDES: Record<string, number> = {
   'Lead Contacted': 128,
   'Lead Contacted At': 180,
@@ -553,6 +563,136 @@ function normalizeHeaders(existingHeaders: string[], nextRow: GoogleSheetsRow) {
   })
 
   return normalizedHeaders
+}
+
+function buildUniqueHeaderKey(row: GoogleSheetsRow, rawKey: string, fallback: string) {
+  const baseKey = normalizeText(rawKey) || fallback
+  let nextKey = baseKey
+  let index = 2
+
+  while (Object.prototype.hasOwnProperty.call(row, nextKey)) {
+    nextKey = `${baseKey} (${index})`
+    index += 1
+  }
+
+  return nextKey
+}
+
+function isLegacyAnswerSheetHeaders(headers: string[]) {
+  return LEGACY_ANSWERS_SHEET_HEADERS.every((header, index) => headers[index] === header)
+}
+
+function buildAnswerSheetHeaders(existingHeaders: string[], rows: LeadAnswerSheetRow[]) {
+  const existingDynamicHeaders = helper.isValidArray(existingHeaders) && !isLegacyAnswerSheetHeaders(existingHeaders)
+    ? existingHeaders
+        .filter(helper.isValid)
+        .filter(header => !BASE_ANSWERS_SHEET_HEADERS.includes(header))
+    : []
+
+  let headers = [...BASE_ANSWERS_SHEET_HEADERS, ...existingDynamicHeaders]
+
+  rows.forEach(row => {
+    headers = normalizeHeaders(headers, row)
+  })
+
+  return headers
+}
+
+function pivotLegacyAnswerRows(values: string[][], headers: string[]): LeadAnswerSheetRow[] {
+  const leadIdColumnIndex = headers.indexOf(LEAD_ID_HEADER)
+  const quizNameColumnIndex = headers.indexOf(QUIZ_NAME_HEADER)
+  const submittedAtColumnIndex = headers.indexOf(SUBMITTED_AT_HEADER)
+  const questionColumnIndex = headers.indexOf(LEGACY_QUESTION_HEADER)
+  const answerColumnIndex = headers.indexOf(LEGACY_ANSWER_HEADER)
+
+  if (
+    leadIdColumnIndex < 0 ||
+    quizNameColumnIndex < 0 ||
+    submittedAtColumnIndex < 0 ||
+    questionColumnIndex < 0 ||
+    answerColumnIndex < 0
+  ) {
+    return []
+  }
+
+  const rowsByLeadId = new Map<string, LeadAnswerSheetRow>()
+
+  values.slice(1).forEach((valuesRow, index) => {
+    const leadId = normalizeText(valuesRow[leadIdColumnIndex])
+
+    if (!leadId) {
+      return
+    }
+
+    const existingRow = rowsByLeadId.get(leadId) || {
+      'Lead ID': leadId,
+      'Quiz Name': normalizeText(valuesRow[quizNameColumnIndex]) || '',
+      'Submitted At': normalizeText(valuesRow[submittedAtColumnIndex]) || ''
+    }
+    const question = normalizeText(valuesRow[questionColumnIndex])
+
+    if (question) {
+      const header = buildUniqueHeaderKey(existingRow, question, `Question ${index + 1}`)
+      existingRow[header] = normalizeText(valuesRow[answerColumnIndex]) || ''
+    }
+
+    rowsByLeadId.set(leadId, existingRow)
+  })
+
+  return Array.from(rowsByLeadId.values())
+}
+
+async function overwriteWorksheetRows(
+  sheets: any,
+  spreadsheetId: string,
+  sheetName: string,
+  headers: string[],
+  rows: GoogleSheetsRow[]
+) {
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId,
+    range: getSheetRange(sheetName, 'A:ZZZ')
+  })
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: getSheetRange(sheetName, 'A:ZZZ'),
+    valueInputOption: 'RAW',
+    requestBody: {
+      values: [headers, ...rows.map(row => headers.map(header => row[header] ?? ''))]
+    }
+  })
+}
+
+async function prepareAnswerWorksheet(
+  sheets: any,
+  spreadsheetId: string,
+  sheetId: number,
+  sheetName: string,
+  pendingRows: LeadAnswerSheetRow[]
+) {
+  const existingHeaders = await getWorksheetHeaders(sheets, spreadsheetId, sheetName)
+
+  if (isLegacyAnswerSheetHeaders(existingHeaders)) {
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: getSheetRange(sheetName, 'A:ZZZ')
+    })
+    const existingRows = pivotLegacyAnswerRows((response.data.values || []) as string[][], existingHeaders)
+    const headers = buildAnswerSheetHeaders([], [...existingRows, ...pendingRows])
+
+    await prepareWorksheetColumns(sheets, spreadsheetId, sheetId, sheetName, headers)
+    await overwriteWorksheetRows(sheets, spreadsheetId, sheetName, headers, existingRows)
+
+    return headers
+  }
+
+  const headers = buildAnswerSheetHeaders(existingHeaders, pendingRows)
+
+  await prepareWorksheetColumns(sheets, spreadsheetId, sheetId, sheetName, headers)
+  await upsertHeaders(sheets, spreadsheetId, sheetName, headers)
+
+  return headers
 }
 
 async function ensureWorksheet(sheets: any, spreadsheetId: string, sheetName: string) {
@@ -1407,7 +1547,7 @@ function groupTestPayloadsByDestination(config: GoogleSheetsConfig, payloads: Le
       answersSheetName: string
       leadHeaders: string[]
       leadRows: GoogleSheetsRow[]
-      answerRows: GoogleSheetsRow[]
+      answerRows: LeadAnswerSheetRow[]
       submissionIds: string[]
       leadLevels: Array<LeadLevel | undefined>
     }
@@ -1487,19 +1627,18 @@ async function writeTestLeadRows(config: GoogleSheetsConfig, payloads: LeadCaptu
       group.leadHeaders
     )
 
-    await prepareWorksheetColumns(
+    const answerHeaders = await prepareAnswerWorksheet(
       sheets,
       group.spreadsheetId,
       answersWorksheetInfo.sheetId,
       group.answersSheetName,
-      ANSWERS_SHEET_HEADERS
+      group.answerRows
     )
-    await upsertHeaders(sheets, group.spreadsheetId, group.answersSheetName, ANSWERS_SHEET_HEADERS)
     await appendRows(
       sheets,
       group.spreadsheetId,
       group.answersSheetName,
-      ANSWERS_SHEET_HEADERS,
+      answerHeaders,
       group.answerRows
     )
     await formatWorksheet(
@@ -1507,7 +1646,7 @@ async function writeTestLeadRows(config: GoogleSheetsConfig, payloads: LeadCaptu
       group.spreadsheetId,
       answersWorksheetInfo.sheetId,
       group.answersSheetName,
-      ANSWERS_SHEET_HEADERS
+      answerHeaders
     )
   }
 
@@ -1622,20 +1761,19 @@ async function writeLeadRow(
     headers
   )
 
-  await prepareWorksheetColumns(
+  const answerHeaders = await prepareAnswerWorksheet(
     sheets,
     destination.spreadsheetId,
     answersWorksheetInfo.sheetId,
     destination.answersSheetName,
-    ANSWERS_SHEET_HEADERS
+    answerRows
   )
-  await upsertHeaders(sheets, destination.spreadsheetId, destination.answersSheetName, ANSWERS_SHEET_HEADERS)
   await replaceAnswerRows(
     sheets,
     destination.spreadsheetId,
     answersWorksheetInfo.sheetId,
     destination.answersSheetName,
-    ANSWERS_SHEET_HEADERS,
+    answerHeaders,
     enrichedPayload.submissionId,
     answerRows
   )
@@ -1644,7 +1782,7 @@ async function writeLeadRow(
     destination.spreadsheetId,
     answersWorksheetInfo.sheetId,
     destination.answersSheetName,
-    ANSWERS_SHEET_HEADERS
+    answerHeaders
   )
 
   return {
@@ -1662,7 +1800,7 @@ export default {
   id: 'googlesheets',
   name: 'Google Sheets',
   description:
-    'Send each submission to a clean Google Sheets leads tab plus a linked answers tab, with service-account auth and optional upsert updates.',
+    'Send each submission to a clean Google Sheets leads tab plus a linked one-row-per-lead answers tab, with service-account auth and optional upsert updates.',
   icon: '/static/googleanalytics.png',
   settings: [
     {
