@@ -188,6 +188,7 @@ export interface LeadCapturePayload {
   hasZeroScoreAnswer?: boolean
   leadQuality?: string
   leadPriority?: string
+  answerItems?: LeadAnswerItem[]
   answersByTitle: Record<string, string>
   hiddenFieldsByName: Record<string, string>
   variablesByName: Record<string, string | number>
@@ -203,6 +204,12 @@ export interface LeadAnswerSheetRow {
   'Question Order': number
   Question: string
   Answer: string
+}
+
+export interface LeadAnswerItem {
+  fieldId: string
+  question: string
+  answer: string
 }
 
 function escapeRegex(value: string) {
@@ -591,6 +598,34 @@ function flattenFormFields(fields?: FormField[]): FormField[] {
   return flattened
 }
 
+function getOrderedQuestionFields(fields?: FormField[]) {
+  return flattenFormFields(fields).filter(field => !NON_QUESTION_FIELD_KINDS.includes(field.kind))
+}
+
+function buildLeadAnswerItems(fields: FormField[] | undefined, answers: Answer[]): LeadAnswerItem[] {
+  const answersById = new Map<string, Answer>()
+  const usedQuestions: Record<string, true> = {}
+
+  answers.forEach(answer => {
+    if (!answersById.has(answer.id)) {
+      answersById.set(answer.id, answer)
+    }
+  })
+
+  return getOrderedQuestionFields(fields).map((field, index) => {
+    const answer = answersById.get(field.id)
+    const question = makeUniqueKey(usedQuestions, getFieldTitle(field), `Question ${index + 1}`)
+
+    usedQuestions[question] = true
+
+    return {
+      fieldId: field.id,
+      question,
+      answer: answer ? normalizeString(parsePlainAnswer(answer)) || '' : ''
+    }
+  })
+}
+
 function getSelectedChoiceIds(value: unknown): string[] {
   if (helper.isObject(value) && Object.prototype.hasOwnProperty.call(value, 'value')) {
     return getSelectedChoiceIds((value as { value?: unknown }).value)
@@ -807,6 +842,7 @@ export function buildLeadCapturePayload(
   const settings = (form.settings || {}) as LeadFlowSettings
   const fieldMap = new Map(flattenFormFields(form.fields).map(field => [field.id, field]))
   const hiddenFieldMap = new Map((form.hiddenFields || []).map(field => [field.id, field]))
+  const answerItems = buildLeadAnswerItems(form.fields, submission.answers)
   const answersByTitle: Record<string, string> = {}
   const hiddenFieldsByName: Record<string, string> = {}
   const variablesByName: Record<string, string | number> = {}
@@ -913,6 +949,7 @@ export function buildLeadCapturePayload(
     hasZeroScoreAnswer: negativeLead,
     leadQuality,
     leadPriority,
+    answerItems,
     answersByTitle,
     hiddenFieldsByName,
     variablesByName,
@@ -930,6 +967,7 @@ export function buildTestLeadCapturePayload(
 ): LeadCapturePayload {
   const settings = (form.settings || {}) as LeadFlowSettings
   const answersByTitle: Record<string, string> = {}
+  const answerItems: LeadAnswerItem[] = []
   const hiddenFieldsByName: Record<string, string> = {}
   const variablesByName: Record<string, string | number> = {}
   const submittedAt = Math.floor(Date.now() / 1000)
@@ -943,12 +981,17 @@ export function buildTestLeadCapturePayload(
   const respondentPhone = persona.respondentPhone
   const trafficSource = TEST_TRAFFIC_SOURCES[sampleIndex % TEST_TRAFFIC_SOURCES.length]
 
-  ;(form.fields || [])
-    .filter(field => !NON_QUESTION_FIELD_KINDS.includes(field.kind))
-    .forEach((field, index) => {
-      const key = makeUniqueKey(answersByTitle, getFieldTitle(field), `Question ${index + 1}`)
-      answersByTitle[key] = getSampleAnswerValue(field, index, sampleLeadLevel)
+  getOrderedQuestionFields(form.fields).forEach((field, index) => {
+    const question = makeUniqueKey(answersByTitle, getFieldTitle(field), `Question ${index + 1}`)
+    const answer = getSampleAnswerValue(field, index, sampleLeadLevel)
+
+    answersByTitle[question] = answer
+    answerItems.push({
+      fieldId: field.id,
+      question,
+      answer
     })
+  })
 
   ;(form.hiddenFields || []).forEach(hiddenField => {
     const key = makeUniqueKey(hiddenFieldsByName, hiddenField.name || hiddenField.id, hiddenField.id)
@@ -1016,6 +1059,7 @@ export function buildTestLeadCapturePayload(
     hasZeroScoreAnswer: false,
     leadQuality,
     leadPriority,
+    answerItems,
     answersByTitle,
     hiddenFieldsByName,
     variablesByName,
@@ -1091,13 +1135,20 @@ export function buildLeadSheetRow(payload: LeadCapturePayload) {
 
 export function buildLeadAnswerSheetRows(payload: LeadCapturePayload): LeadAnswerSheetRow[] {
   const submittedAt = formatUtcDateTime(payload.submittedAtIso)
+  const answerItems = helper.isValidArray(payload.answerItems)
+    ? payload.answerItems
+    : Object.entries(payload.answersByTitle).map(([question, answer], index) => ({
+        fieldId: String(index + 1),
+        question,
+        answer
+      }))
 
-  return Object.entries(payload.answersByTitle).map(([question, answer], index) => ({
+  return answerItems.map((item, index) => ({
     'Lead ID': payload.submissionId,
     'Quiz Name': payload.formName,
     'Submitted At': submittedAt,
     'Question Order': index + 1,
-    Question: question,
-    Answer: answer
+    Question: item.question,
+    Answer: item.answer
   }))
 }

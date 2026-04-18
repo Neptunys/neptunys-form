@@ -13,6 +13,11 @@ import {
   LeadAnswerSheetRow,
   LeadCapturePayload
 } from '../utils'
+import {
+  normalizeTrafficSourceLabel,
+  resolveTrafficSourceLabel,
+  TrafficSourceRecord
+} from '../utils/traffic-source'
 import { FormOpenHistoryModel } from '../model'
 
 const GOOGLE_SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets'
@@ -122,18 +127,6 @@ const COLUMN_WIDTH_OVERRIDES: Record<string, number> = {
   Question: 240,
   Answer: 360
 }
-const TRAFFIC_SOURCE_LABELS: Record<string, string> = {
-  direct: 'Direct',
-  meta: 'Meta',
-  google: 'Google',
-  linkedin: 'LinkedIn',
-  x: 'X',
-  youtube: 'YouTube',
-  tiktok: 'TikTok',
-  email: 'Email',
-  other: 'Other'
-}
-
 type GoogleSheetsConfig = Record<string, any>
 type GoogleSheetsRow = Record<string, string | number | boolean>
 type LeadLevel = 'high' | 'medium' | 'low'
@@ -141,13 +134,6 @@ type WriteMode = 'append' | 'upsert'
 type WorksheetInfo = {
   sheetId: number
 }
-type SessionSourceRecord = {
-  channel?: string
-  utmSource?: string
-  utmMedium?: string
-  referrer?: string
-}
-
 function getSheetRange(sheetName: string, range: string) {
   return `'${sheetName.replace(/'/g, "''")}'!${range}`
 }
@@ -207,174 +193,76 @@ function normalizeLookupKey(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '')
 }
 
-function titleCaseWords(value: string): string {
-  return value
-    .split(/[^a-z0-9]+/i)
-    .filter(helper.isValid)
-    .map(token => token.charAt(0).toUpperCase() + token.slice(1).toLowerCase())
-    .join(' ')
+function findNamedValue(record: Record<string, string | number>, candidateKeys: string[]) {
+  const normalizedCandidates = new Set(candidateKeys.map(normalizeLookupKey))
+
+  for (const [key, value] of Object.entries(record)) {
+    if (normalizedCandidates.has(normalizeLookupKey(key))) {
+      const normalizedValue = normalizeText(value)
+
+      if (normalizedValue) {
+        return normalizedValue
+      }
+    }
+  }
+
+  return undefined
 }
 
-  function parseHostname(value?: string) {
-    if (!helper.isValid(value)) {
-      return undefined
-    }
+function getFormOpenHistoryModel() {
+  for (const connection of mongoose.connections) {
+    const model = connection.models[FormOpenHistoryModel.name] as
+      | mongoose.Model<{ source?: TrafficSourceRecord }>
+      | undefined
 
-    try {
-      return new URL(String(value)).hostname.toLowerCase().replace(/^www\./, '')
-    } catch {
-      return undefined
+    if (model) {
+      return model
     }
   }
 
-  function includesAny(value: string | undefined, patterns: string[]) {
-    return helper.isValid(value) && patterns.some(pattern => value!.includes(pattern))
-  }
+  return mongoose.models[FormOpenHistoryModel.name] as
+    | mongoose.Model<{ source?: TrafficSourceRecord }>
+    | undefined
+}
 
-  function normalizeTrafficSource(value?: string) {
-    const normalized = normalizeText(value)?.toLowerCase()
-
-    if (!normalized) {
-      return undefined
-    }
-
-    if (includesAny(normalized, ['facebook', 'instagram', 'messenger', 'whatsapp', 'meta', 'fb', 'ig'])) {
-      return TRAFFIC_SOURCE_LABELS.meta
-    }
-
-    if (includesAny(normalized, ['google', 'adwords', 'gclid', 'googleads'])) {
-      return TRAFFIC_SOURCE_LABELS.google
-    }
-
-    if (includesAny(normalized, ['linkedin', 'lnkd'])) {
-      return TRAFFIC_SOURCE_LABELS.linkedin
-    }
-
-    if (includesAny(normalized, ['twitter', 't.co', ' x ', 'x.com']) || normalized === 'x') {
-      return TRAFFIC_SOURCE_LABELS.x
-    }
-
-    if (includesAny(normalized, ['youtube', 'youtu.be'])) {
-      return TRAFFIC_SOURCE_LABELS.youtube
-    }
-
-    if (includesAny(normalized, ['tiktok'])) {
-      return TRAFFIC_SOURCE_LABELS.tiktok
-    }
-
-    if (includesAny(normalized, ['email', 'newsletter', 'mail'])) {
-      return TRAFFIC_SOURCE_LABELS.email
-    }
-
-    if (includesAny(normalized, ['direct', '(direct)', 'typed', 'none'])) {
-      return TRAFFIC_SOURCE_LABELS.direct
-    }
-
-    const referrerHost = parseHostname(normalized)
-
-    if (referrerHost) {
-      if (
-        includesAny(referrerHost, [
-          'facebook.com',
-          'fb.com',
-          'instagram.com',
-          'messenger.com',
-          'm.me',
-          'whatsapp.com'
-        ])
-      ) {
-        return TRAFFIC_SOURCE_LABELS.meta
-      }
-
-      if (includesAny(referrerHost, ['google.', 'googlesyndication.com'])) {
-        return TRAFFIC_SOURCE_LABELS.google
-      }
-
-      if (includesAny(referrerHost, ['linkedin.com'])) {
-        return TRAFFIC_SOURCE_LABELS.linkedin
-      }
-
-      if (includesAny(referrerHost, ['twitter.com', 'x.com', 't.co'])) {
-        return TRAFFIC_SOURCE_LABELS.x
-      }
-
-      if (includesAny(referrerHost, ['youtube.com', 'youtu.be'])) {
-        return TRAFFIC_SOURCE_LABELS.youtube
-      }
-
-      if (includesAny(referrerHost, ['tiktok.com'])) {
-        return TRAFFIC_SOURCE_LABELS.tiktok
-      }
-
-      if (includesAny(referrerHost, ['mail.', 'outlook.', 'gmail.', 'yahoo.', 'proton.'])) {
-        return TRAFFIC_SOURCE_LABELS.email
-      }
-
-      return TRAFFIC_SOURCE_LABELS.other
-    }
-
-    return titleCaseWords(normalized)
-  }
-
-  function findNamedValue(record: Record<string, string | number>, candidateKeys: string[]) {
-    const normalizedCandidates = new Set(candidateKeys.map(normalizeLookupKey))
-
-    for (const [key, value] of Object.entries(record)) {
-      if (normalizedCandidates.has(normalizeLookupKey(key))) {
-        const normalizedValue = normalizeText(value)
-
-        if (normalizedValue) {
-          return normalizedValue
-        }
-      }
-    }
-
+async function findSubmissionTrafficSource(formId: string, sessionId?: string) {
+  if (!helper.isValid(sessionId)) {
     return undefined
   }
 
-  async function findSubmissionTrafficSource(formId: string, sessionId?: string) {
-    if (!helper.isValid(sessionId)) {
-      return undefined
-    }
+  const model = getFormOpenHistoryModel()
 
-    const model = mongoose.models[FormOpenHistoryModel.name] as
-      | mongoose.Model<{ source?: SessionSourceRecord }>
-      | undefined
-
-    if (!model) {
-      return undefined
-    }
-
-    try {
-      const session = await model.findOne({ _id: sessionId, formId }, { source: 1 }).lean()
-
-      return (
-        normalizeTrafficSource(session?.source?.channel) ||
-        normalizeTrafficSource(session?.source?.utmSource) ||
-        normalizeTrafficSource(session?.source?.utmMedium) ||
-        normalizeTrafficSource(session?.source?.referrer)
-      )
-    } catch {
-      return undefined
-    }
+  if (!model) {
+    return undefined
   }
 
-  async function resolveTrafficSource(
-    formId: string,
-    submission: { sessionId?: string } | undefined,
-    payload: LeadCapturePayload
-  ) {
-    return (
-      normalizeTrafficSource(payload.trafficSource) ||
-      (await findSubmissionTrafficSource(formId, submission?.sessionId)) ||
-      normalizeTrafficSource(
-        findNamedValue(payload.hiddenFieldsByName, ['utm_source', 'utm_medium', 'source', 'traffic_source', 'channel'])
-      ) ||
-      normalizeTrafficSource(
-        findNamedValue(payload.variablesByName, ['utm_source', 'utm_medium', 'source', 'traffic_source', 'channel'])
-      )
+  try {
+    const session =
+      (await model.findOne({ _id: sessionId, formId }, { source: 1 }).lean()) ||
+      (await model.findOne({ _id: sessionId }, { source: 1 }).lean())
+
+    return resolveTrafficSourceLabel(session?.source)
+  } catch {
+    return undefined
+  }
+}
+
+async function resolveTrafficSource(
+  formId: string,
+  submission: { sessionId?: string } | undefined,
+  payload: LeadCapturePayload
+) {
+  return (
+    normalizeTrafficSourceLabel(payload.trafficSource) ||
+    (await findSubmissionTrafficSource(formId, submission?.sessionId)) ||
+    normalizeTrafficSourceLabel(
+      findNamedValue(payload.hiddenFieldsByName, ['utm_source', 'utm_medium', 'source', 'traffic_source', 'channel'])
+    ) ||
+    normalizeTrafficSourceLabel(
+      findNamedValue(payload.variablesByName, ['utm_source', 'utm_medium', 'source', 'traffic_source', 'channel'])
     )
-  }
+  )
+}
 
 function getLevelSuffix(level: LeadLevel) {
   return `${level.charAt(0).toUpperCase()}${level.slice(1)}`

@@ -102,6 +102,39 @@ function createAnswerOnlyScoreForm() {
   }
 }
 
+function createFormWithSkippedQuestion() {
+  return {
+    id: 'form_3',
+    projectId: 'project_1',
+    name: 'Skipped question flow',
+    settings: {
+      leadMediumThreshold: 50,
+      leadHighThreshold: 80
+    },
+    fields: [
+      {
+        id: 'served',
+        title: 'Which branch did you serve in?',
+        kind: FieldKindEnum.SHORT_TEXT,
+        properties: {}
+      },
+      {
+        id: 'year',
+        title: 'What year did you leave?',
+        kind: FieldKindEnum.SHORT_TEXT,
+        properties: {}
+      },
+      {
+        id: 'email',
+        title: 'Email',
+        kind: FieldKindEnum.EMAIL,
+        properties: {}
+      }
+    ],
+    variables: []
+  }
+}
+
 function createSubmission(choiceId: string, leadScore: number) {
   return {
     id: `submission_${choiceId}`,
@@ -231,6 +264,30 @@ function createNegativeSubmissionWithoutSnapshotScores(choiceId: string) {
   }
 }
 
+function createSubmissionWithSkippedQuestion() {
+  return {
+    id: 'submission_skipped_question',
+    answers: [
+      {
+        id: 'served',
+        title: 'Which branch did you serve in?',
+        kind: FieldKindEnum.SHORT_TEXT,
+        properties: {},
+        value: 'Army'
+      },
+      {
+        id: 'email',
+        title: 'Email',
+        kind: FieldKindEnum.EMAIL,
+        properties: {},
+        value: 'lead@example.com'
+      }
+    ],
+    variables: [],
+    endAt: 1713264000
+  }
+}
+
 function testNegativeLeadDetection() {
   const payload = buildLeadCapturePayload(createForm(), createSubmission('fail', 0))
   const values = buildLeadTemplateValues(payload)
@@ -334,6 +391,21 @@ function testLeadAnswerSheetRowsStayNormalized() {
   })
 }
 
+function testLeadAnswerSheetRowsIncludeAllQuizQuestionsInOrder() {
+  const payload = buildLeadCapturePayload(
+    createFormWithSkippedQuestion(),
+    createSubmissionWithSkippedQuestion()
+  )
+  const rows = buildLeadAnswerSheetRows(payload)
+
+  assert.strictEqual(rows.length, 3)
+  assert.deepStrictEqual(rows.map(row => [row['Question Order'], row.Question, row.Answer]), [
+    [1, 'Which branch did you serve in?', 'Army'],
+    [2, 'What year did you leave?', ''],
+    [3, 'Email', 'lead@example.com']
+  ])
+}
+
 function testBuildTestLeadCapturePayloadsScaleToUniqueLeadIds() {
   const payloads = buildTestLeadCapturePayloads(createAnswerOnlyScoreForm(), undefined, 10)
   const submissionIds = payloads.map(payload => payload.submissionId)
@@ -367,6 +439,7 @@ async function run() {
   testLeadScoreFallsBackToFormChoiceScoresWhenSnapshotScoresAreMissing()
   testLeadSheetRowUsesCompactLayout()
   testLeadAnswerSheetRowsStayNormalized()
+  testLeadAnswerSheetRowsIncludeAllQuizQuestionsInOrder()
   testBuildTestLeadCapturePayloadsScaleToUniqueLeadIds()
   testNegativeLeadDetectionFallsBackToFormChoiceScoresWhenSnapshotScoresAreMissing()
 }
