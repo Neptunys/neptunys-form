@@ -147,7 +147,7 @@ export class MailService {
     })
   }
 
-  async submissionNotification(to: string, options: SubmissionNotificationOptions) {
+  async submissionNotification(to: string | string[], options: SubmissionNotificationOptions) {
     await this.addQueue('submission_notification', to, options, undefined, true)
   }
 
@@ -244,7 +244,7 @@ export class MailService {
 
   private async addQueue(
     templateName: string,
-    to: string,
+    to: string | string[],
     replacements?: Record<string, any>,
     options?: JobOptions,
     waitForCompletion = false
@@ -268,6 +268,12 @@ export class MailService {
       })
     }
 
+    const recipients = helper.isArray(to) ? to.filter(helper.isValid).join(',') : to
+
+    if (!helper.isValid(recipients)) {
+      return
+    }
+
     await this.assertMailDeliveryConfigured()
 
     await this.enqueue(
@@ -279,7 +285,7 @@ export class MailService {
             this.mailOptions.provider === 'smtp' && helper.isValid(SMTP_USER)
               ? SMTP_USER
               : undefined,
-          to,
+          to: recipients,
           subject,
           html
         }

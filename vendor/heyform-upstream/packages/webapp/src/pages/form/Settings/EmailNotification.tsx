@@ -7,7 +7,7 @@ import { useFormStore } from '@/store'
 
 export default function FormSettingsEmailNotification() {
   const { t } = useTranslation()
-  const { form, formFields } = useFormStore()
+  const { form, formFields, tempSettings } = useFormStore()
 
   const scoreVariableOptions = (form?.variables || [])
     .filter(variable => variable.kind === 'number')
@@ -54,6 +54,16 @@ export default function FormSettingsEmailNotification() {
         >
           <Switch />
         </Form.Item>
+
+        {tempSettings?.enableEmailNotification && (
+          <Form.Item
+            name="selfEmailRecipientsText"
+            label="Self-notification recipients"
+            footer="One email address per line. Leave blank to send only to the workspace owner."
+          >
+            <Input.TextArea rows={3} placeholder={'owner@example.com\nteam@example.com'} />
+          </Form.Item>
+        )}
 
         <div className="grid gap-6 md:grid-cols-2">
           <Form.Item

@@ -19,7 +19,12 @@ export const EmptyState: FC<EmptyStateProps> = ({ className, field, onClick, ...
 
   return (
     <Block
-      className={clsx('heyform-empty-state', className)}
+      className={clsx(
+        'heyform-empty-state',
+        className,
+        field.layout?.contentAlign && `heyform-welcome-align-${field.layout.contentAlign}`,
+        field.layout?.titleSize && field.layout.titleSize !== 'normal' && `heyform-welcome-title-${field.layout.titleSize}`
+      )}
       field={field as FormField}
       isScrollable={false}
       {...restProps}

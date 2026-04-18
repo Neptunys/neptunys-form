@@ -914,6 +914,11 @@ export class UpdateFormInput extends FormDetailInput {
   @IsOptional()
   operatorNotificationEmails?: string[]
 
+  @Field(type => [String], { nullable: true })
+  @IsArray()
+  @IsOptional()
+  selfEmailRecipients?: string[]
+
   @Field({ nullable: true })
   @IsOptional()
   operatorNotificationSubject?: string
@@ -1613,6 +1618,9 @@ export class FormSettingType {
 
   @Field(type => [String], { nullable: true })
   operatorNotificationEmails?: string[]
+
+  @Field(type => [String], { nullable: true })
+  selfEmailRecipients?: string[]
 
   @Field({ nullable: true })
   operatorNotificationSubject?: string

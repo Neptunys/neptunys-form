@@ -769,6 +769,7 @@ export const FORM_DETAIL_GQL = gql`
         enableQuestionList
         enableNavigationArrows
         enableEmailNotification
+        selfEmailRecipients
         enableLeadScoring
         leadScoreVariableId
         leadMediumThreshold

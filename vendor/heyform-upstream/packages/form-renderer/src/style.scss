@@ -1148,6 +1148,102 @@ button.button-icon-only {
   }
 }
 
+.heyform-empty-state.heyform-welcome {
+  .heyform-block-title,
+  .heyform-block-description {
+    text-align: center;
+  }
+
+  .heyform-block-title-row {
+    justify-content: center;
+  }
+
+  .heyform-layout-inline {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .heyform-submit-container {
+    justify-content: center;
+  }
+}
+
+// Welcome screen: content alignment
+.heyform-welcome-align-left {
+  .heyform-block-title,
+  .heyform-block-description {
+    text-align: left;
+  }
+
+  .heyform-block-title-row {
+    justify-content: flex-start;
+  }
+
+  .heyform-layout-inline {
+    margin-left: 0;
+    margin-right: auto;
+  }
+
+  .heyform-submit-container {
+    justify-content: flex-start;
+  }
+}
+
+.heyform-welcome-align-center {
+  .heyform-block-title,
+  .heyform-block-description {
+    text-align: center;
+  }
+
+  .heyform-block-title-row {
+    justify-content: center;
+  }
+
+  .heyform-layout-inline {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .heyform-submit-container {
+    justify-content: center;
+  }
+}
+
+.heyform-welcome-align-right {
+  .heyform-block-title,
+  .heyform-block-description {
+    text-align: right;
+  }
+
+  .heyform-block-title-row {
+    justify-content: flex-end;
+  }
+
+  .heyform-layout-inline {
+    margin-left: auto;
+    margin-right: 0;
+  }
+
+  .heyform-submit-container {
+    justify-content: flex-end;
+  }
+}
+
+// Welcome screen: title size overrides
+.heyform-welcome-title-large {
+  .heyform-block-title {
+    font-size: clamp(2.75rem, 5vw, 4rem);
+    line-height: 1.05;
+  }
+}
+
+.heyform-welcome-title-xl {
+  .heyform-block-title {
+    font-size: clamp(3rem, 6vw, 4.75rem);
+    line-height: 1;
+  }
+}
+
 .heyform-statement {
   .heyform-block-title,
   .heyform-block-description,
@@ -1433,6 +1529,25 @@ button.button-icon-only {
 @media (max-width: 800px) {
   .heyform-block-container {
     overflow: hidden;
+  }
+
+  .heyform-empty-state.heyform-welcome {
+    .heyform-block-main {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .heyform-block-wrapper {
+      margin-top: 0;
+      margin-bottom: 0;
+      padding-top: 1rem;
+      padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    }
+
+    .heyform-layout-inline {
+      margin-bottom: 1.25rem;
+    }
   }
 
   .heyform-block-main:has(.heyform-form-mobile-docked) {
@@ -3071,6 +3186,11 @@ button.heyform-submit-button {
       @apply border-t border-slate-100 bg-white;
     }
 
+    .heyform-welcome .heyform-submit-container,
+    .heyform-welcome button.heyform-submit-button {
+      width: 100%;
+    }
+
     .heyform-footer-right {
       @apply justify-center;
     }
@@ -3081,6 +3201,21 @@ button.heyform-submit-button {
       svg {
         @apply block h-auto w-5;
       }
+    }
+
+    // CTA button fills full width on mobile
+    .heyform-submit-container {
+      width: 100%;
+    }
+
+    button.heyform-submit-button {
+      width: 100%;
+      min-height: 3.25rem;
+    }
+
+    // No scroll on the welcome screen on mobile
+    .heyform-scroll-wrapper {
+      overflow-y: hidden;
     }
   }
 }

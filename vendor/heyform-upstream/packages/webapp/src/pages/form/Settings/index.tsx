@@ -47,6 +47,11 @@ export default function FormSettings() {
         delete settings.operatorNotificationEmailsText
       }
 
+      if (Object.prototype.hasOwnProperty.call(settings, 'selfEmailRecipientsText')) {
+        settings.selfEmailRecipients = parseEmailList(settings.selfEmailRecipientsText)
+        delete settings.selfEmailRecipientsText
+      }
+
       if (helper.isEmpty(settings.leadMediumThreshold)) {
         delete settings.leadMediumThreshold
       }

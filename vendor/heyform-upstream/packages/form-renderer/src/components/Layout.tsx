@@ -31,7 +31,7 @@ const LayoutComponent: FC<FormLayout> = props => {
   const style: CSSProperties | undefined =
     props.align === FieldLayoutAlignEnum.INLINE
       ? {
-          width: `${helper.isNumber(props.inlineMediaWidth) ? Math.max(20, Math.min(100, props.inlineMediaWidth)) : 75}%`,
+          width: `${helper.isNumber(props.inlineMediaWidth) ? Math.max(3, Math.min(100, props.inlineMediaWidth)) : 75}%`,
           maxWidth: '100%'
         }
       : undefined

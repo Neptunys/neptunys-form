@@ -19,6 +19,8 @@ export default function CoverAndLayout() {
     field.layout?.align === FieldLayoutAlignEnum.INLINE &&
     [FieldKindEnum.STATEMENT, FieldKindEnum.WELCOME, FieldKindEnum.THANK_YOU].includes(field.kind)
 
+  const isWelcome = field.kind === FieldKindEnum.WELCOME
+
   const handleChange = useCallback(
     (key: string, value: any) => {
       startTransition(() => {
@@ -162,10 +164,45 @@ export default function CoverAndLayout() {
             </div>
 
             <Slider
-              min={20}
+              min={3}
               max={100}
               value={field.layout?.inlineMediaWidth || 75}
               onChange={value => handleChange('inlineMediaWidth', value)}
+            />
+          </div>
+        </div>
+      )}
+
+      {isWelcome && (
+        <div className="border-accent-light mt-4 space-y-3 border-t pt-4">
+          <div className="space-y-1">
+            <label className="text-sm/6" htmlFor="#">
+              Content alignment
+            </label>
+            <Select
+              className="w-full"
+              options={[
+                { label: 'Center', value: 'center' },
+                { label: 'Left', value: 'left' },
+                { label: 'Right', value: 'right' }
+              ]}
+              value={field.layout?.contentAlign || 'center'}
+              onChange={value => handleChange('contentAlign', value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm/6" htmlFor="#">
+              Title size
+            </label>
+            <Select
+              className="w-full"
+              options={[
+                { label: 'Normal', value: 'normal' },
+                { label: 'Large', value: 'large' },
+                { label: 'Extra large', value: 'xl' }
+              ]}
+              value={field.layout?.titleSize || 'normal'}
+              onChange={value => handleChange('titleSize', value)}
             />
           </div>
         </div>

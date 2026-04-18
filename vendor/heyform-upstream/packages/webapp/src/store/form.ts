@@ -28,6 +28,8 @@ interface TempSettings extends FormSettings {
   enableRespondentNotification?: boolean
   operatorNotificationEmails?: string[]
   operatorNotificationEmailsText?: string
+  selfEmailRecipients?: string[]
+  selfEmailRecipientsText?: string
 }
 
 type EmbedConfigs = typeof DEFAULT_EMBED_CONFIGS
@@ -161,6 +163,8 @@ export const useFormStore = create<FormStoreType>()(
 
             tempSettings.operatorNotificationEmailsText =
               tempSettings.operatorNotificationEmails?.join('\n') || ''
+
+            tempSettings.selfEmailRecipientsText = tempSettings.selfEmailRecipients?.join('\n') || ''
 
             state.tempSettings = tempSettings
           } else {

@@ -101,6 +101,12 @@ export class UpdateFormResolver {
         : []
     }
 
+    if (Object.prototype.hasOwnProperty.call(input, 'selfEmailRecipients')) {
+      updates['settings.selfEmailRecipients'] = helper.isArray(input.selfEmailRecipients)
+        ? input.selfEmailRecipients
+        : []
+    }
+
     if (
       helper.isValidArray(input.languages) &&
       !input.languages.every(t => form.settings?.languages?.includes(t))

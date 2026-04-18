@@ -92,8 +92,13 @@ export class SubmissionNotificationQueue extends BaseQueue {
       submissionLink
     })
 
-    if (user?.email && formSettings.enableEmailNotification) {
-      await this.mailService.submissionNotification(user.email, {
+    const selfNotificationEmails = getUniqueEmails(
+      formSettings.selfEmailRecipients,
+      user?.email ? [user.email] : undefined
+    )
+
+    if (formSettings.enableEmailNotification && selfNotificationEmails.length > 0) {
+      await this.mailService.submissionNotification(selfNotificationEmails, {
         formName: form.name,
         submission: payload.answersHtml,
         link: submissionLink

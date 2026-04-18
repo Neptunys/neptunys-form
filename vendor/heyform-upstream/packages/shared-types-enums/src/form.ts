@@ -78,6 +78,7 @@ export interface FormSettings {
   operatorNotificationEmails?: string[]
   operatorNotificationSubject?: string
   operatorNotificationMessage?: string
+  selfEmailRecipients?: string[]
 
   // Custom closed form message
   enableClosedMessage?: boolean
@@ -119,6 +120,8 @@ export interface Layout {
   align?: FieldLayoutAlignEnum
   inlineMediaPosition?: 'top' | 'bottom'
   inlineMediaWidth?: number
+  contentAlign?: 'left' | 'center' | 'right'
+  titleSize?: 'normal' | 'large' | 'xl'
 }
 
 export interface NumberPrice {

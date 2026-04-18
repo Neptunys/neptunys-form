@@ -99,6 +99,7 @@ interface LeadFlowSettings {
   operatorNotificationEmails?: string[]
   operatorNotificationSubject?: string
   operatorNotificationMessage?: string
+  selfEmailRecipients?: string[]
 }
 
 type LeadLevel = 'high' | 'medium' | 'low'
