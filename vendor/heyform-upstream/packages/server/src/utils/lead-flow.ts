@@ -150,6 +150,7 @@ const TEST_LEAD_PERSONAS: Record<
 }
 
 const TEST_LEAD_LEVELS: LeadLevel[] = ['high', 'medium', 'low']
+const DERIVED_LEAD_SCORE_SOURCE = 'Answer scores'
 
 export interface LeadCapturePayload {
   clientName?: string
@@ -561,6 +562,45 @@ function hasAnswerValue(answer: Answer): boolean {
   return !helper.isNil(answer.value)
 }
 
+function getAnswerScore(answer: Answer): number | undefined {
+  if (!hasAnswerValue(answer)) {
+    return undefined
+  }
+
+  if (CHOICE_FIELD_KINDS.includes(answer.kind) && helper.isValidArray(answer.properties?.choices)) {
+    const selectedChoiceIds = getSelectedChoiceIds(answer.value)
+
+    if (selectedChoiceIds.length > 0) {
+      const choiceScore = answer.properties!.choices!
+        .filter(choice => selectedChoiceIds.includes(choice.id))
+        .reduce((total, choice) => {
+          const score = normalizeNumber(choice.score)
+          return helper.isNumber(score) ? total + score : total
+        }, 0)
+
+      return choiceScore
+    }
+  }
+
+  return normalizeNumber(answer.properties?.score)
+}
+
+function deriveLeadScoreFromAnswers(answers: Answer[]): number | undefined {
+  let totalScore = 0
+  let hasScoredAnswer = false
+
+  answers.forEach(answer => {
+    const score = getAnswerScore(answer)
+
+    if (helper.isNumber(score)) {
+      totalScore += score
+      hasScoredAnswer = true
+    }
+  })
+
+  return hasScoredAnswer ? totalScore : undefined
+}
+
 export function hasZeroScoreAnswer(answers: Answer[]): boolean {
   return answers.some(answer => {
     if (!hasAnswerValue(answer)) {
@@ -717,7 +757,11 @@ export function buildLeadCapturePayload(
     FieldKindEnum.PHONE_NUMBER
   ])
   const scoreVariable = resolveScoreVariable(form, submission)
-  const leadScore = normalizeNumber(scoreVariable?.value)
+  const variableLeadScore = normalizeNumber(scoreVariable?.value)
+  const derivedLeadScore = helper.isNumber(variableLeadScore)
+    ? undefined
+    : deriveLeadScoreFromAnswers(submission.answers)
+  const leadScore = helper.isNumber(variableLeadScore) ? variableLeadScore : derivedLeadScore
   const leadMediumThreshold = normalizeNumber(settings.leadMediumThreshold) ?? 50
   const leadHighThreshold = normalizeNumber(settings.leadHighThreshold) ?? 80
   const leadLevel = getLeadLevel(leadScore, leadMediumThreshold, leadHighThreshold)
@@ -767,7 +811,7 @@ export function buildLeadCapturePayload(
     respondentPhone,
     leadScore,
     leadScoreVariableId: scoreVariable?.id,
-    leadScoreVariableName: scoreVariable?.name,
+    leadScoreVariableName: scoreVariable?.name || (helper.isNumber(derivedLeadScore) ? DERIVED_LEAD_SCORE_SOURCE : undefined),
     leadLevel,
     hasZeroScoreAnswer: negativeLead,
     leadQuality,

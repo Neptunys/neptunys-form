@@ -58,6 +58,47 @@ function createForm() {
   }
 }
 
+function createAnswerOnlyScoreForm() {
+  return {
+    id: 'form_2',
+    projectId: 'project_1',
+    name: 'Builder scoring only',
+    settings: {
+      enableLeadScoring: true,
+      leadMediumThreshold: 2,
+      leadHighThreshold: 3
+    },
+    fields: [
+      {
+        id: 'fit_check',
+        title: 'Fit check',
+        kind: FieldKindEnum.MULTIPLE_CHOICE,
+        properties: {
+          choices: [
+            {
+              id: 'best_fit',
+              label: 'Best fit',
+              score: 3
+            },
+            {
+              id: 'maybe_fit',
+              label: 'Maybe fit',
+              score: 1
+            }
+          ]
+        }
+      },
+      {
+        id: 'email',
+        title: 'Email',
+        kind: FieldKindEnum.EMAIL,
+        properties: {}
+      }
+    ],
+    variables: []
+  }
+}
+
 function createSubmission(choiceId: string, leadScore: number) {
   return {
     id: `submission_${choiceId}`,
@@ -93,6 +134,46 @@ function createSubmission(choiceId: string, leadScore: number) {
   }
 }
 
+function createAnswerOnlyScoreSubmission(choiceId: string) {
+  return {
+    id: `submission_answer_only_${choiceId}`,
+    answers: [
+      {
+        id: 'fit_check',
+        title: 'Fit check',
+        kind: FieldKindEnum.MULTIPLE_CHOICE,
+        properties: {
+          choices: [
+            {
+              id: 'best_fit',
+              label: 'Best fit',
+              score: 3
+            },
+            {
+              id: 'maybe_fit',
+              label: 'Maybe fit',
+              score: 1
+            }
+          ]
+        },
+        value: {
+          value: [choiceId],
+          other: ''
+        }
+      },
+      {
+        id: 'email',
+        title: 'Email',
+        kind: FieldKindEnum.EMAIL,
+        properties: {},
+        value: 'lead@example.com'
+      }
+    ],
+    variables: [],
+    endAt: 1713264000
+  }
+}
+
 function testNegativeLeadDetection() {
   const payload = buildLeadCapturePayload(createForm(), createSubmission('fail', 0))
   const values = buildLeadTemplateValues(payload)
@@ -121,9 +202,21 @@ function testStandardLeadDetection() {
   assert.strictEqual(templates.subjectTemplate, 'Standard subject')
 }
 
+function testLeadScoreFallsBackToAnswerScores() {
+  const payload = buildLeadCapturePayload(
+    createAnswerOnlyScoreForm(),
+    createAnswerOnlyScoreSubmission('best_fit')
+  )
+
+  assert.strictEqual(payload.leadScore, 3)
+  assert.strictEqual(payload.leadLevel, 'high')
+  assert.strictEqual(payload.leadScoreVariableName, 'Answer scores')
+}
+
 async function run() {
   testNegativeLeadDetection()
   testStandardLeadDetection()
+  testLeadScoreFallsBackToAnswerScores()
 }
 
 if (require.main === module) {

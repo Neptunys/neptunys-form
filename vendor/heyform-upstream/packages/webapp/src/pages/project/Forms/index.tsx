@@ -136,7 +136,7 @@ export default function ProjectForms() {
       </section>
 
       <section className="hf-card p-6">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="hf-section-title">Forms</h2>
             <p className="text-secondary mt-1 text-sm/6">
@@ -145,7 +145,11 @@ export default function ProjectForms() {
             </p>
           </div>
 
-          <Button size="md" onClick={() => openModal('CreateFormModal')}>
+          <Button
+            className="self-start shrink-0 whitespace-nowrap"
+            size="md"
+            onClick={() => openModal('CreateFormModal')}
+          >
             {t('form.creation.title')}
           </Button>
         </div>
