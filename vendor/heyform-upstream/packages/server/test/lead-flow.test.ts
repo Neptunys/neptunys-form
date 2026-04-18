@@ -3,7 +3,10 @@ import * as assert from 'assert'
 import { FieldKindEnum } from '@heyform-inc/shared-types-enums'
 
 import {
+  buildLeadAnswerSheetRows,
   buildLeadCapturePayload,
+  buildLeadSheetRow,
+  buildTestLeadCapturePayloads,
   buildLeadTemplateValues,
   resolveRespondentNotificationTemplates
 } from '../src/utils/lead-flow'
@@ -174,6 +177,60 @@ function createAnswerOnlyScoreSubmission(choiceId: string) {
   }
 }
 
+function createAnswerOnlyScoreSubmissionWithoutSnapshotScores(choiceId: string) {
+  return {
+    id: `submission_answer_only_stripped_${choiceId}`,
+    answers: [
+      {
+        id: 'fit_check',
+        title: 'Fit check',
+        kind: FieldKindEnum.MULTIPLE_CHOICE,
+        properties: {},
+        value: {
+          value: [choiceId],
+          other: ''
+        }
+      },
+      {
+        id: 'email',
+        title: 'Email',
+        kind: FieldKindEnum.EMAIL,
+        properties: {},
+        value: 'lead@example.com'
+      }
+    ],
+    variables: [],
+    endAt: 1713264000
+  }
+}
+
+function createNegativeSubmissionWithoutSnapshotScores(choiceId: string) {
+  return {
+    id: `submission_negative_stripped_${choiceId}`,
+    answers: [
+      {
+        id: 'screening',
+        title: 'Eligibility screening',
+        kind: FieldKindEnum.MULTIPLE_CHOICE,
+        properties: {},
+        value: {
+          value: [choiceId],
+          other: ''
+        }
+      },
+      {
+        id: 'email',
+        title: 'Email',
+        kind: FieldKindEnum.EMAIL,
+        properties: {},
+        value: 'lead@example.com'
+      }
+    ],
+    variables: [],
+    endAt: 1713264000
+  }
+}
+
 function testNegativeLeadDetection() {
   const payload = buildLeadCapturePayload(createForm(), createSubmission('fail', 0))
   const values = buildLeadTemplateValues(payload)
@@ -213,10 +270,105 @@ function testLeadScoreFallsBackToAnswerScores() {
   assert.strictEqual(payload.leadScoreVariableName, 'Answer scores')
 }
 
+function testLeadScoreFallsBackToFormChoiceScoresWhenSnapshotScoresAreMissing() {
+  const payload = buildLeadCapturePayload(
+    createAnswerOnlyScoreForm(),
+    createAnswerOnlyScoreSubmissionWithoutSnapshotScores('best_fit')
+  )
+  const row = buildLeadSheetRow(payload)
+
+  assert.strictEqual(payload.leadScore, 3)
+  assert.strictEqual(payload.leadLevel, 'high')
+  assert.strictEqual(payload.leadScoreVariableName, 'Answer scores')
+  assert.strictEqual(row['Lead Score'], 3)
+  assert.strictEqual(row['Lead Level'], 'high')
+}
+
+function testLeadSheetRowUsesCompactLayout() {
+  const payload = buildLeadCapturePayload(createForm(), createSubmission('pass', 100))
+  const row = buildLeadSheetRow(payload)
+
+  assert.deepStrictEqual(Object.keys(row), [
+    'Lead Contacted',
+    'Lead Contacted At',
+    'Traffic Source',
+    'Respondent Name',
+    'Respondent Email',
+    'Respondent Phone',
+    'Project Name',
+    'Quiz Name',
+    'Submitted At',
+    'Lead Score',
+    'Lead Level',
+    'Lead ID',
+    'View Answers'
+  ])
+  assert.strictEqual(row['Lead ID'], payload.submissionId)
+  assert.strictEqual(row['Quiz Name'], payload.formName)
+  assert.strictEqual(row['View Answers'], '')
+}
+
+function testLeadAnswerSheetRowsStayNormalized() {
+  const payload = buildLeadCapturePayload(
+    createAnswerOnlyScoreForm(),
+    createAnswerOnlyScoreSubmission('best_fit')
+  )
+  const rows = buildLeadAnswerSheetRows(payload)
+
+  assert.strictEqual(rows.length, 2)
+  assert.deepStrictEqual(rows[0], {
+    'Lead ID': payload.submissionId,
+    'Quiz Name': payload.formName,
+    'Submitted At': '2024-04-16 10:40:00 UTC',
+    'Question Order': 1,
+    Question: 'Fit check',
+    Answer: 'Best fit'
+  })
+  assert.deepStrictEqual(rows[1], {
+    'Lead ID': payload.submissionId,
+    'Quiz Name': payload.formName,
+    'Submitted At': '2024-04-16 10:40:00 UTC',
+    'Question Order': 2,
+    Question: 'Email',
+    Answer: 'lead@example.com'
+  })
+}
+
+function testBuildTestLeadCapturePayloadsScaleToUniqueLeadIds() {
+  const payloads = buildTestLeadCapturePayloads(createAnswerOnlyScoreForm(), undefined, 10)
+  const submissionIds = payloads.map(payload => payload.submissionId)
+  const respondentEmails = payloads.map(payload => payload.respondentEmail)
+
+  assert.strictEqual(payloads.length, 10)
+  assert.strictEqual(new Set(submissionIds).size, 10)
+  assert.strictEqual(new Set(respondentEmails).size, 10)
+}
+
+function testNegativeLeadDetectionFallsBackToFormChoiceScoresWhenSnapshotScoresAreMissing() {
+  const payload = buildLeadCapturePayload(
+    createForm(),
+    createNegativeSubmissionWithoutSnapshotScores('fail')
+  )
+  const values = buildLeadTemplateValues(payload)
+  const row = buildLeadSheetRow(payload)
+
+  assert.strictEqual(payload.leadScore, 0)
+  assert.strictEqual(payload.leadLevel, 'low')
+  assert.strictEqual(payload.hasZeroScoreAnswer, true)
+  assert.strictEqual(values.leadResult, 'negative')
+  assert.strictEqual(row['Lead Score'], 0)
+  assert.strictEqual(row['Lead Level'], 'low')
+}
+
 async function run() {
   testNegativeLeadDetection()
   testStandardLeadDetection()
   testLeadScoreFallsBackToAnswerScores()
+  testLeadScoreFallsBackToFormChoiceScoresWhenSnapshotScoresAreMissing()
+  testLeadSheetRowUsesCompactLayout()
+  testLeadAnswerSheetRowsStayNormalized()
+  testBuildTestLeadCapturePayloadsScaleToUniqueLeadIds()
+  testNegativeLeadDetectionFallsBackToFormChoiceScoresWhenSnapshotScoresAreMissing()
 }
 
 if (require.main === module) {

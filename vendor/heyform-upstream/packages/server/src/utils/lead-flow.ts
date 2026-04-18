@@ -103,6 +103,10 @@ interface LeadFlowSettings {
 
 type LeadLevel = 'high' | 'medium' | 'low'
 type LeadIdentitySource = 'email' | 'phone' | 'name' | 'submission'
+type ScoredChoiceLike = {
+  id: string
+  score?: unknown
+}
 
 const TEST_LEAD_PERSONAS: Record<
   LeadLevel,
@@ -151,6 +155,16 @@ const TEST_LEAD_PERSONAS: Record<
 
 const TEST_LEAD_LEVELS: LeadLevel[] = ['high', 'medium', 'low']
 const DERIVED_LEAD_SCORE_SOURCE = 'Answer scores'
+const TEST_TRAFFIC_SOURCES = [
+  'Meta',
+  'Google',
+  'Direct',
+  'LinkedIn',
+  'Email',
+  'TikTok',
+  'YouTube',
+  'X'
+]
 
 export interface LeadCapturePayload {
   clientName?: string
@@ -166,6 +180,7 @@ export interface LeadCapturePayload {
   respondentName?: string
   respondentEmail?: string
   respondentPhone?: string
+  trafficSource?: string
   leadScore?: number
   leadScoreVariableId?: string
   leadScoreVariableName?: string
@@ -179,6 +194,15 @@ export interface LeadCapturePayload {
   answersPlain: string
   answersHtml: string
   reportingTimezone?: string
+}
+
+export interface LeadAnswerSheetRow {
+  'Lead ID': string
+  'Quiz Name': string
+  'Submitted At': string
+  'Question Order': number
+  Question: string
+  Answer: string
 }
 
 function escapeRegex(value: string) {
@@ -225,6 +249,30 @@ function normalizeNumber(value: unknown): number | undefined {
   }
 
   return undefined
+}
+
+function formatUtcDateTime(value: string | undefined): string {
+  const normalized = normalizeString(value)
+
+  if (!normalized) {
+    return ''
+  }
+
+  return normalized.replace('T', ' ').replace(/\.\d+Z$/, ' UTC').replace(/Z$/, ' UTC')
+}
+
+function buildTaggedEmail(email: string, sampleIndex: number): string {
+  const separatorIndex = email.indexOf('@')
+
+  if (separatorIndex === -1) {
+    return email
+  }
+
+  return `${email.slice(0, separatorIndex)}+${sampleIndex + 1}${email.slice(separatorIndex)}`
+}
+
+function buildTaggedName(name: string, sampleIndex: number): string {
+  return `${name} ${sampleIndex + 1}`
 }
 
 function getRecordIdentifier(record: Record<string, any> | undefined): string | undefined {
@@ -525,6 +573,24 @@ function resolveScoreVariable(
   return undefined
 }
 
+function flattenFormFields(fields?: FormField[]): FormField[] {
+  if (!helper.isValidArray(fields)) {
+    return []
+  }
+
+  const flattened: FormField[] = []
+
+  fields.forEach(field => {
+    flattened.push(field)
+
+    if (field.kind === FieldKindEnum.GROUP && helper.isValidArray(field.properties?.fields)) {
+      flattened.push(...flattenFormFields(field.properties.fields as FormField[]))
+    }
+  })
+
+  return flattened
+}
+
 function getSelectedChoiceIds(value: unknown): string[] {
   if (helper.isObject(value) && Object.prototype.hasOwnProperty.call(value, 'value')) {
     return getSelectedChoiceIds((value as { value?: unknown }).value)
@@ -562,16 +628,35 @@ function hasAnswerValue(answer: Answer): boolean {
   return !helper.isNil(answer.value)
 }
 
-function getAnswerScore(answer: Answer): number | undefined {
+function getAnswerChoiceDefinitions(
+  answer: Answer,
+  fieldMap?: Map<string, FormField>
+): ScoredChoiceLike[] | undefined {
+  if (helper.isValidArray(answer.properties?.choices)) {
+    return answer.properties.choices as ScoredChoiceLike[]
+  }
+
+  const fieldChoices = fieldMap?.get(answer.id)?.properties?.choices
+
+  if (helper.isValidArray(fieldChoices)) {
+    return fieldChoices as ScoredChoiceLike[]
+  }
+
+  return undefined
+}
+
+function getAnswerScore(answer: Answer, fieldMap?: Map<string, FormField>): number | undefined {
   if (!hasAnswerValue(answer)) {
     return undefined
   }
 
-  if (CHOICE_FIELD_KINDS.includes(answer.kind) && helper.isValidArray(answer.properties?.choices)) {
+  const choices = getAnswerChoiceDefinitions(answer, fieldMap)
+
+  if (CHOICE_FIELD_KINDS.includes(answer.kind) && helper.isValidArray(choices)) {
     const selectedChoiceIds = getSelectedChoiceIds(answer.value)
 
     if (selectedChoiceIds.length > 0) {
-      const choiceScore = answer.properties!.choices!
+      const choiceScore = choices
         .filter(choice => selectedChoiceIds.includes(choice.id))
         .reduce((total, choice) => {
           const score = normalizeNumber(choice.score)
@@ -582,15 +667,18 @@ function getAnswerScore(answer: Answer): number | undefined {
     }
   }
 
-  return normalizeNumber(answer.properties?.score)
+  return normalizeNumber(answer.properties?.score) ?? normalizeNumber(fieldMap?.get(answer.id)?.properties?.score)
 }
 
-function deriveLeadScoreFromAnswers(answers: Answer[]): number | undefined {
+function deriveLeadScoreFromAnswers(
+  answers: Answer[],
+  fieldMap?: Map<string, FormField>
+): number | undefined {
   let totalScore = 0
   let hasScoredAnswer = false
 
   answers.forEach(answer => {
-    const score = getAnswerScore(answer)
+    const score = getAnswerScore(answer, fieldMap)
 
     if (helper.isNumber(score)) {
       totalScore += score
@@ -601,23 +689,29 @@ function deriveLeadScoreFromAnswers(answers: Answer[]): number | undefined {
   return hasScoredAnswer ? totalScore : undefined
 }
 
-export function hasZeroScoreAnswer(answers: Answer[]): boolean {
+export function hasZeroScoreAnswer(
+  answers: Answer[],
+  fieldMap?: Map<string, FormField>
+): boolean {
   return answers.some(answer => {
     if (!hasAnswerValue(answer)) {
       return false
     }
 
-    if (CHOICE_FIELD_KINDS.includes(answer.kind) && helper.isValidArray(answer.properties?.choices)) {
+    const choices = getAnswerChoiceDefinitions(answer, fieldMap)
+
+    if (CHOICE_FIELD_KINDS.includes(answer.kind) && helper.isValidArray(choices)) {
       const selectedChoiceIds = getSelectedChoiceIds(answer.value)
 
       if (selectedChoiceIds.length > 0) {
-        return answer.properties!.choices!.some(choice => {
+        return choices.some(choice => {
           return selectedChoiceIds.includes(choice.id) && normalizeNumber(choice.score) === 0
         })
       }
     }
 
-    return normalizeNumber(answer.properties?.score) === 0
+    return (normalizeNumber(answer.properties?.score) ??
+      normalizeNumber(fieldMap?.get(answer.id)?.properties?.score)) === 0
   })
 }
 
@@ -664,8 +758,10 @@ export function buildLeadTemplateValues(
     clientName: payload.clientName,
     formId: payload.formId,
     formName: payload.formName,
+    quizName: payload.formName,
     projectId: payload.projectId,
     projectName: payload.projectName,
+    leadId: payload.submissionId,
     submissionId: payload.submissionId,
     userId: payload.userId,
     userIdSource: payload.userIdSource,
@@ -673,6 +769,7 @@ export function buildLeadTemplateValues(
     respondentName: payload.respondentName,
     respondentEmail: payload.respondentEmail,
     respondentPhone: payload.respondentPhone,
+    trafficSource: payload.trafficSource,
     leadScore: helper.isNil(payload.leadScore) ? undefined : String(payload.leadScore),
     leadLevel: payload.leadLevel,
     leadResult: payload.hasZeroScoreAnswer ? 'negative' : 'standard',
@@ -708,7 +805,7 @@ export function buildLeadCapturePayload(
   project?: LeadAwareProject
 ): LeadCapturePayload {
   const settings = (form.settings || {}) as LeadFlowSettings
-  const fieldMap = new Map((form.fields || []).map(field => [field.id, field]))
+  const fieldMap = new Map(flattenFormFields(form.fields).map(field => [field.id, field]))
   const hiddenFieldMap = new Map((form.hiddenFields || []).map(field => [field.id, field]))
   const answersByTitle: Record<string, string> = {}
   const hiddenFieldsByName: Record<string, string> = {}
@@ -760,12 +857,12 @@ export function buildLeadCapturePayload(
   const variableLeadScore = normalizeNumber(scoreVariable?.value)
   const derivedLeadScore = helper.isNumber(variableLeadScore)
     ? undefined
-    : deriveLeadScoreFromAnswers(submission.answers)
+    : deriveLeadScoreFromAnswers(submission.answers, fieldMap)
   const leadScore = helper.isNumber(variableLeadScore) ? variableLeadScore : derivedLeadScore
   const leadMediumThreshold = normalizeNumber(settings.leadMediumThreshold) ?? 50
   const leadHighThreshold = normalizeNumber(settings.leadHighThreshold) ?? 80
   const leadLevel = getLeadLevel(leadScore, leadMediumThreshold, leadHighThreshold)
-  const negativeLead = hasZeroScoreAnswer(submission.answers)
+  const negativeLead = hasZeroScoreAnswer(submission.answers, fieldMap)
   const respondentName = getRespondentName(respondentNameAnswer)
   const respondentEmail = getRespondentEmail(respondentEmailAnswer)
   const respondentPhone = getRespondentPhone(respondentPhoneAnswer)
@@ -828,7 +925,8 @@ export function buildLeadCapturePayload(
 export function buildTestLeadCapturePayload(
   form: LeadAwareForm,
   team?: LeadAwareTeam,
-  sampleLeadLevel: LeadLevel = 'high'
+  sampleLeadLevel: LeadLevel = 'high',
+  sampleIndex = 0
 ): LeadCapturePayload {
   const settings = (form.settings || {}) as LeadFlowSettings
   const answersByTitle: Record<string, string> = {}
@@ -839,7 +937,11 @@ export function buildTestLeadCapturePayload(
   const leadHighThreshold = normalizeNumber(settings.leadHighThreshold) ?? 80
   const persona = TEST_LEAD_PERSONAS[sampleLeadLevel]
   const leadScore = getTestLeadScore(sampleLeadLevel, leadMediumThreshold, leadHighThreshold)
-  const submissionId = `test-${sampleLeadLevel}-${submittedAt}`
+  const submissionId = `test-${sampleLeadLevel}-${submittedAt}-${sampleIndex + 1}`
+  const respondentName = buildTaggedName(persona.respondentName, sampleIndex)
+  const respondentEmail = buildTaggedEmail(persona.respondentEmail, sampleIndex)
+  const respondentPhone = persona.respondentPhone
+  const trafficSource = TEST_TRAFFIC_SOURCES[sampleIndex % TEST_TRAFFIC_SOURCES.length]
 
   ;(form.fields || [])
     .filter(field => !NON_QUESTION_FIELD_KINDS.includes(field.kind))
@@ -884,9 +986,9 @@ export function buildTestLeadCapturePayload(
     low: normalizeString(settings.leadPriorityLowLabel) || DEFAULT_LEAD_PRIORITY_LABELS.low
   })
   const userIdentity = buildLeadUserIdentity({
-    respondentName: persona.respondentName,
-    respondentEmail: persona.respondentEmail,
-    respondentPhone: persona.respondentPhone,
+    respondentName,
+    respondentEmail,
+    respondentPhone,
     submissionId
   })
   const answersPlain = Object.entries(answersByTitle)
@@ -903,9 +1005,10 @@ export function buildTestLeadCapturePayload(
     userIdSource: userIdentity.userIdSource,
     submittedAt,
     submittedAtIso: new Date(submittedAt * 1000).toISOString(),
-    respondentName: persona.respondentName,
-    respondentEmail: persona.respondentEmail,
-    respondentPhone: persona.respondentPhone,
+    respondentName,
+    respondentEmail,
+    respondentPhone,
+    trafficSource,
     leadScore,
     leadScoreVariableId: scoreVariable?.id,
     leadScoreVariableName: scoreVariable?.name,
@@ -924,9 +1027,14 @@ export function buildTestLeadCapturePayload(
 
 export function buildTestLeadCapturePayloads(
   form: LeadAwareForm,
-  team?: LeadAwareTeam
+  team?: LeadAwareTeam,
+  sampleCount = TEST_LEAD_LEVELS.length
 ): LeadCapturePayload[] {
-  return TEST_LEAD_LEVELS.map(level => buildTestLeadCapturePayload(form, team, level))
+  return Array.from({ length: Math.max(1, sampleCount) }, (_, index) => {
+    const level = TEST_LEAD_LEVELS[index % TEST_LEAD_LEVELS.length]
+
+    return buildTestLeadCapturePayload(form, team, level, index)
+  })
 }
 
 export function resolveRespondentNotificationTemplates(
@@ -965,36 +1073,31 @@ export function buildLeadSheetRow(payload: LeadCapturePayload) {
   const row: Record<string, string | number | boolean> = {
     'Lead Contacted': false,
     'Lead Contacted At': '',
-    'Submission ID': payload.submissionId,
-    'Form ID': payload.formId,
-    'User ID': payload.userId,
-    'User ID Source': payload.userIdSource,
-    'Form Name': payload.formName,
-    'Project ID': payload.projectId || '',
-    'Project Name': payload.projectName || '',
-    'Submitted At (UTC)': payload.submittedAtIso,
+    'Traffic Source': payload.trafficSource || '',
     'Respondent Name': payload.respondentName || '',
     'Respondent Email': payload.respondentEmail || '',
     'Respondent Phone': payload.respondentPhone || '',
+    'Project Name': payload.projectName || '',
+    'Quiz Name': payload.formName,
+    'Submitted At': formatUtcDateTime(payload.submittedAtIso),
     'Lead Score': helper.isNil(payload.leadScore) ? '' : payload.leadScore,
     'Lead Level': payload.leadLevel || '',
-    'Lead Quality': payload.leadQuality || '',
-    'Lead Priority': payload.leadPriority || '',
-    'Lead Score Source': payload.leadScoreVariableName || '',
-    'Answers Summary': payload.answersPlain
+    'Lead ID': payload.submissionId,
+    'View Answers': ''
   }
 
-  Object.entries(payload.answersByTitle).forEach(([key, value]) => {
-    row[key] = value
-  })
-
-  Object.entries(payload.hiddenFieldsByName).forEach(([key, value]) => {
-    row[`Hidden: ${key}`] = value
-  })
-
-  Object.entries(payload.variablesByName).forEach(([key, value]) => {
-    row[`Variable: ${key}`] = value
-  })
-
   return row
+}
+
+export function buildLeadAnswerSheetRows(payload: LeadCapturePayload): LeadAnswerSheetRow[] {
+  const submittedAt = formatUtcDateTime(payload.submittedAtIso)
+
+  return Object.entries(payload.answersByTitle).map(([question, answer], index) => ({
+    'Lead ID': payload.submissionId,
+    'Quiz Name': payload.formName,
+    'Submitted At': submittedAt,
+    'Question Order': index + 1,
+    Question: question,
+    Answer: answer
+  }))
 }

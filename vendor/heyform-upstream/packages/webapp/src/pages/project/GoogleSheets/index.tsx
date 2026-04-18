@@ -157,7 +157,7 @@ export default function ProjectGoogleSheets() {
 
       toast({
         title: 'Sample lead set sent',
-        message: 'High, medium, and low sample leads were written to Google Sheets.'
+        message: 'Sample leads were written to the project leads sheet and linked Lead Answers sheet.'
       })
     } catch (testError: any) {
       toast({
@@ -219,7 +219,7 @@ export default function ProjectGoogleSheets() {
         <div className="max-w-3xl">
           <h2 className="hf-section-title">Project Google Sheets</h2>
           <p data-slot="text" className="text-secondary mt-4 text-base/5 sm:text-sm/6">
-            Send submissions from every form in this project into one shared Google Sheets destination.
+            Send submissions from every form in this project into one shared Google Sheets leads sheet with a linked answers tab.
           </p>
         </div>
 
@@ -246,7 +246,7 @@ export default function ProjectGoogleSheets() {
                 className="[&_[data-slot=content]]:pt-1.5"
                 name="enableGoogleSheetsLeadSync"
                 label="Project-wide Google Sheets sync"
-                description="When enabled, every submission in this project is queued to the shared Google Sheets destination in addition to any form-specific integrations."
+                description="When enabled, every submission in this project is queued to the shared Google Sheets leads sheet and linked answers tab in addition to any form-specific integrations."
                 isInline
               >
                 <Switch />
