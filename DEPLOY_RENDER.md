@@ -97,6 +97,37 @@ Example for Cloudflare R2:
 5. Deploy the `neptunys-form` web service.
 6. After the service is live, open the Render service URL and create the first HeyForm admin account.
 
+## Deploy Guardrails (Run Every Time)
+
+Use these checks to prevent stale shell/config regressions before and after deploy.
+
+1. Before pushing, validate the blueprint has pinned custom-domain values:
+
+```powershell
+npm run deploy:guard:blueprint
+```
+
+2. Push to `main` (auto-deploy trigger is `commit` in `render.yaml`).
+
+3. After Render shows the deploy as live, validate both `/` and `/dashboard` runtime shell config:
+
+```powershell
+npm run deploy:guard:live
+```
+
+The live guard fails if any of the following are wrong:
+
+- `/` or `/dashboard` is not HTTP 200
+- shell is missing `/static/index-*.js`
+- runtime config is missing or malformed
+- `homepageURL` or `websiteURL` is not `https://form.neptunysengine.com`
+- `cookieDomain` is not `form.neptunysengine.com`
+- `customDomainRuntime` is not `true`
+- any `.onrender.com` hostname still appears in the served HTML
+- root and dashboard do not serve the same bundle hash
+
+If the live guard fails right after deploy, trigger a manual redeploy in Render and run `npm run deploy:guard:live` again.
+
 ## Backup Helpers In This Workspace
 
 The workspace now includes two local Python helpers for database continuity work:

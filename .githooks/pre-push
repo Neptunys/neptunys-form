@@ -1,0 +1,13 @@
+#!/bin/sh
+
+printf 'Running deploy blueprint guard...\n'
+npm run -s deploy:guard:blueprint
+status=$?
+
+if [ "$status" -ne 0 ]; then
+  printf '\nPush blocked: render blueprint guard failed.\n'
+  exit "$status"
+fi
+
+printf 'Blueprint guard passed. Proceeding with push.\n'
+exit 0

@@ -75,3 +75,20 @@ To finish live deployment from this machine, the remaining external requirements
 1. a backend hosting account and linked project on a free provider such as Render
 2. working git push access to the project GitHub repo
 3. a Vercel-authenticated CLI session if you want me to trigger the live frontend deployment from here
+
+## Deploy Regression Guardrails
+
+Run this once on each machine to enforce blueprint checks before every push:
+
+```powershell
+npm run hooks:install
+```
+
+Manual guard commands:
+
+```powershell
+npm run deploy:guard:blueprint
+npm run deploy:guard:live
+```
+
+These checks prevent regressions where live shell config drifts back to wrong domain/cookie values or stale routing behavior.

@@ -6,6 +6,8 @@ dist/
 .vercel
 .vscode/
 *.tsbuildinfo
+*.log
+server_build_exit.txt
 supabase/.temp/
 .env*.local
 live-app.js

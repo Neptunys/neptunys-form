@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy:guard:blueprint": "node ./scripts/verify-render-blueprint.mjs --file ./render.yaml --expected-homepage https://form.neptunysengine.com --expected-cookie-domain form.neptunysengine.com",
+    "deploy:guard:live": "node ./scripts/verify-render-live.mjs --base-url https://form.neptunysengine.com --expected-domain form.neptunysengine.com",
+    "deploy:guard": "npm run deploy:guard:blueprint && npm run deploy:guard:live",
+    "hooks:install": "git config core.hooksPath .githooks"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",
