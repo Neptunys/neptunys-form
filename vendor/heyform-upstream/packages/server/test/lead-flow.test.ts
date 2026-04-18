@@ -68,8 +68,8 @@ function createAnswerOnlyScoreForm() {
     name: 'Builder scoring only',
     settings: {
       enableLeadScoring: true,
-      leadMediumThreshold: 2,
-      leadHighThreshold: 3
+      leadMediumThreshold: 50,
+      leadHighThreshold: 80
     },
     fields: [
       {
@@ -322,9 +322,20 @@ function testLeadScoreFallsBackToAnswerScores() {
     createAnswerOnlyScoreSubmission('best_fit')
   )
 
-  assert.strictEqual(payload.leadScore, 3)
+  assert.strictEqual(payload.leadScore, 100)
   assert.strictEqual(payload.leadLevel, 'high')
   assert.strictEqual(payload.leadScoreVariableName, 'Answer scores')
+}
+
+function testNonZeroLowScoreDoesNotBecomeLowLeadLevel() {
+  const payload = buildLeadCapturePayload(
+    createAnswerOnlyScoreForm(),
+    createAnswerOnlyScoreSubmission('maybe_fit')
+  )
+
+  assert.strictEqual(payload.leadScore, 33)
+  assert.strictEqual(payload.hasZeroScoreAnswer, false)
+  assert.strictEqual(payload.leadLevel, 'medium')
 }
 
 function testLeadScoreFallsBackToFormChoiceScoresWhenSnapshotScoresAreMissing() {
@@ -334,11 +345,27 @@ function testLeadScoreFallsBackToFormChoiceScoresWhenSnapshotScoresAreMissing() 
   )
   const row = buildLeadSheetRow(payload)
 
-  assert.strictEqual(payload.leadScore, 3)
+  assert.strictEqual(payload.leadScore, 100)
   assert.strictEqual(payload.leadLevel, 'high')
   assert.strictEqual(payload.leadScoreVariableName, 'Answer scores')
-  assert.strictEqual(row['Lead Score'], 3)
+  assert.strictEqual(row['Lead Score'], 100)
   assert.strictEqual(row['Lead Level'], 'high')
+}
+
+function testVariableLeadScoreIsNormalizedWhenThresholdsAreRelative() {
+  const form = createForm()
+  const payload = buildLeadCapturePayload(form, createSubmission('pass', 1))
+
+  assert.strictEqual(payload.leadScore, 100)
+  assert.strictEqual(payload.leadLevel, 'high')
+}
+
+function testZeroScoreAnswerForcesLowLeadLevel() {
+  const form = createForm()
+  const payload = buildLeadCapturePayload(form, createSubmission('fail', 999))
+
+  assert.strictEqual(payload.hasZeroScoreAnswer, true)
+  assert.strictEqual(payload.leadLevel, 'low')
 }
 
 function testLeadSheetRowUsesCompactLayout() {
@@ -438,7 +465,10 @@ async function run() {
   testNegativeLeadDetection()
   testStandardLeadDetection()
   testLeadScoreFallsBackToAnswerScores()
+  testNonZeroLowScoreDoesNotBecomeLowLeadLevel()
   testLeadScoreFallsBackToFormChoiceScoresWhenSnapshotScoresAreMissing()
+  testVariableLeadScoreIsNormalizedWhenThresholdsAreRelative()
+  testZeroScoreAnswerForcesLowLeadLevel()
   testLeadSheetRowUsesCompactLayout()
   testLeadAnswerSheetRowsStaySingleLinePerLead()
   testLeadAnswerSheetRowsIncludeAllQuizQuestionsInOrder()

@@ -2,12 +2,18 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRequest } from 'ahooks'
 import { IconAlertCircle, IconCheck } from '@tabler/icons-react'
 
-import { AppService, ProjectService } from '@/services'
-import { Button, Form, Switch, useToast } from '@/components'
+import { AppService, FormService, ProjectService } from '@/services'
+import { Button, Form, Input, Select, Switch, useToast } from '@/components'
 import IntegrationSettingsItem, { getVisibleIntegrationSettings } from '@/pages/form/Integrations/IntegrationSettingsItem'
-import { useParam } from '@/utils'
-import { AppType } from '@/types'
+import {
+  buildPublicFormUrl,
+  buildTrackedShareUrl,
+  TRAFFIC_SOURCE_PRESETS,
+  useParam
+} from '@/utils'
+import { AppType, FormType } from '@/types'
 import { helper } from '@heyform-inc/utils'
+import { useWorkspaceStore } from '@/store'
 
 interface ProjectLeadFlowType {
   enableGoogleSheetsLeadSync?: boolean
@@ -56,9 +62,13 @@ function buildGoogleSheetsConfig(app: AppType | undefined, values: AnyMap) {
 export default function ProjectGoogleSheets() {
   const { projectId } = useParam()
   const toast = useToast()
+  const { sharingURLPrefix, workspace } = useWorkspaceStore()
   const [googleSheetsForm] = Form.useForm()
   const [enabled, setEnabled] = useState(false)
   const [draftValues, setDraftValues] = useState<AnyMap>({})
+  const [sourcePreset, setSourcePreset] = useState(TRAFFIC_SOURCE_PRESETS[0].value)
+  const [campaign, setCampaign] = useState('military_quiz')
+  const [selectedFormId, setSelectedFormId] = useState<string>()
 
   const {
     data,
@@ -67,14 +77,16 @@ export default function ProjectGoogleSheets() {
     refreshAsync
   } = useRequest(
     async () => {
-      const [apps, leadFlow] = await Promise.all([
+      const [apps, leadFlow, formResult] = await Promise.all([
         AppService.apps(),
-        ProjectService.leadFlow(projectId)
+        ProjectService.leadFlow(projectId),
+        FormService.forms(projectId)
       ])
 
       return {
         googleSheetsApp: apps.find((app: AppType) => app.id === 'googlesheets'),
-        leadFlow
+        leadFlow,
+        forms: formResult.forms as FormType[]
       }
     },
     {
@@ -84,6 +96,48 @@ export default function ProjectGoogleSheets() {
 
   const googleSheetsApp = data?.googleSheetsApp
   const leadFlow = data?.leadFlow as ProjectLeadFlowType | undefined
+  const forms = (((data as AnyMap | undefined)?.forms as FormType[] | undefined) || []).filter(
+    form => !form.suspended
+  )
+
+  const formOptions = useMemo(
+    () => forms.map(form => ({ value: form.id, label: form.name || form.id })),
+    [forms]
+  )
+
+  const sourceOptions = useMemo(
+    () => TRAFFIC_SOURCE_PRESETS.map(option => ({ value: option.value, label: option.label })),
+    []
+  )
+
+  const selectedForm = useMemo(
+    () => forms.find(form => form.id === selectedFormId) || forms[0],
+    [forms, selectedFormId]
+  )
+
+  const baseShareLink = useMemo(() => {
+    if (!selectedForm) {
+      return ''
+    }
+
+    return buildPublicFormUrl({
+      sharingURLPrefix,
+      formId: selectedForm.id,
+      slug: selectedForm.slug,
+      isDomainRoot: selectedForm.isDomainRoot,
+      customDomain: workspace?.customDomain
+    })
+  }, [selectedForm, sharingURLPrefix, workspace?.customDomain])
+
+  const trackedShareLink = useMemo(() => {
+    if (!baseShareLink) {
+      return ''
+    }
+
+    const preset = TRAFFIC_SOURCE_PRESETS.find(option => option.value === sourcePreset)
+
+    return buildTrackedShareUrl(baseShareLink, preset, campaign)
+  }, [baseShareLink, campaign, sourcePreset])
 
   const { loading: testLoading, runAsync: runTestAsync } = useRequest(
     (values: AnyMap) => ProjectService.testGoogleSheets(projectId, buildGoogleSheetsConfig(googleSheetsApp, values)),
@@ -122,6 +176,12 @@ export default function ProjectGoogleSheets() {
     setEnabled(nextEnabled)
     setDraftValues(initialValues)
   }, [initialValues])
+
+  useEffect(() => {
+    if (!selectedFormId && forms.length > 0) {
+      setSelectedFormId(forms[0].id)
+    }
+  }, [forms, selectedFormId])
 
   async function saveProjectGoogleSheets(values: AnyMap) {
     const enableGoogleSheetsLeadSync = Boolean(values.enableGoogleSheetsLeadSync)
@@ -221,6 +281,37 @@ export default function ProjectGoogleSheets() {
           <p data-slot="text" className="text-secondary mt-4 text-base/5 sm:text-sm/6">
             Send submissions from every form in this project into one shared Google Sheets leads sheet with a linked answers tab that keeps one row per lead.
           </p>
+
+          {forms.length > 0 && (
+            <div className="mt-4 space-y-2 rounded-lg border border-accent-light p-3">
+              <div className="text-secondary text-xs font-medium uppercase tracking-wide">
+                Source link generator
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
+                <Select
+                  value={selectedForm?.id}
+                  options={formOptions}
+                  placeholder="Select form"
+                  onChange={setSelectedFormId}
+                />
+
+                <Select
+                  value={sourcePreset}
+                  options={sourceOptions}
+                  placeholder="Select source"
+                  onChange={setSourcePreset}
+                />
+              </div>
+
+              <Input value={campaign} placeholder="Campaign name" onChange={setCampaign} />
+
+              <div className="hf-card border-input flex items-center gap-x-4 rounded-lg border">
+                <div className="h-10 flex-1 truncate pl-4 leading-10">{trackedShareLink}</div>
+                <Button.Copy className="rounded-l-none" text={trackedShareLink} />
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mt-6 max-w-3xl">

@@ -108,6 +108,12 @@ type ScoredChoiceLike = {
   score?: unknown
 }
 
+interface DerivedLeadScore {
+  rawScore: number
+  normalizedScore: number
+  maxScore: number
+}
+
 const TEST_LEAD_PERSONAS: Record<
   LeadLevel,
   {
@@ -387,6 +393,13 @@ function getLeadLabel(
   labels: Record<'high' | 'medium' | 'low', string>
 ) {
   const level = getLeadLevel(score, mediumThreshold, highThreshold)
+  return level ? labels[level] : undefined
+}
+
+function getLeadLabelByLevel(
+  level: LeadLevel | undefined,
+  labels: Record<'high' | 'medium' | 'low', string>
+) {
   return level ? labels[level] : undefined
 }
 
@@ -702,11 +715,71 @@ function getAnswerScore(answer: Answer, fieldMap?: Map<string, FormField>): numb
   return normalizeNumber(answer.properties?.score) ?? normalizeNumber(fieldMap?.get(answer.id)?.properties?.score)
 }
 
+function getAnswerMaxScore(answer: Answer, fieldMap?: Map<string, FormField>): number | undefined {
+  const choices = getAnswerChoiceDefinitions(answer, fieldMap)
+
+  if (CHOICE_FIELD_KINDS.includes(answer.kind) && helper.isValidArray(choices)) {
+    const scoredChoices = choices
+      .map(choice => normalizeNumber(choice.score))
+      .filter((score): score is number => helper.isNumber(score))
+
+    if (!scoredChoices.length) {
+      return undefined
+    }
+
+    const allowMultiple =
+      helper.isTrue(answer.properties?.allowMultiple) ||
+      helper.isTrue(fieldMap?.get(answer.id)?.properties?.allowMultiple)
+
+    if (allowMultiple) {
+      const positiveTotal = scoredChoices.filter(score => score > 0).reduce((total, score) => total + score, 0)
+
+      if (positiveTotal > 0) {
+        return positiveTotal
+      }
+    }
+
+    return Math.max(...scoredChoices)
+  }
+
+  return normalizeNumber(fieldMap?.get(answer.id)?.properties?.score)
+}
+
+function normalizeScoreFromMax(rawScore: number, maxScore: number): number {
+  if (!Number.isFinite(maxScore) || maxScore <= 0) {
+    return Math.max(0, Math.round(rawScore))
+  }
+
+  const normalized = (rawScore / maxScore) * 100
+
+  return Math.min(100, Math.max(0, Math.round(normalized)))
+}
+
+function shouldNormalizeVariableScore(
+  variableScore: number,
+  maxScore: number,
+  mediumThreshold: number,
+  highThreshold: number
+): boolean {
+  if (!Number.isFinite(maxScore) || maxScore <= 0) {
+    return false
+  }
+
+  if (variableScore > maxScore) {
+    return false
+  }
+
+  const thresholdsLookRelative = highThreshold > maxScore || mediumThreshold > maxScore
+
+  return thresholdsLookRelative
+}
+
 function deriveLeadScoreFromAnswers(
   answers: Answer[],
   fieldMap?: Map<string, FormField>
-): number | undefined {
+): DerivedLeadScore | undefined {
   let totalScore = 0
+  let totalMaxScore = 0
   let hasScoredAnswer = false
 
   answers.forEach(answer => {
@@ -715,10 +788,24 @@ function deriveLeadScoreFromAnswers(
     if (helper.isNumber(score)) {
       totalScore += score
       hasScoredAnswer = true
+
+      const maxScore = getAnswerMaxScore(answer, fieldMap)
+
+      if (helper.isNumber(maxScore)) {
+        totalMaxScore += maxScore
+      }
     }
   })
 
-  return hasScoredAnswer ? totalScore : undefined
+  if (!hasScoredAnswer) {
+    return undefined
+  }
+
+  return {
+    rawScore: totalScore,
+    normalizedScore: normalizeScoreFromMax(totalScore, totalMaxScore),
+    maxScore: totalMaxScore
+  }
 }
 
 export function hasZeroScoreAnswer(
@@ -888,14 +975,33 @@ export function buildLeadCapturePayload(
   ])
   const scoreVariable = resolveScoreVariable(form, submission)
   const variableLeadScore = normalizeNumber(scoreVariable?.value)
-  const derivedLeadScore = helper.isNumber(variableLeadScore)
-    ? undefined
-    : deriveLeadScoreFromAnswers(submission.answers, fieldMap)
-  const leadScore = helper.isNumber(variableLeadScore) ? variableLeadScore : derivedLeadScore
+  const derivedLeadScore = deriveLeadScoreFromAnswers(submission.answers, fieldMap)
   const leadMediumThreshold = normalizeNumber(settings.leadMediumThreshold) ?? 50
   const leadHighThreshold = normalizeNumber(settings.leadHighThreshold) ?? 80
-  const leadLevel = getLeadLevel(leadScore, leadMediumThreshold, leadHighThreshold)
   const negativeLead = hasZeroScoreAnswer(submission.answers, fieldMap)
+  let leadScore = helper.isNumber(variableLeadScore)
+    ? variableLeadScore
+    : derivedLeadScore?.normalizedScore
+
+  if (
+    helper.isNumber(variableLeadScore) &&
+    derivedLeadScore &&
+    shouldNormalizeVariableScore(
+      variableLeadScore,
+      derivedLeadScore.maxScore,
+      leadMediumThreshold,
+      leadHighThreshold
+    )
+  ) {
+    leadScore = normalizeScoreFromMax(variableLeadScore, derivedLeadScore.maxScore)
+  }
+
+  const computedLeadLevel = getLeadLevel(leadScore, leadMediumThreshold, leadHighThreshold)
+  const leadLevel: LeadLevel | undefined = negativeLead
+    ? 'low'
+    : computedLeadLevel === 'low'
+      ? 'medium'
+      : computedLeadLevel
   const respondentName = getRespondentName(respondentNameAnswer)
   const respondentEmail = getRespondentEmail(respondentEmailAnswer)
   const respondentPhone = getRespondentPhone(respondentPhoneAnswer)
@@ -905,12 +1011,12 @@ export function buildLeadCapturePayload(
     respondentPhone,
     submissionId: submission.id
   })
-  const leadQuality = getLeadLabel(leadScore, leadMediumThreshold, leadHighThreshold, {
+  const leadQuality = getLeadLabelByLevel(leadLevel, {
     high: normalizeString(settings.leadQualityHighLabel) || DEFAULT_LEAD_QUALITY_LABELS.high,
     medium: normalizeString(settings.leadQualityMediumLabel) || DEFAULT_LEAD_QUALITY_LABELS.medium,
     low: normalizeString(settings.leadQualityLowLabel) || DEFAULT_LEAD_QUALITY_LABELS.low
   })
-  const leadPriority = getLeadLabel(leadScore, leadMediumThreshold, leadHighThreshold, {
+  const leadPriority = getLeadLabelByLevel(leadLevel, {
     high: normalizeString(settings.leadPriorityHighLabel) || DEFAULT_LEAD_PRIORITY_LABELS.high,
     medium: normalizeString(settings.leadPriorityMediumLabel) || DEFAULT_LEAD_PRIORITY_LABELS.medium,
     low: normalizeString(settings.leadPriorityLowLabel) || DEFAULT_LEAD_PRIORITY_LABELS.low
@@ -941,7 +1047,8 @@ export function buildLeadCapturePayload(
     respondentPhone,
     leadScore,
     leadScoreVariableId: scoreVariable?.id,
-    leadScoreVariableName: scoreVariable?.name || (helper.isNumber(derivedLeadScore) ? DERIVED_LEAD_SCORE_SOURCE : undefined),
+    leadScoreVariableName:
+      scoreVariable?.name || (helper.isNumber(derivedLeadScore?.rawScore) ? DERIVED_LEAD_SCORE_SOURCE : undefined),
     leadLevel,
     hasZeroScoreAnswer: negativeLead,
     leadQuality,

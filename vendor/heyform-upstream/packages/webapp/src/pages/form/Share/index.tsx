@@ -6,12 +6,12 @@ import {
   IconMail,
   IconQrcode
 } from '@tabler/icons-react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { buildPublicFormUrl, getDecoratedURL, useParam } from '@/utils'
+import { buildPublicFormUrl, buildTrackedShareUrl, getDecoratedURL, TRAFFIC_SOURCE_PRESETS, useParam } from '@/utils'
 
-import { Button, Tooltip } from '@/components'
+import { Button, Input, Select, Tooltip } from '@/components'
 import { FORM_EMBED_OPTIONS } from '@/consts'
 import { useAppStore, useFormStore, useWorkspaceStore } from '@/store'
 
@@ -26,6 +26,8 @@ export default function FormShare() {
   const { openModal } = useAppStore()
   const { sharingURLPrefix, workspace } = useWorkspaceStore()
   const { form, selectEmbedType } = useFormStore()
+  const [sourcePreset, setSourcePreset] = useState(TRAFFIC_SOURCE_PRESETS[0].value)
+  const [campaign, setCampaign] = useState('military_quiz')
 
   const shareLink = useMemo(
     () =>
@@ -38,6 +40,17 @@ export default function FormShare() {
       }),
     [form?.isDomainRoot, form?.slug, formId, sharingURLPrefix, workspace?.customDomain]
   )
+
+  const sourceOptions = useMemo(
+    () => TRAFFIC_SOURCE_PRESETS.map(option => ({ value: option.value, label: option.label })),
+    []
+  )
+
+  const trackedShareLink = useMemo(() => {
+    const preset = TRAFFIC_SOURCE_PRESETS.find(option => option.value === sourcePreset)
+
+    return buildTrackedShareUrl(shareLink, preset, campaign)
+  }, [campaign, shareLink, sourcePreset])
 
   function handleShareEmail() {
     const url = getDecoratedURL('mailto:', {
@@ -99,6 +112,32 @@ export default function FormShare() {
               <div className="hf-card border-input flex items-center gap-x-4 rounded-lg border">
                 <div className="h-10 flex-1 truncate pl-4 leading-10">{shareLink}</div>
                 <Button.Copy className="rounded-l-none" text={shareLink} />
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-2 rounded-lg border border-accent-light p-3">
+              <div className="text-secondary text-xs font-medium uppercase tracking-wide">
+                Source link generator
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
+                <Select
+                  value={sourcePreset}
+                  options={sourceOptions}
+                  placeholder="Select source"
+                  onChange={setSourcePreset}
+                />
+
+                <Input
+                  value={campaign}
+                  placeholder="Campaign name"
+                  onChange={setCampaign}
+                />
+              </div>
+
+              <div className="hf-card border-input flex items-center gap-x-4 rounded-lg border">
+                <div className="h-10 flex-1 truncate pl-4 leading-10">{trackedShareLink}</div>
+                <Button.Copy className="rounded-l-none" text={trackedShareLink} />
               </div>
             </div>
 
