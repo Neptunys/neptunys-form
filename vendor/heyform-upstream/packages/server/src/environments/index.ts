@@ -1,4 +1,5 @@
 import { loadEnv } from '@heyooo-inc/env'
+import { CaptchaKindEnum } from '@heyform-inc/shared-types-enums'
 import * as fs from 'fs'
 import { resolve } from 'path'
 
@@ -29,6 +30,35 @@ if (process.env.REDIS_URL) {
 
 const parsedRedisDb = parsedRedisUrl?.pathname.replace(/^\/+/, '')
 
+const splitEnvList = (value?: string): string[] =>
+  (value || '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean)
+
+const parseUrl = (value?: string): URL | undefined => {
+  if (!value) {
+    return undefined
+  }
+
+  try {
+    return new URL(value)
+  } catch (_) {
+    return undefined
+  }
+}
+
+const compileRegexList = (value?: string): RegExp[] =>
+  splitEnvList(value)
+    .map(pattern => {
+      try {
+        return new RegExp(pattern)
+      } catch (_) {
+        return null
+      }
+    })
+    .filter((pattern): pattern is RegExp => pattern !== null)
+
 // App serve
 export const APP_LISTEN_PORT: number = +(process.env.APP_LISTEN_PORT || process.env.PORT || 9157)
 export const APP_LISTEN_HOSTNAME: string = process.env.APP_LISTEN_HOSTNAME || '0.0.0.0'
@@ -36,6 +66,8 @@ export const APP_HOMEPAGE_URL: string =
   process.env.APP_HOMEPAGE_URL ||
   RENDER_EXTERNAL_URL ||
   `http://${APP_LISTEN_HOSTNAME}:${APP_LISTEN_PORT}`
+const parsedHomepageUrl = parseUrl(APP_HOMEPAGE_URL)
+export const APP_HOMEPAGE_ORIGIN: string = parsedHomepageUrl?.origin || ''
 export const APP_DISABLE_REGISTRATION: boolean = helper.isTrue(process.env.APP_DISABLE_REGISTRATION)
 export const ADMIN_APPROVAL_EMAIL: string = (process.env.ADMIN_APPROVAL_EMAIL || '').toLowerCase()
 export const ENABLE_GOOGLE_FONTS: boolean =
@@ -45,11 +77,24 @@ export const ENABLE_GOOGLE_FONTS: boolean =
 
 // Cookie
 export const COOKIE_MAX_AGE: string = process.env.COOKIE_MAX_AGE || '1y'
-export const COOKIE_DOMAIN: string = process.env.COOKIE_DOMAIN || new URL(APP_HOMEPAGE_URL).hostname
+export const COOKIE_DOMAIN: string =
+  process.env.COOKIE_DOMAIN || parsedHomepageUrl?.hostname || APP_LISTEN_HOSTNAME
 export const SESSION_KEY: string = process.env.SESSION_KEY
 export const SESSION_MAX_AGE: string = process.env.SESSION_MAX_AGE || '15d'
 export const REMEMBER_ME_SESSION_MAX_AGE: string =
   process.env.REMEMBER_ME_SESSION_MAX_AGE || '30d'
+export const CORS_ALLOW_ALL_ORIGINS: boolean =
+  process.env.CORS_ALLOW_ALL_ORIGINS === undefined
+    ? NODE_ENV !== 'production'
+    : helper.isTrue(process.env.CORS_ALLOW_ALL_ORIGINS)
+export const CORS_ALLOW_CREDENTIALS: boolean =
+  process.env.CORS_ALLOW_CREDENTIALS === undefined
+    ? true
+    : helper.isTrue(process.env.CORS_ALLOW_CREDENTIALS)
+export const CORS_ALLOWED_ORIGINS: string[] = splitEnvList(process.env.CORS_ALLOWED_ORIGINS)
+export const CORS_ALLOWED_ORIGIN_REGEXES: RegExp[] = compileRegexList(
+  process.env.CORS_ALLOWED_ORIGIN_REGEX
+)
 
 // Email templates
 export const EMAIL_TEMPLATES_DIR: string = resolve(ROOT_PATH, 'resources/email-templates')
@@ -147,6 +192,8 @@ export const BULL_JOB_ATTEMPTS: number = +process.env.BULL_JOB_ATTEMPTS || 3
 export const BULL_JOB_TIMEOUT: string = process.env.BULL_JOB_TIMEOUT || '1m'
 export const BULL_JOB_BACKOFF_DELAY: number = +process.env.BULL_JOB_BACKOFF_DELAY || 3000
 export const BULL_JOB_BACKOFF_TYPE: string = process.env.BULL_JOB_BACKOFF_TYPE || 'fixed'
+export const GLOBAL_RATE_LIMIT_WINDOW: string = process.env.GLOBAL_RATE_LIMIT_WINDOW || '1m'
+export const GLOBAL_RATE_LIMIT_MAX: number = +process.env.GLOBAL_RATE_LIMIT_MAX || 1000
 
 // Time limit on team invite links
 export const INVITE_CODE_EXPIRE_DAYS: number = +process.env.INVITE_CODE_EXPIRE_DAYS || 7
@@ -173,6 +220,29 @@ export const UNSPLASH_CLIENT_ID: string = process.env.UNSPLASH_CLIENT_ID
 export const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL
 export const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 export const OPENAI_GPT_MODEL = process.env.OPENAI_GPT_MODEL || 'gpt-4o-mini'
+
+// Security headers
+export const HELMET_ENABLE_CSP: boolean = helper.isTrue(process.env.HELMET_ENABLE_CSP)
+export const HELMET_CSP_REPORT_ONLY: boolean = helper.isTrue(process.env.HELMET_CSP_REPORT_ONLY)
+export const HELMET_FRAME_ANCESTORS: string[] = splitEnvList(process.env.HELMET_FRAME_ANCESTORS)
+export const HELMET_REFERRER_POLICY: string =
+  process.env.HELMET_REFERRER_POLICY || 'strict-origin-when-cross-origin'
+
+// New form protection defaults
+const DEFAULT_FORM_CAPTCHA_KIND_RAW = (process.env.DEFAULT_FORM_CAPTCHA_KIND || 'none')
+  .trim()
+  .toLowerCase()
+export const DEFAULT_FORM_CAPTCHA_KIND: CaptchaKindEnum =
+  (DEFAULT_FORM_CAPTCHA_KIND_RAW === 'google_recaptcha' ||
+    DEFAULT_FORM_CAPTCHA_KIND_RAW === 'google-recaptcha' ||
+    DEFAULT_FORM_CAPTCHA_KIND_RAW === 'recaptcha' ||
+    DEFAULT_FORM_CAPTCHA_KIND_RAW === 'google') &&
+  helper.isValid(process.env.GOOGLE_RECAPTCHA_KEY) &&
+  helper.isValid(process.env.GOOGLE_RECAPTCHA_SECRET)
+    ? CaptchaKindEnum.GOOGLE_RECAPTCHA
+    : CaptchaKindEnum.NONE
+export const DEFAULT_FORM_FILTER_SPAM: boolean =
+  helper.isTrue(process.env.DEFAULT_FORM_FILTER_SPAM) && helper.isValid(process.env.AKISMET_KEY)
 
 // S3
 export const S3_ENDPOINT = process.env.S3_ENDPOINT

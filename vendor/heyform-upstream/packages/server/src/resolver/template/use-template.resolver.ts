@@ -1,6 +1,7 @@
 import { CaptchaKindEnum, FormStatusEnum } from '@heyform-inc/shared-types-enums'
 import { BadRequestException } from '@nestjs/common'
 
+import { DEFAULT_FORM_CAPTCHA_KIND, DEFAULT_FORM_FILTER_SPAM } from '@environments'
 import { Auth, ProjectGuard, Team, User } from '@decorator'
 import { UseTemplateInput } from '@graphql'
 import { helper } from '@heyform-inc/utils'
@@ -40,8 +41,8 @@ export class UseTemplateResolver {
       fieldsUpdatedAt: 0,
       settings: {
         active: false,
-        captchaKind: CaptchaKindEnum.NONE,
-        filterSpam: false,
+        captchaKind: DEFAULT_FORM_CAPTCHA_KIND || CaptchaKindEnum.NONE,
+        filterSpam: DEFAULT_FORM_FILTER_SPAM,
         allowArchive: true,
         requirePassword: false,
         locale: 'en',

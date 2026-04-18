@@ -61,6 +61,10 @@ The app now also supports:
 - a single `REDIS_URL`, including TLS `rediss://` URLs from providers like Upstash
 - `OPENAI_GPT_MODEL` if you want to override the default AI model
 - `ADMIN_APPROVAL_EMAIL` to gate all new non-admin registrations behind email approval
+- `CORS_ALLOWED_ORIGINS` and `CORS_ALLOWED_ORIGIN_REGEX` to tighten cross-origin access in production
+- `GLOBAL_RATE_LIMIT_WINDOW` and `GLOBAL_RATE_LIMIT_MAX` to tune the global rate limiter without code edits
+- `HELMET_ENABLE_CSP` and `HELMET_FRAME_ANCESTORS` for opt-in CSP/frame-ancestor hardening once the approved embed domains are known
+- `DEFAULT_FORM_CAPTCHA_KIND` and `DEFAULT_FORM_FILTER_SPAM` for opt-in safer defaults on newly created forms
 
 The Render blueprint now defaults `SMTP_FROM` to `NeptunysForm <noreply@neptunys.com>`, enables `VERIFY_USER_EMAIL=true`, and every system email in the app uses that sender value.
 The blueprint also defaults `BULL_JOB_TIMEOUT` to `5m` so mail jobs are not cut off at one minute.
@@ -92,6 +96,15 @@ Example for Cloudflare R2:
 4. Fill in the prompted secret values.
 5. Deploy the `neptunys-form` web service.
 6. After the service is live, open the Render service URL and create the first HeyForm admin account.
+
+## Backup Helpers In This Workspace
+
+The workspace now includes two local Python helpers for database continuity work:
+
+- `scripts/export-heyform-mongo-backup.py` to export a live Mongo database into gzipped JSONL collection files plus a manifest
+- `.heyform-local/tools/restore-mongo-backup.py` to restore one of those exports into another Mongo database
+
+Use them to prove backup and restore before changing the live Mongo target.
 
 ## Optional Later Work
 

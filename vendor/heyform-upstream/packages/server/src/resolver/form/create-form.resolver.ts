@@ -1,5 +1,6 @@
 import { CaptchaKindEnum, FieldKindEnum, FormStatusEnum } from '@heyform-inc/shared-types-enums'
 
+import { DEFAULT_FORM_CAPTCHA_KIND, DEFAULT_FORM_FILTER_SPAM } from '@environments'
 import { Auth, ProjectGuard, Team, User } from '@decorator'
 import { CreateFormInput } from '@graphql'
 import { helper, nanoid } from '@heyform-inc/utils'
@@ -54,8 +55,8 @@ export class CreateFormResolver {
       fieldsUpdatedAt: 0,
       settings: {
         active: false,
-        captchaKind: CaptchaKindEnum.NONE,
-        filterSpam: false,
+        captchaKind: DEFAULT_FORM_CAPTCHA_KIND || CaptchaKindEnum.NONE,
+        filterSpam: DEFAULT_FORM_FILTER_SPAM,
         allowArchive: true,
         requirePassword: false,
         locale: 'en',
