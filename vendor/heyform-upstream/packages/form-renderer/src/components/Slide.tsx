@@ -9,9 +9,6 @@ interface SlideProps extends Omit<IComponentProps, 'onChange'> {
   onChange: (scrollIndex: number, scrollTo: 'next' | 'previous') => void
 }
 
-// Global Timeout
-const timeout = new Timeout()
-
 export const Slide: FC<SlideProps> = ({
   className,
   children,

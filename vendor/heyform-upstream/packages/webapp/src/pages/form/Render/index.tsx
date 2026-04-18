@@ -66,6 +66,12 @@ export default function FormRender({ resolveDomainRoot = false }: { resolveDomai
   return (
     <Async
       fetch={fetchData}
+      loader={
+        <PublicRouteState
+          title="Loading form"
+          message="Connecting to the published page..."
+        />
+      }
       errorRender={(error: Error) => (
         <PublicRouteState
           title="Page not found"
