@@ -1,6 +1,6 @@
 import { FieldLayoutAlignEnum, QUESTION_FIELD_KINDS } from '@heyform-inc/shared-types-enums'
 import clsx from 'clsx'
-import { FC, WheelEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { FC, useEffect, useMemo, useRef, useState } from 'react'
 
 import { questionNumber, removeHeading, replaceHTML } from '../utils'
 import { htmlUtils } from '@heyform-inc/answer-utils'
@@ -9,7 +9,6 @@ import { helper } from '@heyform-inc/utils'
 import { Layout } from '../components'
 import { useStore } from '../store'
 import type { IComponentProps, IFormField } from '../typings'
-import { useWheelScroll } from './hook'
 
 export interface BlockProps extends IComponentProps {
   field: IFormField
@@ -34,7 +33,7 @@ export const Block: FC<BlockProps> = ({
   children,
   ...restProps
 }) => {
-  const { state, dispatch } = useStore()
+  const { state } = useStore()
   const { values, fields, query, variables } = state
   const bodyRef = useRef<HTMLDivElement>(null)
 
@@ -53,8 +52,6 @@ export const Block: FC<BlockProps> = ({
 
   const [isReducedMotion, setIsReducedMotion] = useState(false)
   const [isTransitionReady, setIsTransitionReady] = useState(false)
-  const [isScrolledToTop, setIsScrolledToTop] = useState(true)
-  const [isScrolledToBottom, setIsScrolledToBottom] = useState(true)
   const activeFieldId = state.fields[state.scrollIndex!]?.id
   const isStandaloneActive =
     (!state.isStarted && state.welcomeField?.id === field.id) || !!state.isSubmitted
@@ -78,24 +75,6 @@ export const Block: FC<BlockProps> = ({
 
     return questionIndex > -1 ? String(questionIndex + 1) : ''
   }, [field.id, field.kind, field.number, field.parent?.number, state.fields])
-
-  function handleScroll(event: WheelEvent<HTMLDivElement>) {
-    const container = event.target as HTMLElement
-
-    setIsScrolledToTop(container.scrollTop === 0)
-    setIsScrolledToBottom(
-      container.clientHeight + container.scrollTop + 60 >= container.scrollHeight
-    )
-  }
-
-  const handleWheelScroll = useWheelScroll(
-    isScrollable,
-    isScrolledToTop,
-    isScrolledToBottom,
-    type => {
-      dispatch({ type })
-    }
-  )
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
@@ -234,7 +213,6 @@ export const Block: FC<BlockProps> = ({
       {/* Block container */}
       <div
         className={clsx('heyform-block-container', className)}
-        onWheel={handleWheelScroll}
         {...restProps}
       >
         {field.parent && (
@@ -266,7 +244,7 @@ export const Block: FC<BlockProps> = ({
             {/* Field layout */}
             {!isInlineLayout && <Layout {...field.layout} />}
 
-            <div className="heyform-scroll-wrapper" onScroll={handleScroll}>
+            <div className="heyform-scroll-wrapper">
               <div className="heyform-scroll-container">
                 <div className="heyform-block-main">
                   <div className="heyform-block-wrapper">
