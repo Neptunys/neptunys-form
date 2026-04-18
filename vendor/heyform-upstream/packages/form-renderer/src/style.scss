@@ -656,6 +656,8 @@ button.button-icon-only {
 }
 
 .heyform-root-embedded {
+  --heyform-question-transition-duration: 240ms;
+  --heyform-question-transition-distance: 0px;
   height: 100%;
   min-height: 100%;
 

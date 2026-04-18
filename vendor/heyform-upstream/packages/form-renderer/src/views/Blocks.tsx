@@ -35,7 +35,26 @@ import { Footer } from './Footer'
 import { Header } from './Header'
 
 const QUESTION_TRANSITION_DURATION = 1000
+const EMBEDDED_QUESTION_TRANSITION_DURATION = 240
 type TransitionState = 'active' | 'leaving'
+
+function getQuestionTransitionDurationMs(isReducedMotion: boolean) {
+  if (isReducedMotion) {
+    return 0
+  }
+
+  if (typeof window === 'undefined') {
+    return QUESTION_TRANSITION_DURATION
+  }
+
+  try {
+    return window.self !== window.top
+      ? EMBEDDED_QUESTION_TRANSITION_DURATION
+      : QUESTION_TRANSITION_DURATION
+  } catch {
+    return EMBEDDED_QUESTION_TRANSITION_DURATION
+  }
+}
 
 function getBlock(
   field: FormField,
@@ -203,7 +222,9 @@ const Main: FC = () => {
       return
     }
 
-    if (isReducedMotion) {
+    const transitionDuration = getQuestionTransitionDurationMs(isReducedMotion)
+
+    if (transitionDuration === 0) {
       setLeavingField(undefined)
       return
     }
@@ -215,7 +236,7 @@ const Main: FC = () => {
 
     const timeoutId = window.setTimeout(() => {
       setLeavingField(undefined)
-    }, QUESTION_TRANSITION_DURATION)
+    }, transitionDuration)
 
     return () => window.clearTimeout(timeoutId)
   }, [activeField, isReducedMotion, state.scrollTo])

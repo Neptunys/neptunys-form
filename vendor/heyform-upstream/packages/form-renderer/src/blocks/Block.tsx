@@ -24,6 +24,27 @@ const SPLIT_LAYOUTS = [
   FieldLayoutAlignEnum.SPLIT_RIGHT
 ]
 
+const DEFAULT_BLOCK_FOCUS_DELAY_MS = 1000
+const EMBEDDED_BLOCK_FOCUS_DELAY_MS = 240
+
+function getBlockFocusDelayMs(isReducedMotion: boolean) {
+  if (isReducedMotion) {
+    return 0
+  }
+
+  if (typeof window === 'undefined') {
+    return DEFAULT_BLOCK_FOCUS_DELAY_MS
+  }
+
+  try {
+    return window.self !== window.top
+      ? EMBEDDED_BLOCK_FOCUS_DELAY_MS
+      : DEFAULT_BLOCK_FOCUS_DELAY_MS
+  } catch {
+    return EMBEDDED_BLOCK_FOCUS_DELAY_MS
+  }
+}
+
 export const Block: FC<BlockProps> = ({
   className,
   field: rawField,
@@ -143,6 +164,8 @@ export const Block: FC<BlockProps> = ({
       return
     }
 
+    const focusDelayMs = getBlockFocusDelayMs(isReducedMotion)
+
     const timeoutId = window.setTimeout(
       () => {
         const container = bodyRef.current
@@ -187,7 +210,7 @@ export const Block: FC<BlockProps> = ({
 
         focusContainer()
       },
-      isReducedMotion ? 0 : 1000
+      focusDelayMs
     )
 
     return () => {
