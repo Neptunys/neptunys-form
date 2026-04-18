@@ -2152,7 +2152,7 @@ button.button-icon-only {
 }
 
 .heyform-consent-option-subtle .heyform-consent-link {
-  color: var(--heyform-answer-color);
+  color: var(--heyform-consent-link-color, var(--heyform-answer-color));
 }
 
 // -----------------------------------------------------------------------------
