@@ -409,6 +409,9 @@ export function getThemeStyle(theme: RendererFormTheme, query?: Record<string, a
     normalizedTheme.answerKeyActiveBackground || alpha(normalizedTheme.answerTextColor!, 0.8)
   const desktopBackButtonBackground =
     normalizedTheme.desktopBackButtonBackground || normalizedTheme.buttonBackground
+  const consentTextColor = normalizedTheme.consentTextColor || normalizedTheme.answerTextColor
+  const consentLinkColor = normalizedTheme.consentLinkColor || normalizedTheme.buttonBackground
+  const consentCheckboxColor = normalizedTheme.consentCheckboxColor || normalizedTheme.buttonBackground
   const answerSelectionIndicatorDisplay = helper.isFalse(normalizedTheme.showChoiceCheckIcon)
     ? 'none'
     : 'block'
@@ -521,6 +524,9 @@ export function getThemeStyle(theme: RendererFormTheme, query?: Record<string, a
     --heyform-progress-track-color: ${progressTrackColor};
     --heyform-top-progress-color: ${topProgressColor};
     --heyform-top-progress-track-color: ${topProgressTrackColor};
+    --heyform-consent-text-color: ${consentTextColor};
+    --heyform-consent-link-color: ${consentLinkColor};
+    --heyform-consent-checkbox-color: ${consentCheckboxColor};
   }
   
   .heyform-theme-background {

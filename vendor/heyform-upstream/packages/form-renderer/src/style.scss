@@ -1922,7 +1922,7 @@ button.button-icon-only {
   border: 1px solid var(--heyform-answer-opacity-30-color);
   border-radius: calc(var(--heyform-answer-radius) + 0.25rem);
   background-color: var(--heyform-answer-opacity-10-color);
-  color: var(--heyform-answer-color);
+  color: var(--heyform-consent-text-color, var(--heyform-answer-color));
   text-align: left;
   transition:
     border-color 160ms ease,
@@ -1999,8 +1999,8 @@ button.button-icon-only {
 }
 
 .heyform-consent-option-selected .heyform-consent-box {
-  border-color: var(--heyform-button-color);
-  background-color: var(--heyform-button-color);
+  border-color: var(--heyform-consent-checkbox-color, var(--heyform-button-color));
+  background-color: var(--heyform-consent-checkbox-color, var(--heyform-button-color));
   color: var(--heyform-button-text-color);
 }
 
@@ -2022,12 +2022,12 @@ button.button-icon-only {
 .heyform-consent-option-subtle .heyform-consent-text {
   font-size: clamp(0.8rem, calc(var(--heyform-field-text-size) * 0.8), 1rem);
   line-height: 1.45;
-  color: var(--heyform-answer-opacity-80-color);
+  color: var(--heyform-consent-text-color, var(--heyform-answer-opacity-80-color));
 }
 
 .heyform-consent-link {
   margin-left: 0.4rem;
-  color: var(--heyform-button-color);
+  color: var(--heyform-consent-link-color, var(--heyform-button-color));
   text-decoration: underline;
   text-underline-offset: 0.16em;
 

@@ -299,6 +299,9 @@ export interface FormTheme {
   progressTrackColor?: string
   topProgressColor?: string
   topProgressTrackColor?: string
+  consentTextColor?: string
+  consentLinkColor?: string
+  consentCheckboxColor?: string
   logo?: string
 
   // Custom CSS

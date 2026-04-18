@@ -675,6 +675,45 @@ export default function Customize() {
           </Form.Item>
 
           <Form.Item
+            name="consentTextColor"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:flex [&_[data-slot=control]]:items-center [&_[data-slot=control]]:justify-between"
+            label="Consent text"
+          >
+            <ColorPicker
+              contentProps={{
+                side: 'bottom',
+                align: 'end'
+              }}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="consentLinkColor"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:flex [&_[data-slot=control]]:items-center [&_[data-slot=control]]:justify-between"
+            label="Consent link"
+          >
+            <ColorPicker
+              contentProps={{
+                side: 'bottom',
+                align: 'end'
+              }}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="consentCheckboxColor"
+            className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:flex [&_[data-slot=control]]:items-center [&_[data-slot=control]]:justify-between"
+            label="Consent checkbox"
+          >
+            <ColorPicker
+              contentProps={{
+                side: 'bottom',
+                align: 'end'
+              }}
+            />
+          </Form.Item>
+
+          <Form.Item
             name="answerBorderRadius"
             className="[&_[data-slot=content]]:flex-none [&_[data-slot=control]]:block"
             label="Answer radius"
