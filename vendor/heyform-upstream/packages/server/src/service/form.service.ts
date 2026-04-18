@@ -16,8 +16,7 @@ import { TeamService } from './team.service'
 import { GOOGLE_RECAPTCHA_KEY } from '@environments'
 import { helper, pickObject, timestamp } from '@heyform-inc/utils'
 import { FormModel, ProjectModel } from '@model'
-import { mapToObject } from '@utils'
-import { getUpdateQuery } from '@utils'
+import { getPublicDomainRootFallbackFormId, getUpdateQuery, mapToObject } from '@utils'
 
 const DEFAULT_PUBLIC_FORM_SLUG = 'form'
 const RESERVED_PUBLIC_FORM_SLUGS = new Set([
@@ -451,6 +450,12 @@ export class FormService {
 
     if (!helper.isValid(normalizedHostname)) {
       return null
+    }
+
+    const fallbackFormId = getPublicDomainRootFallbackFormId(normalizedHostname, slug)
+
+    if (fallbackFormId) {
+      return this.findById(fallbackFormId)
     }
 
     const team = await this.teamService.findByCustomDomain(normalizedHostname!)

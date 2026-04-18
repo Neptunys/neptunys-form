@@ -12,6 +12,7 @@ import {
 } from '@environments'
 import { hs } from '@heyform-inc/utils'
 import { TeamService } from '@service'
+import { hasPublicDomainRootFallbackHost } from '@utils'
 
 @Controller()
 export class DashboardController {
@@ -20,6 +21,10 @@ export class DashboardController {
   private async isCustomDomainHost(hostname?: string) {
     if (!hostname) {
       return false
+    }
+
+    if (hasPublicDomainRootFallbackHost(hostname)) {
+      return true
     }
 
     return !!(await this.teamService.findByCustomDomain(hostname.toLowerCase()))

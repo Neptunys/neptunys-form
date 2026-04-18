@@ -9,6 +9,7 @@ import {
   STRIPE_PUBLISHABLE_KEY
 } from '@environments'
 import { TeamService } from '@service'
+import { hasPublicDomainRootFallbackHost } from '@utils'
 
 @Controller()
 export class FormController {
@@ -31,6 +32,10 @@ export class FormController {
   private async isCustomDomainHost(hostname?: string) {
     if (!hostname) {
       return false
+    }
+
+    if (hasPublicDomainRootFallbackHost(hostname)) {
+      return true
     }
 
     return !!(await this.teamService.findByCustomDomain(hostname.toLowerCase()))
