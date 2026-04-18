@@ -27,7 +27,6 @@ export const EmptyState: FC<EmptyStateProps> = ({ className, field, onClick, ...
         typeof field.layout?.titleSizePx === 'number' && 'heyform-welcome-title-custom'
       )}
       style={{
-        '--heyform-welcome-content-align-px': `${field.layout?.contentAlignPx ?? 0}px`,
         '--heyform-welcome-title-size-px':
           typeof field.layout?.titleSizePx === 'number' ? `${field.layout.titleSizePx}px` : undefined
       }}

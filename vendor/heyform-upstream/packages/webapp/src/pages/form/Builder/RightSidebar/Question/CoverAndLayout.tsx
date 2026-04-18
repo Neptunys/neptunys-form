@@ -55,13 +55,6 @@ export default function CoverAndLayout() {
           }
         }
 
-        if (key === 'contentAlignPx') {
-          layout = {
-            ...layout,
-            contentAlign: undefined
-          }
-        }
-
         const currentValue = (layout as Record<string, any> | undefined)?.[key]
 
         if (currentValue === value) {
@@ -229,23 +222,6 @@ export default function CoverAndLayout() {
               ]}
               value={field.layout?.contentAlign || 'center'}
               onChange={value => handleChange('contentAlign', value)}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-sm/6" htmlFor="#">
-              Content alignment (px)
-            </label>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-secondary text-xs/6">-320px</span>
-              <span className="text-secondary text-xs/6">{field.layout?.contentAlignPx ?? 0}px</span>
-              <span className="text-secondary text-xs/6">320px</span>
-            </div>
-            <Slider
-              min={-320}
-              max={320}
-              value={field.layout?.contentAlignPx ?? 0}
-              onChange={value => handleChange('contentAlignPx', value)}
             />
           </div>
 
