@@ -39,7 +39,7 @@ export const EmptyState: FC<EmptyStateProps> = ({ className, field, onClick, ...
         text={field.properties?.buttonText || t('Next')}
         helper={
           field.properties?.buttonSubtext ? (
-            <div className="heyform-submit-helper">{field.properties.buttonSubtext}</div>
+            <div className="heyform-block-description">{field.properties.buttonSubtext}</div>
           ) : undefined
         }
         onClick={onClick}

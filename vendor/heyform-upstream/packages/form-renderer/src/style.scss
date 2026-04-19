@@ -1170,20 +1170,13 @@ button.button-icon-only {
 
   .heyform-submit-with-helper {
     flex-direction: column;
-    align-items: center;
-  }
-
-  .heyform-submit-helper {
-    color: var(--heyform-question-text-color);
-    font-size: 0.875rem;
-    line-height: 1.4;
-    opacity: 0.78;
-    text-align: center;
   }
 }
 
 // Welcome screen: content alignment
-.heyform-welcome-align-left {
+// Note: prefixed with .heyform-empty-state to match specificity of the default
+// .heyform-empty-state.heyform-welcome rule (0,2,0) so these overrides win.
+.heyform-empty-state.heyform-welcome-align-left {
   .heyform-block-title,
   .heyform-block-description {
     text-align: left;
@@ -1198,17 +1191,15 @@ button.button-icon-only {
     margin-right: auto;
   }
 
+  // justify-content: positions button in row layout (no subtext)
+  // align-items: positions button in column layout (with subtext)
   .heyform-submit-container {
     justify-content: flex-start;
     align-items: flex-start;
   }
-
-  .heyform-submit-helper {
-    text-align: left;
-  }
 }
 
-.heyform-welcome-align-center {
+.heyform-empty-state.heyform-welcome-align-center {
   .heyform-block-title,
   .heyform-block-description {
     text-align: center;
@@ -1227,13 +1218,9 @@ button.button-icon-only {
     justify-content: center;
     align-items: center;
   }
-
-  .heyform-submit-helper {
-    text-align: center;
-  }
 }
 
-.heyform-welcome-align-right {
+.heyform-empty-state.heyform-welcome-align-right {
   .heyform-block-title,
   .heyform-block-description {
     text-align: right;
@@ -1251,10 +1238,6 @@ button.button-icon-only {
   .heyform-submit-container {
     justify-content: flex-end;
     align-items: flex-end;
-  }
-
-  .heyform-submit-helper {
-    text-align: right;
   }
 }
 

@@ -60,7 +60,7 @@ export default function StatementSettings({ field }: RequiredSettingsProps) {
       {field.kind === FieldKindEnum.WELCOME && (
         <>
           <label className="text-sm/6" htmlFor="#">
-            Button subtext
+            CTA subtitle
           </label>
 
           <Input

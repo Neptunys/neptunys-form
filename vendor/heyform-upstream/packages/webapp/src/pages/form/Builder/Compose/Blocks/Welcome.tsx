@@ -20,7 +20,7 @@ export const Welcome: FC<BlockProps> = ({ field, locale, ...restProps }) => {
         text={field.properties?.buttonText || t('Next', { lng: locale })}
         helper={
           field.properties?.buttonSubtext ? (
-            <div className="heyform-submit-helper">{field.properties.buttonSubtext}</div>
+            <div className="heyform-block-description">{field.properties.buttonSubtext}</div>
           ) : undefined
         }
       />
