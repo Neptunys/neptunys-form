@@ -72,11 +72,23 @@ export class SubmissionNotificationQueue extends BaseQueue {
       this.formService.findById(job.data.formId)
     ])
 
-    const [user, team, project] = await Promise.all([
-      this.userService.findById(form.memberId),
+    const [team, project] = await Promise.all([
       this.teamService.findById(form.teamId),
       this.projectService.findById(form.projectId)
     ])
+
+    const ownerIds = Array.from(
+      new Set(
+        [form.memberId, team?.ownerId, project?.ownerId].filter(
+          (id): id is string => helper.isValid(id)
+        )
+      )
+    )
+
+    const ownerUsers = ownerIds.length > 0 ? await this.userService.findAll(ownerIds) : []
+    const ownerEmails = ownerUsers
+      .map(owner => owner.email)
+      .filter((email): email is string => helper.isValid(email))
 
     const resolvedTimezone = project?.reportingTimezone || team?.reportingTimezone
     const inheritedProjectRecipients = resolveInheritedRecipients(
@@ -92,10 +104,7 @@ export class SubmissionNotificationQueue extends BaseQueue {
       submissionLink
     })
 
-    const selfNotificationEmails = getUniqueEmails(
-      formSettings.selfEmailRecipients,
-      user?.email ? [user.email] : undefined
-    )
+    const selfNotificationEmails = getUniqueEmails(formSettings.selfEmailRecipients, ownerEmails)
 
     if (formSettings.enableEmailNotification && selfNotificationEmails.length > 0) {
       await this.mailService.submissionNotification(selfNotificationEmails, {
