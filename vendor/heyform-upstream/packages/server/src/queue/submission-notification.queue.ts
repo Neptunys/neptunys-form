@@ -15,11 +15,25 @@ import {
 
 import { BaseQueue, IntegrationQueueJob } from './base.queue'
 
-function renderNotificationLayout(title: string, body: string, footer?: string) {
+function renderNotificationLayout(
+  title: string,
+  body: string,
+  footer?: string,
+  branding?: {
+    workspaceName?: string
+    logoUrl?: string
+  }
+) {
+  const workspaceName = helper.isValid(branding?.workspaceName)
+    ? escapeHtml(String(branding!.workspaceName))
+    : ''
+  const logoUrl = helper.isValid(branding?.logoUrl) ? escapeHtml(String(branding!.logoUrl)) : ''
+
   return `
     <div style="font-family:Arial,sans-serif;background:#f6f8fb;padding:24px;">
       <div style="max-width:720px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
         <div style="padding:24px 24px 16px;border-bottom:1px solid #eef2f7;">
+          ${workspaceName ? `<div style="margin:0 0 12px;display:flex;align-items:center;gap:10px;color:#6b7280;font-size:12px;line-height:1.4;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;">${logoUrl ? `<img src="${logoUrl}" alt="${workspaceName} logo" style="display:block;width:28px;height:28px;border-radius:6px;object-fit:cover;border:1px solid #e5e7eb;" />` : ''}<span>${workspaceName}</span></div>` : ''}
           <h1 style="margin:0;font-size:22px;line-height:1.3;color:#111827;">${escapeHtml(title)}</h1>
         </div>
         <div style="padding:24px;color:#111827;font-size:14px;line-height:1.6;">
@@ -29,6 +43,28 @@ function renderNotificationLayout(title: string, body: string, footer?: string) 
       </div>
     </div>
   `
+}
+
+function resolveBrandingLogoUrl(rawLogo?: string) {
+  if (!helper.isValid(rawLogo)) {
+    return undefined
+  }
+
+  const logo = String(rawLogo).trim()
+
+  if (!logo) {
+    return undefined
+  }
+
+  if (/^https?:\/\//i.test(logo)) {
+    return logo
+  }
+
+  if (logo.startsWith('/')) {
+    return `${APP_HOMEPAGE_URL}${logo}`
+  }
+
+  return `${APP_HOMEPAGE_URL}/${logo}`
 }
 
 function getUniqueEmails(...groups: Array<string[] | undefined>) {
@@ -97,9 +133,11 @@ export class SubmissionNotificationQueue extends BaseQueue {
     )
     const formSettings = ((form.settings || {}) as Record<string, any>) || {}
     const payload = buildLeadCapturePayload(form, submission, team || undefined, project || undefined)
+    const workspaceName = helper.isValid(team?.clientName) ? team?.clientName : team?.name
+    const brandingLogoUrl = resolveBrandingLogoUrl((form.themeSettings as any)?.logo)
     const submissionLink = `${APP_HOMEPAGE_URL}/workspace/${form.teamId}/project/${form.projectId}/form/${form.id}/submissions`
     const values = buildLeadTemplateValues(payload, {
-      workspaceName: team?.name,
+      workspaceName,
       projectName: project?.name,
       submissionLink
     })
@@ -145,9 +183,12 @@ export class SubmissionNotificationQueue extends BaseQueue {
         subject,
         html: renderNotificationLayout(
           subject,
-          `${body}<div style="margin-top:20px;color:#6b7280;font-size:12px;">Reference: ${escapeHtml(
-            payload.submissionId
-          )}</div>`
+          body,
+          undefined,
+          {
+            workspaceName,
+            logoUrl: brandingLogoUrl
+          }
         )
       })
     }

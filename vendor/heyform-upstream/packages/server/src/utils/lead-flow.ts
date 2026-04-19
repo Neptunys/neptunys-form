@@ -25,12 +25,12 @@ const DEFAULT_LEAD_QUALITY_LABELS = {
   low: 'Low fit'
 }
 
-const DEFAULT_RESPONDENT_NOTIFICATION_SUBJECT = 'We received your submission for {formName}'
+const DEFAULT_RESPONDENT_NOTIFICATION_SUBJECT = 'We received your submission for {projectDisplayName}'
 const DEFAULT_RESPONDENT_NOTIFICATION_MESSAGE =
-  'Hi {respondentName},\n\nThanks for your submission to {formName}. We received it on {submittedAt}. A team member will review it and follow up if needed.'
-const DEFAULT_NEGATIVE_RESPONDENT_NOTIFICATION_SUBJECT = 'Your result for {formName}'
+  'Hi {respondentName},\n\nThanks for your submission to {projectDisplayName}. We received it on {submittedAt}. A team member will review it and follow up if needed.'
+const DEFAULT_NEGATIVE_RESPONDENT_NOTIFICATION_SUBJECT = 'Your result for {projectDisplayName}'
 const DEFAULT_NEGATIVE_RESPONDENT_NOTIFICATION_MESSAGE =
-  'Hi {respondentName},\n\nThanks for completing {formName}. Based on your answers, this result is negative right now. We recorded your submission on {submittedAt}.'
+  'Hi {respondentName},\n\nThanks for completing {projectDisplayName}. Based on your answers, this result is negative right now. We recorded your submission on {submittedAt}.'
 
 const NON_QUESTION_FIELD_KINDS = [
   FieldKindEnum.GROUP,
@@ -874,6 +874,11 @@ export function buildLeadTemplateValues(
   payload: LeadCapturePayload,
   extras?: Record<string, string | number | undefined>
 ) {
+  const projectDisplayName = normalizeString(payload.projectName) || payload.formName
+  const submittedAtDate = helper.isValid(payload.submittedAtIso)
+    ? String(payload.submittedAtIso).split('T')[0]
+    : undefined
+
   const values: Record<string, string | number | undefined> = {
     clientName: payload.clientName,
     formId: payload.formId,
@@ -881,11 +886,12 @@ export function buildLeadTemplateValues(
     quizName: payload.formName,
     projectId: payload.projectId,
     projectName: payload.projectName,
+    projectDisplayName,
     leadId: payload.submissionId,
     submissionId: payload.submissionId,
     userId: payload.userId,
     userIdSource: payload.userIdSource,
-    submittedAt: payload.submittedAtIso,
+    submittedAt: submittedAtDate,
     respondentName: payload.respondentName,
     respondentEmail: payload.respondentEmail,
     respondentPhone: payload.respondentPhone,

@@ -240,11 +240,25 @@ function formatTimestamp(value: number, timeZone: string, includeTime = false) {
   }).format(new Date(value * 1000))
 }
 
-function renderNotificationLayout(title: string, body: string, footer?: string) {
+function renderNotificationLayout(
+  title: string,
+  body: string,
+  footer?: string,
+  branding?: {
+    workspaceName?: string
+    logoUrl?: string
+  }
+) {
+  const workspaceName = helper.isValid(branding?.workspaceName)
+    ? escapeHtml(String(branding!.workspaceName))
+    : ''
+  const logoUrl = helper.isValid(branding?.logoUrl) ? escapeHtml(String(branding!.logoUrl)) : ''
+
   return `
     <div style="font-family:Arial,sans-serif;background:#f6f8fb;padding:24px;">
       <div style="max-width:720px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
         <div style="padding:24px 24px 16px;border-bottom:1px solid #eef2f7;">
+          ${workspaceName ? `<div style="margin:0 0 12px;display:flex;align-items:center;gap:10px;color:#6b7280;font-size:12px;line-height:1.4;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;">${logoUrl ? `<img src="${logoUrl}" alt="${workspaceName} logo" style="display:block;width:28px;height:28px;border-radius:6px;object-fit:cover;border:1px solid #e5e7eb;" />` : ''}<span>${workspaceName}</span></div>` : ''}
           <h1 style="margin:0;font-size:22px;line-height:1.3;color:#111827;">${escapeHtml(title)}</h1>
         </div>
         <div style="padding:24px;color:#111827;font-size:14px;line-height:1.6;">
@@ -256,6 +270,27 @@ function renderNotificationLayout(title: string, body: string, footer?: string) 
   `
 }
 
+function resolveBrandingLogoUrl(rawLogo?: string) {
+  if (!helper.isValid(rawLogo)) {
+    return undefined
+  }
+
+  const logo = String(rawLogo).trim()
+
+  if (!logo) {
+    return undefined
+  }
+
+  if (/^https?:\/\//i.test(logo)) {
+    return logo
+  }
+
+  if (logo.startsWith('/')) {
+    return `${APP_HOMEPAGE_URL}${logo}`
+  }
+
+  return `${APP_HOMEPAGE_URL}/${logo}`
+}
 function renderSummaryCell(label: string, value: string, caption?: string) {
   return `
     <td style="padding:0;vertical-align:top;">
@@ -404,7 +439,6 @@ function renderLeadReportEmail(options: {
   activityLogHtml?: string
   topFormsTable: string
   recentLeadsTable: string
-  workspaceUrl: string
 }) {
   return `
     <div style="font-family:Arial,sans-serif;background:#f6f8fb;padding:24px;">
@@ -428,9 +462,6 @@ function renderLeadReportEmail(options: {
           <div style="margin-top:28px;">
             <h2 style="margin:0 0 14px;color:#111827;font-size:18px;line-height:1.4;">Recent lead log</h2>
             ${options.recentLeadsTable}
-          </div>
-          <div style="margin-top:28px;">
-            <a href="${options.workspaceUrl}" style="display:inline-block;padding:11px 15px;background:#111827;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:600;">Open project</a>
           </div>
         </div>
       </div>
@@ -668,8 +699,7 @@ export class ProjectEmailService {
         metricGrid,
         activityLogHtml: activityLog,
         topFormsTable: renderTopForms(topForms),
-        recentLeadsTable: renderRecentLeads(recentLeads, timeZone),
-        workspaceUrl: `${APP_HOMEPAGE_URL}/workspace/${team.id}/project/${project.id}`
+        recentLeadsTable: renderRecentLeads(recentLeads, timeZone)
       })
     })
 
@@ -711,6 +741,8 @@ export class ProjectEmailService {
       workspaceName: team.name,
       projectName: project.name
     })
+    const workspaceName = helper.isValid(team.clientName) ? team.clientName : team.name
+    const brandingLogoUrl = resolveBrandingLogoUrl((activeForm?.themeSettings as any)?.logo)
     const respondentTemplates = resolveRespondentNotificationTemplates(payload, {
       subject: settings.respondentNotificationSubject,
       message: settings.respondentNotificationMessage,
@@ -730,15 +762,12 @@ export class ProjectEmailService {
       subject,
       html: renderNotificationLayout(
         subject,
-        `${body}<div style="margin-top:20px;color:#6b7280;font-size:12px;">Reference: ${escapeHtml(
-          payload.submissionId
-        )}</div>`,
-        [
-          helper.isValid(team.clientName) ? `Client: ${escapeHtml(team.clientName!)}` : undefined,
-          helper.isValid(project.name) ? `Project: ${escapeHtml(project.name)}` : undefined
-        ]
-          .filter(Boolean)
-          .join(' | ') || undefined
+        body,
+        undefined,
+        {
+          workspaceName,
+          logoUrl: brandingLogoUrl
+        }
       )
     })
   }
