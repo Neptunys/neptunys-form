@@ -440,10 +440,10 @@
   .heyform-thank-you {
     .heyform-block-title,
     .heyform-block-description {
-      @apply text-left;
+      @apply text-center;
 
       &:empty {
-        @apply text-left;
+        @apply text-center;
 
         &:before {
           @apply w-full;
@@ -456,7 +456,56 @@
     }
 
     .heyform-submit-container {
-      @apply mt-0;
+      @apply mt-0 w-full items-center justify-center;
+    }
+  }
+
+  .heyform-submit-with-helper {
+    @apply flex-col gap-10;
+  }
+
+  .heyform-welcome-align-left {
+    .heyform-block-title,
+    .heyform-block-description {
+      @apply text-left;
+    }
+
+    .heyform-block-title-row {
+      @apply justify-start;
+    }
+
+    .heyform-submit-container {
+      @apply items-start justify-start;
+    }
+  }
+
+  .heyform-welcome-align-center {
+    .heyform-block-title,
+    .heyform-block-description {
+      @apply text-center;
+    }
+
+    .heyform-block-title-row {
+      @apply justify-center;
+    }
+
+    .heyform-submit-container {
+      @apply items-center justify-center;
+    }
+  }
+
+  .heyform-welcome-align-right {
+    .heyform-block-title,
+    .heyform-block-description {
+      @apply text-right;
+    }
+
+    .heyform-block-title-row {
+      @apply justify-end;
+    }
+
+    .heyform-submit-container {
+      @apply items-end justify-end;
     }
   }
 

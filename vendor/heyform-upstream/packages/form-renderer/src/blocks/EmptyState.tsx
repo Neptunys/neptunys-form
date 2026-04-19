@@ -1,6 +1,6 @@
 import type { FormField } from '@heyform-inc/shared-types-enums'
 import clsx from 'clsx'
-import type { FC } from 'react'
+import type { CSSProperties, FC } from 'react'
 
 import { useKey, useTranslation } from '../utils'
 
@@ -14,6 +14,8 @@ interface EmptyStateProps extends Omit<BlockProps, 'field'> {
 
 export const EmptyState: FC<EmptyStateProps> = ({ className, field, onClick, ...restProps }) => {
   const { t } = useTranslation()
+  const buttonSubtext = field.properties?.buttonSubtext
+  const hasDescription = typeof buttonSubtext === 'string' && buttonSubtext.trim().length > 0
 
   useKey('Enter', onClick)
 
@@ -29,17 +31,20 @@ export const EmptyState: FC<EmptyStateProps> = ({ className, field, onClick, ...
       style={{
         '--heyform-welcome-title-size-px':
           typeof field.layout?.titleSizePx === 'number' ? `${field.layout.titleSizePx}px` : undefined
-      }}
+      } as CSSProperties}
       field={field as FormField}
       isScrollable={false}
       {...restProps}
     >
       <Submit
-        className={field.properties?.buttonSubtext ? 'heyform-submit-with-helper' : undefined}
+        className={hasDescription ? 'heyform-submit-with-helper' : undefined}
         text={field.properties?.buttonText || t('Next')}
         helper={
-          field.properties?.buttonSubtext ? (
-            <div className="heyform-block-description">{field.properties.buttonSubtext}</div>
+          hasDescription ? (
+            <div
+              className="heyform-block-description"
+              dangerouslySetInnerHTML={{ __html: buttonSubtext as string }}
+            />
           ) : undefined
         }
         onClick={onClick}

@@ -1,5 +1,5 @@
 import { FieldKindEnum } from '@heyform-inc/shared-types-enums'
-import { startTransition, useCallback, useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Input } from '@/components'
@@ -28,48 +28,46 @@ export default function StatementSettings({ field }: RequiredSettingsProps) {
 
   const handleChange = useCallback(
     (key: string, value: any) => {
-      startTransition(() => {
-        dispatch({
-          type: 'updateField',
-          payload: {
-            id: field.id,
-            updates: {
-              properties: {
-                ...field.properties,
-                [key]: value
-              }
+      dispatch({
+        type: 'updateField',
+        payload: {
+          id: field.id,
+          updates: {
+            properties: {
+              ...field.properties,
+              [key]: value
             }
           }
-        })
+        }
       })
     },
     [dispatch, field]
   )
   return (
-    <div className="space-y-1">
-      <label className="text-sm/6" htmlFor="#">
-        {t('form.builder.settings.buttonText')}
-      </label>
+    <div className="space-y-4">
+      <div className="space-y-1">
+        <label className="text-sm/6" htmlFor="#">
+          {t('form.builder.settings.buttonText')}
+        </label>
 
-      <Input
-        maxLength={24}
-        value={buttonText}
-        onChange={value => handleChange('buttonText', value)}
-      />
+        <Input
+          maxLength={24}
+          value={buttonText}
+          onChange={value => handleChange('buttonText', value)}
+        />
+      </div>
 
-      {field.kind === FieldKindEnum.WELCOME && (
-        <>
-          <label className="text-sm/6" htmlFor="#">
-            CTA subtitle
-          </label>
+      <div className="space-y-1">
+        <label className="text-sm/6" htmlFor="#">
+          {t('Button helper text')}
+        </label>
 
-          <Input
-            maxLength={120}
-            value={field.properties?.buttonSubtext || ''}
-            onChange={value => handleChange('buttonSubtext', value)}
-          />
-        </>
-      )}
+        <Input
+          maxLength={120}
+          value={field.properties?.buttonSubtext || ''}
+          onChange={value => handleChange('buttonSubtext', value)}
+        />
+      </div>
     </div>
   )
 }

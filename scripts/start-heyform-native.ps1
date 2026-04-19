@@ -39,13 +39,13 @@ if ($null -ne $preferredWebappListener) {
   }
 }
 
-$homepageUrl = "http://127.0.0.1:$webappPort"
+$homepageUrl = "http://localhost:$webappPort"
 
 $serverEnv = @"
 APP_LISTEN_HOSTNAME=127.0.0.1
 APP_LISTEN_PORT=9157
 APP_HOMEPAGE_URL=$homepageUrl
-COOKIE_DOMAIN=127.0.0.1
+COOKIE_DOMAIN=localhost
 ENABLE_GOOGLE_FONTS=false
 SESSION_MAX_AGE=15d
 SESSION_KEY=local-dev-session-key-change-me
@@ -91,7 +91,7 @@ OPENAI_API_KEY=
 
 $webappEnv = @"
 VITE_HOMEPAGE_URL=$homepageUrl
-VITE_COOKIE_DOMAIN=127.0.0.1
+VITE_COOKIE_DOMAIN=localhost
 VITE_COOKIE_DOMAIN_REWRITE=127.0.0.1
 VITE_PROXY_TARGET=http://127.0.0.1:9157
 VITE_GRAPHQL_API_URL=/graphql
@@ -140,8 +140,69 @@ if ((Get-Service Redis).Status -ne 'Running') {
   Start-Service Redis
 }
 
-if (-not (Get-Process mongod -ErrorAction SilentlyContinue)) {
-  throw 'mongod is not running. Start MongoDB before running this script.'
+function Test-MongoListener {
+  return $null -ne (Get-NetTCPConnection -LocalPort 27017 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1)
+}
+
+function Get-MongodPathFromService {
+  $mongoService = Get-CimInstance Win32_Service -Filter "Name='MongoDB'" -ErrorAction SilentlyContinue
+
+  if ($null -eq $mongoService -or [string]::IsNullOrWhiteSpace($mongoService.PathName)) {
+    return $null
+  }
+
+  if ($mongoService.PathName -match '"([^"]*mongod\.exe)"') {
+    return $matches[1]
+  }
+
+  $servicePath = $mongoService.PathName.Split(' ')[0]
+  if ($servicePath -like '*mongod.exe*') {
+    return $servicePath
+  }
+
+  return $null
+}
+
+if (-not (Test-MongoListener)) {
+  $mongoService = Get-Service -Name MongoDB -ErrorAction SilentlyContinue
+
+  if ($null -ne $mongoService -and $mongoService.Status -ne 'Running') {
+    try {
+      Start-Service MongoDB
+    }
+    catch {
+      Write-Host 'MongoDB service start failed; falling back to manual mongod startup.'
+    }
+  }
+}
+
+if (-not (Test-MongoListener)) {
+  $mongodPath = Get-MongodPathFromService
+  if ([string]::IsNullOrWhiteSpace($mongodPath)) {
+    $mongodCmd = Get-Command mongod -ErrorAction SilentlyContinue
+    $mongodPath = $mongodCmd.Source
+  }
+
+  if ([string]::IsNullOrWhiteSpace($mongodPath) -or -not (Test-Path $mongodPath)) {
+    throw 'MongoDB is not running and mongod executable could not be found. Install/start MongoDB first.'
+  }
+
+  $fallbackDbPath = 'D:\MongoDB\data\db'
+  $fallbackLogPath = 'D:\MongoDB\log\mongod.log'
+
+  New-Item -ItemType Directory -Force -Path $fallbackDbPath | Out-Null
+  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $fallbackLogPath) | Out-Null
+
+  Start-Process -FilePath $mongodPath -ArgumentList @(
+    '--dbpath', $fallbackDbPath,
+    '--logpath', $fallbackLogPath,
+    '--bind_ip', '127.0.0.1',
+    '--port', '27017'
+  ) | Out-Null
+}
+
+if (-not (Test-MongoListener)) {
+  throw 'MongoDB is not listening on 127.0.0.1:27017 after startup attempts.'
 }
 
 $processSpecs = @(
