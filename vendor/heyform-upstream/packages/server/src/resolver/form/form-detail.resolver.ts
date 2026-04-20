@@ -9,7 +9,7 @@ import {
   PublicRouteType
 } from '@graphql'
 import { date, helper } from '@heyform-inc/utils'
-import { FormModel, IntegrationStatusEnum, TeamModel } from '@model'
+import { FormModel, IntegrationStatusEnum, TeamModel, normalizeIntegrationStatus } from '@model'
 import { Args, Context, Query, Resolver } from '@nestjs/graphql'
 import {
   ExperimentService,
@@ -20,6 +20,18 @@ import {
 } from '@service'
 
 const DEFAULT_FORM_NAME = 'Untitled'
+
+function getIntegrationConfigValue(config: unknown, key: string): unknown {
+  if (!config || typeof config !== 'object') {
+    return undefined
+  }
+
+  if (typeof (config as Map<string, unknown>).get === 'function') {
+    return (config as Map<string, unknown>).get(key)
+  }
+
+  return (config as Record<string, unknown>)[key]
+}
 
 @Resolver()
 @Auth()
@@ -88,30 +100,32 @@ export class PublicFormResolver {
       ])
 
       for (const row of rows) {
-        if (row.status !== IntegrationStatusEnum.ACTIVE) {
+        if (normalizeIntegrationStatus(row.status) !== IntegrationStatusEnum.ACTIVE) {
           continue
         }
 
         switch (row.appId) {
           case 'googleanalytics4':
-            if (helper.isValid(row.config?.measurementId)) {
-              integrations.googleanalytics4 = row.config.measurementId
+            const measurementId = String(getIntegrationConfigValue(row.config, 'measurementId') || '').trim()
+
+            if (helper.isValid(measurementId)) {
+              integrations.googleanalytics4 = measurementId
             }
             break
 
           case 'googletagmanager':
-            if (helper.isValid(row.config?.containerId)) {
-              integrations.googletagmanager = row.config.containerId
+            const containerId = String(getIntegrationConfigValue(row.config, 'containerId') || '').trim()
+
+            if (helper.isValid(containerId)) {
+              integrations.googletagmanager = containerId
             }
             break
 
           case 'metapixel':
-            if (helper.isValid(row.config?.pixelId)) {
-              const pixelId = String(row.config.pixelId).trim()
+            const pixelId = String(getIntegrationConfigValue(row.config, 'pixelId') || '').trim()
 
-              if (helper.isValid(pixelId)) {
-                integrations.metapixel = pixelId
-              }
+            if (helper.isValid(pixelId)) {
+              integrations.metapixel = pixelId
             }
             break
         }
