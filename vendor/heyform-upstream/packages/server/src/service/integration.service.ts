@@ -6,7 +6,12 @@ import { Model } from 'mongoose'
 import * as apps from 'src/apps'
 
 import { helper } from '@heyform-inc/utils'
-import { FormModel, IntegrationModel, IntegrationStatusEnum } from '@model'
+import {
+  FormModel,
+  IntegrationModel,
+  IntegrationStatusEnum,
+  normalizeIntegrationStatus
+} from '@model'
 
 import { ProjectService } from './project.service'
 import { TeamService } from './team.service'
@@ -47,30 +52,7 @@ export class IntegrationService {
   }
 
   private normalizeStatus(status: unknown): IntegrationStatusEnum | undefined {
-    if (typeof status === 'number') {
-      return Object.values(IntegrationStatusEnum).includes(status)
-        ? (status as IntegrationStatusEnum)
-        : undefined
-    }
-
-    if (typeof status !== 'string') {
-      return undefined
-    }
-
-    const normalized = status.trim().toUpperCase()
-
-    if (!normalized) {
-      return undefined
-    }
-
-    const numeric = Number(normalized)
-
-    if (!Number.isNaN(numeric) && Object.values(IntegrationStatusEnum).includes(numeric)) {
-      return numeric as IntegrationStatusEnum
-    }
-
-    const enumValue = IntegrationStatusEnum[normalized as keyof typeof IntegrationStatusEnum]
-    return typeof enumValue === 'number' ? enumValue : undefined
+    return normalizeIntegrationStatus(status)
   }
 
   private normalizeUpdates(updates?: Record<string, any>): Record<string, any> {

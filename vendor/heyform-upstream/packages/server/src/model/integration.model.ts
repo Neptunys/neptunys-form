@@ -7,6 +7,35 @@ export enum IntegrationStatusEnum {
   DISABLED = 2
 }
 
+export const INTEGRATION_STATUS_VALUES = Object.values(IntegrationStatusEnum).filter(
+  (value): value is IntegrationStatusEnum => typeof value === 'number'
+)
+
+export function normalizeIntegrationStatus(status: unknown): IntegrationStatusEnum | undefined {
+  if (typeof status === 'number') {
+    return INTEGRATION_STATUS_VALUES.includes(status) ? status : undefined
+  }
+
+  if (typeof status !== 'string') {
+    return undefined
+  }
+
+  const normalized = status.trim().toUpperCase()
+
+  if (!normalized) {
+    return undefined
+  }
+
+  const numeric = Number(normalized)
+
+  if (!Number.isNaN(numeric) && INTEGRATION_STATUS_VALUES.includes(numeric as IntegrationStatusEnum)) {
+    return numeric as IntegrationStatusEnum
+  }
+
+  const enumValue = IntegrationStatusEnum[normalized as keyof typeof IntegrationStatusEnum]
+  return typeof enumValue === 'number' ? enumValue : undefined
+}
+
 @Schema({
   timestamps: true
 })
@@ -26,7 +55,8 @@ export class IntegrationModel extends Document {
   @Prop({
     type: Number,
     required: true,
-    enum: Object.values(IntegrationStatusEnum),
+    enum: INTEGRATION_STATUS_VALUES,
+    set: (value: unknown) => normalizeIntegrationStatus(value) ?? value,
     default: IntegrationStatusEnum.ACTIVE
   })
   status: IntegrationStatusEnum
