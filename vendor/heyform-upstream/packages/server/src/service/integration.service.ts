@@ -46,23 +46,71 @@ export class IntegrationService {
     })
   }
 
+  private normalizeStatus(status: unknown): IntegrationStatusEnum | undefined {
+    if (typeof status === 'number') {
+      return Object.values(IntegrationStatusEnum).includes(status)
+        ? (status as IntegrationStatusEnum)
+        : undefined
+    }
+
+    if (typeof status !== 'string') {
+      return undefined
+    }
+
+    const normalized = status.trim().toUpperCase()
+
+    if (!normalized) {
+      return undefined
+    }
+
+    const numeric = Number(normalized)
+
+    if (!Number.isNaN(numeric) && Object.values(IntegrationStatusEnum).includes(numeric)) {
+      return numeric as IntegrationStatusEnum
+    }
+
+    const enumValue = IntegrationStatusEnum[normalized as keyof typeof IntegrationStatusEnum]
+    return typeof enumValue === 'number' ? enumValue : undefined
+  }
+
+  private normalizeUpdates(updates?: Record<string, any>): Record<string, any> {
+    if (!updates) {
+      return {}
+    }
+
+    const normalizedUpdates = { ...updates }
+
+    if (Object.prototype.hasOwnProperty.call(normalizedUpdates, 'status')) {
+      const normalizedStatus = this.normalizeStatus(normalizedUpdates.status)
+
+      if (normalizedStatus !== undefined) {
+        normalizedUpdates.status = normalizedStatus
+      }
+    }
+
+    return normalizedUpdates
+  }
+
   async create(integration: IntegrationModel | any): Promise<string | undefined> {
-    const result = await this.integrationModel.create(integration as any)
+    const result = await this.integrationModel.create(this.normalizeUpdates(integration as any) as any)
     return result.id
   }
 
   async update(id: string, updates: Record<string, any>): Promise<any> {
+    const normalizedUpdates = this.normalizeUpdates(updates)
+
     const result = await this.integrationModel.updateOne(
       {
         _id: id
       },
-      updates
+      normalizedUpdates
     )
     return result.acknowledged
   }
 
   async updateAllBy(conditions: Record<string, any>, updates: Record<string, any>): Promise<any> {
-    const result = await this.integrationModel.updateMany(conditions, updates)
+    const normalizedUpdates = this.normalizeUpdates(updates)
+    const result = await this.integrationModel.updateMany(conditions, normalizedUpdates)
     return result.matchedCount > 0
   }
 
@@ -71,17 +119,18 @@ export class IntegrationService {
     appId: string,
     updates: Partial<IntegrationModel>
   ): Promise<string> {
+    const normalizedUpdates = this.normalizeUpdates(updates as Record<string, any>)
     const integration = await this.findOne(formId, appId)
 
     if (integration) {
-      await this.update(integration.id, updates)
+      await this.update(integration.id, normalizedUpdates)
       return integration.id
     }
 
     return this.create({
       formId,
       appId,
-      ...updates
+      ...normalizedUpdates
     })
   }
 
