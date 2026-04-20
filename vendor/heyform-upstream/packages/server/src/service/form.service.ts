@@ -619,26 +619,30 @@ export class FormService {
   public async findPublicForm(formId: string): Promise<Record<string, any> | undefined> {
     const form = await this.findById(formId)
 
-    if (!form || !form.settings.active) {
+    if (!form) {
+      return undefined
+    }
+
+    if (!form.settings?.active) {
       return {
         id: formId,
-        teamId: form?.teamId,
-        projectId: form?.projectId,
-        memberId: form?.memberId,
-        name: form?.name,
-        slug: form?.slug,
-        isDomainRoot: form?.isDomainRoot,
+        teamId: form.teamId,
+        projectId: form.projectId,
+        memberId: form.memberId,
+        name: form.name,
+        slug: form.slug,
+        isDomainRoot: form.isDomainRoot,
         fields: [],
         hiddenFields: [],
         settings: {
           active: false,
-          ...pickObject(form?.settings || {}, [
+          ...pickObject(form.settings || {}, [
             'enableClosedMessage',
             'closedFormTitle',
             'closedFormDescription'
           ])
         },
-        themeSettings: form?.themeSettings
+        themeSettings: form.themeSettings
       }
     }
 

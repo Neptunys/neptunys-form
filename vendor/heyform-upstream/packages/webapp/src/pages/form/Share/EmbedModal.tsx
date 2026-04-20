@@ -352,6 +352,7 @@ const EmbedComponent = () => {
 
       return [...prev, `${name}="${embedConfig[key]}"`]
     }, [] as string[])
+    const containerId = `heyform-embed-${formId}-${embedType}`
 
     const publicUrl = buildPublicFormUrl({
       sharingURLPrefix,
@@ -362,13 +363,82 @@ const EmbedComponent = () => {
     })
 
     return `<div
+	id="${containerId}"
 	data-heyform-id="${formId}"
 	data-heyform-type="${embedType}"
 	data-heyform-custom-url="${publicUrl}"
+	data-heyform-hiddenfield-heyform_meta_bridge="1"
 	${attributes.join('\n\t')}
 >
   ${embedType === 'modal' ? `<button class="heyform__trigger-button" type="button" onclick="HeyForm.openModal('${formId}Modal')">${embedConfig.triggerText}</button>` : ''}
 </div>
+<script>
+  (function () {
+    var container = document.getElementById(${JSON.stringify(containerId)});
+
+    if (!container) {
+      return;
+    }
+
+    var urlParams = new URLSearchParams(window.location.search);
+    urlParams.forEach(function (value, key) {
+      var attrName = 'data-heyform-hiddenfield-' + key;
+
+      if (!container.hasAttribute(attrName)) {
+        container.setAttribute(attrName, value);
+      }
+    });
+
+    var bridge = (window.__HEYFORM_META_BRIDGE__ = window.__HEYFORM_META_BRIDGE__ || {
+      initializedPixels: {},
+      installed: false
+    });
+
+    if (bridge.installed) {
+      return;
+    }
+
+    bridge.installed = true;
+    window.addEventListener('message', function (event) {
+      var data = event.data;
+
+      if (!data || data.source !== 'HEYFORM' || typeof data.eventName !== 'string') {
+        return;
+      }
+
+      var payload = data.payload && typeof data.payload === 'object' ? data.payload : {};
+
+      window.dispatchEvent(
+        new CustomEvent('heyform:event', {
+          detail: {
+            eventName: data.eventName,
+            payload: payload
+          }
+        })
+      );
+
+      if (typeof window.fbq !== 'function' || !payload.metaPixelEnabled) {
+        return;
+      }
+
+      var pixelId = typeof payload.metaPixelId === 'string' ? payload.metaPixelId.trim() : '';
+
+      if (pixelId && !bridge.initializedPixels[pixelId]) {
+        window.fbq('set', 'autoConfig', false, pixelId);
+        window.fbq('init', pixelId);
+        bridge.initializedPixels[pixelId] = true;
+      }
+
+      if (data.eventName === 'FORM_OPENED') {
+        window.fbq('trackCustom', 'Quizview', payload);
+      }
+
+      if (data.eventName === 'FORM_SUBMITTED') {
+        window.fbq('track', 'Lead', payload);
+      }
+    });
+  })();
+</script>
 <script src="https://www.unpkg.com/@heyform-inc/embed@latest/dist/index.umd.js"></script>
 `
   }, [embedConfig, embedType, form?.isDomainRoot, form?.slug, formId, sharingURLPrefix, workspace?.customDomain])

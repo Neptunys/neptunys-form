@@ -77,6 +77,54 @@ function normalizeMetaPixelId(value?: unknown): string | undefined {
   return matched?.[0] || normalized
 }
 
+function getQueryValue(query: Record<string, Any>, key: string): string | undefined {
+  const value = query[key]
+
+  if (Array.isArray(value)) {
+    const match = value.find(item => helper.isValid(item))
+    return helper.isValid(match) ? String(match) : undefined
+  }
+
+  return helper.isValid(value) ? String(value) : undefined
+}
+
+function getReferrerSearchParams(): URLSearchParams | undefined {
+  if (!helper.isValid(document.referrer)) {
+    return undefined
+  }
+
+  try {
+    return new URL(document.referrer).searchParams
+  } catch {
+    return undefined
+  }
+}
+
+function isMetaPixelBridgeEnabled(query: Record<string, Any>): boolean {
+  const value = query.heyform_meta_bridge
+
+  if (Array.isArray(value)) {
+    return value.some(item => ['1', 'true'].includes(String(item).toLowerCase()))
+  }
+
+  return ['1', 'true'].includes(String(value).toLowerCase())
+}
+
+function buildTrackingPayload(
+  form: FormModel & { integrations?: Record<string, string> },
+  extraPayload?: Record<string, Any>
+) {
+  const metaPixelId = normalizeMetaPixelId(form.integrations?.metapixel)
+
+  return {
+    formId: form.id,
+    formName: form.name,
+    metaPixelEnabled: !!metaPixelId,
+    metaPixelId,
+    ...extraPayload
+  }
+}
+
 function ensureGa4(measurementId?: string) {
   const normalizedMeasurementId = normalizeTrackingId(measurementId)
 
@@ -163,6 +211,7 @@ function ensureMetaPixel(pixelId?: string) {
   }
 
   if (!registry.meta.has(normalizedPixelId)) {
+    win.fbq('set', 'autoConfig', false, normalizedPixelId)
     win.fbq('init', normalizedPixelId)
     registry.meta.add(normalizedPixelId)
   }
@@ -171,15 +220,14 @@ function ensureMetaPixel(pixelId?: string) {
 function trackPublicEvent(
   form: FormModel & { integrations?: Record<string, string> },
   eventName: 'heyform_view' | 'heyform_lead' | 'heyform_submit',
-  extraPayload?: Record<string, Any>
+  extraPayload?: Record<string, Any>,
+  options?: {
+    bridgeMetaPixel?: boolean
+  }
 ) {
   const win = window as Any
   const hasMetaPixel = !!normalizeMetaPixelId(form.integrations?.metapixel)
-  const payload = {
-    formId: form.id,
-    formName: form.name,
-    ...extraPayload
-  }
+  const payload = buildTrackingPayload(form, extraPayload)
 
   if (form.integrations?.googleanalytics4 && typeof win.gtag === 'function') {
     if (eventName === 'heyform_lead') {
@@ -203,16 +251,14 @@ function trackPublicEvent(
     })
   }
 
-  if (hasMetaPixel && typeof win.fbq === 'function') {
+  if (hasMetaPixel && !options?.bridgeMetaPixel && typeof win.fbq === 'function') {
     if (eventName === 'heyform_view') {
-      win.fbq('track', 'PageView')
+      win.fbq('trackCustom', 'Quizview', payload)
     }
 
-    if (eventName === 'heyform_lead') {
-      win.fbq('track', 'Lead')
+    if (eventName === 'heyform_submit') {
+      win.fbq('track', 'Lead', payload)
     }
-
-    win.fbq('trackCustom', eventName, payload)
   }
 }
 
@@ -245,6 +291,11 @@ export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId, ex
     >
   >({})
   const [isPasswordChecked, setIsPasswordChecked] = useState(false)
+  const metaPixelBridgeEnabled = isMetaPixelBridgeEnabled(query)
+
+  function buildEmbedEventPayload(extraPayload?: Record<string, Any>) {
+    return buildTrackingPayload(form, extraPayload)
+  }
 
   function getSessionMetrics() {
     return Object.values(questionMetricsRef.current).sort((left, right) => left.order - right.order)
@@ -422,7 +473,7 @@ export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId, ex
   }
 
   async function openForm() {
-    sendMessageToParent('FORM_OPENED')
+    sendMessageToParent('FORM_OPENED', buildEmbedEventPayload())
     const input = {
       formId: form.id,
       experimentId,
@@ -457,9 +508,12 @@ export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId, ex
   }
 
   function buildHiddenFieldAnswers(): HiddenFieldAnswer[] {
+    const referrerSearchParams = getReferrerSearchParams()
+
     return (form.hiddenFields || [])
       .map(field => {
-        const value = query[field.name]
+        const value =
+          getQueryValue(query, field.name) || referrerSearchParams?.get(field.name) || undefined
 
         if (helper.isValid(value)) {
           return {
@@ -479,6 +533,8 @@ export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId, ex
     leadTrackedRef.current = true
     trackPublicEvent(form, 'heyform_lead', {
       leadTrigger: trigger
+    }, {
+      bridgeMetaPixel: metaPixelBridgeEnabled
     })
   }
 
@@ -555,8 +611,10 @@ export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId, ex
         trackLeadEventOnce('submit')
       }
 
-      sendMessageToParent('FORM_SUBMITTED')
-      trackPublicEvent(form, 'heyform_submit')
+      sendMessageToParent('FORM_SUBMITTED', buildEmbedEventPayload())
+      trackPublicEvent(form, 'heyform_submit', undefined, {
+        bridgeMetaPixel: metaPixelBridgeEnabled
+      })
     } catch (err: Any) {
       /**
        * Throw error to let Renderer knows that there was an error.
@@ -571,7 +629,7 @@ export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId, ex
   }
 
   useEffect(() => {
-    sendMessageToParent('FORM_LOADED')
+    sendMessageToParent('FORM_LOADED', buildEmbedEventPayload())
 
     if (hasInitializedRef.current) {
       return
@@ -582,8 +640,13 @@ export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId, ex
     if (!form.suspended && form.settings?.active) {
       ensureGa4(form.integrations?.googleanalytics4)
       ensureGtm(form.integrations?.googletagmanager)
-      ensureMetaPixel(form.integrations?.metapixel)
-      trackPublicEvent(form, 'heyform_view')
+      if (!metaPixelBridgeEnabled) {
+        ensureMetaPixel(form.integrations?.metapixel)
+      }
+
+      trackPublicEvent(form, 'heyform_view', undefined, {
+        bridgeMetaPixel: metaPixelBridgeEnabled
+      })
       void openForm().catch(console.error)
       initCaptcha().catch(console.error)
     }

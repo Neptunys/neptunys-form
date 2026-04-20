@@ -1,5 +1,7 @@
 import { getConfigs } from './config'
-import { logger } from './utils'
+import { isPlainObject, logger } from './utils'
+
+import { AnyMap } from './type'
 
 import { FullPage } from './full-page'
 import { Modal } from './modal'
@@ -9,6 +11,75 @@ import './style.scss'
 
 const loaded = new Set<string>()
 const instances = new Map<string, Modal<any> | Popup<any>>()
+const initializedMetaPixels = new Set<string>()
+let messageBridgeInstalled = false
+
+function getEventPayload(data: AnyMap): AnyMap {
+  return isPlainObject(data.payload) ? (data.payload as AnyMap) : {}
+}
+
+function dispatchHeyformEvent(eventName: string, payload: AnyMap) {
+  window.dispatchEvent(
+    new CustomEvent('heyform:event', {
+      detail: {
+        eventName,
+        payload
+      }
+    })
+  )
+}
+
+function bridgeMetaPixel(eventName: string, payload: AnyMap) {
+  if (!payload.metaPixelEnabled) {
+    return
+  }
+
+  const win = window as Window & {
+    fbq?: (...args: any[]) => void
+  }
+
+  if (typeof win.fbq !== 'function') {
+    return
+  }
+
+  if (typeof payload.metaPixelId === 'string' && payload.metaPixelId.trim()) {
+    const metaPixelId = payload.metaPixelId.trim()
+
+    if (!initializedMetaPixels.has(metaPixelId)) {
+      win.fbq('set', 'autoConfig', false, metaPixelId)
+      win.fbq('init', metaPixelId)
+      initializedMetaPixels.add(metaPixelId)
+    }
+  }
+
+  switch (eventName) {
+    case 'FORM_OPENED':
+      win.fbq('trackCustom', 'Quizview', payload)
+      break
+
+    case 'FORM_SUBMITTED':
+      win.fbq('track', 'Lead', payload)
+      break
+  }
+}
+
+function installMessageBridge() {
+  if (messageBridgeInstalled) {
+    return
+  }
+
+  messageBridgeInstalled = true
+  window.addEventListener('message', ({ data }: MessageEvent) => {
+    if (!isPlainObject(data) || data.source !== 'HEYFORM' || typeof data.eventName !== 'string') {
+      return
+    }
+
+    const payload = getEventPayload(data)
+
+    dispatchHeyformEvent(data.eventName, payload)
+    bridgeMetaPixel(data.eventName, payload)
+  })
+}
 
 function main() {
   try {
@@ -75,6 +146,10 @@ export const togglePopup = (formId: string) => toggle(formId, 'popup')
 
 // Import the library after the element
 main()
+installMessageBridge()
 
 // Import the library before the element
-window.addEventListener('DOMContentLoaded', main)
+window.addEventListener('DOMContentLoaded', () => {
+  installMessageBridge()
+  main()
+})

@@ -1,7 +1,7 @@
-import { Dom, buildUrl, isMobile } from './utils'
+import { Dom, buildUrl, getWindowQueryParams, isMobile } from './utils'
 
 import IconLoading from './assets/icon-loading.svg'
-import { EmbedConfig, StandardSettings } from './type'
+import { AnyMap, EmbedConfig, StandardSettings } from './type'
 
 const STANDARD_TEMPLATE = `
 <div class="heyform__iframe-container">
@@ -19,10 +19,14 @@ export class Standard<T extends StandardSettings> {
 
   constructor(config: EmbedConfig<T>) {
     const { formId, type, container, settings, hiddenFields } = config
+    const iframeSettings = settings as AnyMap
 
     this.formUrl = buildUrl(settings.customUrl.replace(/\/+$/, `/${formId}?`), {
-      ...settings,
-      ...hiddenFields
+      ...getWindowQueryParams(),
+      ...hiddenFields,
+      heyform_meta_bridge: '1',
+      transparentBackground: iframeSettings.transparentBackground,
+      hideAfterSubmit: iframeSettings.hideAfterSubmit
     })
 
     container.addClass('heyform__embed')

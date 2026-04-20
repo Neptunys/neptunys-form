@@ -66,10 +66,42 @@ export function buildUrl(url: string, params: AnyMap) {
   const searchParams = new URLSearchParams()
 
   for (const key in params) {
-    searchParams.append(key, params[key])
+    const value = params[key]
+
+    if (value === undefined || value === null || value === '') {
+      continue
+    }
+
+    if (isArray(value)) {
+      value.forEach(entry => {
+        if (entry !== undefined && entry !== null && entry !== '') {
+          searchParams.append(key, String(entry))
+        }
+      })
+      continue
+    }
+
+    searchParams.append(key, String(value))
+  }
+
+  if (!searchParams.toString()) {
+    return url
   }
 
   return url + (url.includes('?') ? '&' : '?') + searchParams.toString()
+}
+
+export function getWindowQueryParams() {
+  const queryParams: AnyMap = {}
+  const searchParams = new URLSearchParams(window.location.search)
+
+  searchParams.forEach((value, key) => {
+    if (!(key in queryParams)) {
+      queryParams[key] = value
+    }
+  })
+
+  return queryParams
 }
 
 export function colorIsDark(color: string) {
