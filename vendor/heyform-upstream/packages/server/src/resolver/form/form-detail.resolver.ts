@@ -107,7 +107,11 @@ export class PublicFormResolver {
 
           case 'metapixel':
             if (helper.isValid(row.config?.pixelId)) {
-              integrations.metapixel = row.config.pixelId
+              const pixelId = String(row.config.pixelId).trim()
+
+              if (helper.isValid(pixelId)) {
+                integrations.metapixel = pixelId
+              }
             }
             break
         }

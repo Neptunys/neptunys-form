@@ -51,8 +51,36 @@ function getTrackingRegistry() {
   }
 }
 
+function normalizeTrackingId(value?: unknown): string | undefined {
+  if (helper.isNil(value)) {
+    return
+  }
+
+  const normalized = String(value).trim()
+
+  if (!normalized) {
+    return
+  }
+
+  return normalized
+}
+
+function normalizeMetaPixelId(value?: unknown): string | undefined {
+  const normalized = normalizeTrackingId(value)
+
+  if (!normalized) {
+    return
+  }
+
+  const matched = normalized.match(/\d{5,}/)
+
+  return matched?.[0] || normalized
+}
+
 function ensureGa4(measurementId?: string) {
-  if (!measurementId) {
+  const normalizedMeasurementId = normalizeTrackingId(measurementId)
+
+  if (!normalizedMeasurementId) {
     return
   }
 
@@ -70,19 +98,21 @@ function ensureGa4(measurementId?: string) {
     const script = document.createElement('script')
     script.id = 'heyform-ga4-sdk'
     script.async = true
-    script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${normalizedMeasurementId}`
     document.head.appendChild(script)
     win.gtag('js', new Date())
   }
 
-  if (!registry.ga4.has(measurementId)) {
-    win.gtag('config', measurementId)
-    registry.ga4.add(measurementId)
+  if (!registry.ga4.has(normalizedMeasurementId)) {
+    win.gtag('config', normalizedMeasurementId)
+    registry.ga4.add(normalizedMeasurementId)
   }
 }
 
 function ensureGtm(containerId?: string) {
-  if (!containerId) {
+  const normalizedContainerId = normalizeTrackingId(containerId)
+
+  if (!normalizedContainerId) {
     return
   }
 
@@ -90,7 +120,7 @@ function ensureGtm(containerId?: string) {
   const win = window as Any
   win.dataLayer = win.dataLayer || []
 
-  if (registry.gtm.has(containerId)) {
+  if (registry.gtm.has(normalizedContainerId)) {
     return
   }
 
@@ -101,13 +131,15 @@ function ensureGtm(containerId?: string) {
 
   const script = document.createElement('script')
   script.async = true
-  script.src = `https://www.googletagmanager.com/gtm.js?id=${containerId}`
+  script.src = `https://www.googletagmanager.com/gtm.js?id=${normalizedContainerId}`
   document.head.appendChild(script)
-  registry.gtm.add(containerId)
+  registry.gtm.add(normalizedContainerId)
 }
 
 function ensureMetaPixel(pixelId?: string) {
-  if (!pixelId) {
+  const normalizedPixelId = normalizeMetaPixelId(pixelId)
+
+  if (!normalizedPixelId) {
     return
   }
 
@@ -130,9 +162,9 @@ function ensureMetaPixel(pixelId?: string) {
     document.head.appendChild(script)
   }
 
-  if (!registry.meta.has(pixelId)) {
-    win.fbq('init', pixelId)
-    registry.meta.add(pixelId)
+  if (!registry.meta.has(normalizedPixelId)) {
+    win.fbq('init', normalizedPixelId)
+    registry.meta.add(normalizedPixelId)
   }
 }
 
@@ -142,6 +174,7 @@ function trackPublicEvent(
   extraPayload?: Record<string, Any>
 ) {
   const win = window as Any
+  const hasMetaPixel = !!normalizeMetaPixelId(form.integrations?.metapixel)
   const payload = {
     formId: form.id,
     formName: form.name,
@@ -170,7 +203,7 @@ function trackPublicEvent(
     })
   }
 
-  if (form.integrations?.metapixel && typeof win.fbq === 'function') {
+  if (hasMetaPixel && typeof win.fbq === 'function') {
     if (eventName === 'heyform_view') {
       win.fbq('track', 'PageView')
     }
@@ -184,6 +217,7 @@ function trackPublicEvent(
 }
 
 export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId, experimentId }) => {
+  const hasInitializedRef = useRef(false)
   const openTokenRef = useRef<string>('')
   const passwordTokenRef = useRef<string>('')
   const leadTrackedRef = useRef(false)
@@ -407,7 +441,6 @@ export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId, ex
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         openTokenRef.current = await EndpointService.openForm(input)
-        trackPublicEvent(form, 'heyform_view')
         await syncSession().catch(console.error)
         return
       } catch (error) {
@@ -540,10 +573,17 @@ export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId, ex
   useEffect(() => {
     sendMessageToParent('FORM_LOADED')
 
+    if (hasInitializedRef.current) {
+      return
+    }
+
+    hasInitializedRef.current = true
+
     if (!form.suspended && form.settings?.active) {
       ensureGa4(form.integrations?.googleanalytics4)
       ensureGtm(form.integrations?.googletagmanager)
       ensureMetaPixel(form.integrations?.metapixel)
+      trackPublicEvent(form, 'heyform_view')
       void openForm().catch(console.error)
       initCaptcha().catch(console.error)
     }
