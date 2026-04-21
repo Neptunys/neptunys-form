@@ -1,0 +1,148 @@
+
+@import '@neptunysform-inc/form-renderer/style.css';
+
+.neptunysform-layout-float_left img,
+.neptunysform-layout-float_right img {
+  border-radius: 1rem;
+}
+
+.neptunysform-layout-split_left img {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.neptunysform-layout-split_right img {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+#neptunysform-render-root {
+  height: 100dvh;
+  min-height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  max-width: 100%;
+  background: transparent;
+}
+
+#neptunysform-render-root {
+  position: relative;
+  font-family: var(--neptunysform-font-family);
+  background-color: transparent;
+}
+
+.grecaptcha-badge {
+  bottom: 4rem !important;
+  z-index: 20;
+}
+
+// Report
+.neptunysform-report {
+  @apply text-sm;
+}
+
+.neptunysform-report-heading {
+  @apply text-3xl font-bold;
+  color: var(--neptunysform-report-heading);
+}
+
+.neptunysform-report-subheading {
+  @apply pb-4 text-sm/6 font-medium;
+  color: var(--neptunysform-report-heading-a60);
+}
+
+.neptunysform-report-question {
+  @apply text-sm/6 font-medium;
+  color: var(--neptunysform-report-question);
+}
+
+.neptunysform-report-meta {
+  @apply text-xs/6;
+  color: var(--neptunysform-report-question-a60);
+}
+
+.neptunysform-report-content {
+  @apply mt-2;
+}
+
+.neptunysform-report-chart {
+  @apply space-y-2;
+}
+
+.neptunysform-report-chart-item {
+  @apply relative rounded-md px-3 py-2 text-sm/6;
+  background: var(--neptunysform-report-chart-a025);
+}
+
+.neptunysform-report-chart-background {
+  @apply pointer-events-none absolute bottom-0 left-0 top-0 rounded-md;
+  background: var(--neptunysform-report-chart-a15);
+}
+
+.neptunysform-report-chart-content {
+  @apply relative flex items-center justify-between;
+  color: var(--neptunysform-report-question);
+}
+
+.neptunysform-report-chart-percent {
+  @apply font-medium;
+}
+
+.neptunysform-report-chart-count {
+  @apply text-xs/6;
+  color: var(--neptunysform-report-question-a60);
+}
+
+.neptunysform-report-border,
+.neptunysform-report-divide > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--neptunysform-report-question-a05);
+}
+
+.neptunysform-report-answer {
+  @apply flex items-center justify-between gap-4 py-2 text-sm/6;
+}
+
+.neptunysform-report-value {
+  @apply min-w-0 flex-1 whitespace-pre-line;
+  color: var(--neptunysform-report-question);
+}
+
+.neptunysform-report-datetime {
+  @apply text-xs;
+  color: var(--neptunysform-report-question-a60);
+}
+
+.neptunysform-report-input-value {
+  @apply whitespace-nowrap py-2 text-sm/6;
+  color: var(--neptunysform-report-question);
+}
+
+.neptunysform-report-input-datetime {
+  @apply whitespace-nowrap py-2 text-right text-xs/6;
+  color: var(--neptunysform-report-question-a60);
+}
+
+.neptunysform-report-pagination {
+  @apply mt-2 border-t py-2;
+  border-color: var(--neptunysform-report-question-a05);
+
+  [data-slot='info'] {
+    color: var(--neptunysform-report-question);
+  }
+
+  button {
+    border-color: rgba(0, 0, 0, 0.1);
+
+    &,
+    &:hover {
+      background: var(--neptunysform-report-question);
+      color: var(--neptunysform-report-button-text);
+    }
+
+    &:hover {
+      @apply opacity-80;
+    }
+  }
+}

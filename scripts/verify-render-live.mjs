@@ -11,8 +11,8 @@ function getArg(name, fallback) {
   return fallback;
 }
 
-const baseUrl = getArg('base-url', process.env.HEYFORM_BASE_URL || 'https://form.neptunysengine.com');
-const expectedDomain = getArg('expected-domain', process.env.HEYFORM_EXPECTED_COOKIE_DOMAIN || 'form.neptunysengine.com');
+const baseUrl = getArg('base-url', process.env.NEPTUNYSFORM_BASE_URL || 'https://form.neptunysengine.com');
+const expectedDomain = getArg('expected-domain', process.env.NEPTUNYSFORM_EXPECTED_COOKIE_DOMAIN || 'form.neptunysengine.com');
 const timeoutMs = Number(getArg('timeout-ms', '15000'));
 
 const endpoints = ['/', '/dashboard'];
@@ -118,7 +118,7 @@ function extractBundlePath(html) {
 }
 
 function extractRuntimeConfig(html) {
-  const runtimeMatch = html.match(/const\s+heyform\s*=\s*(\{[\s\S]*?\});/);
+  const runtimeMatch = html.match(/const\s+neptunysform\s*=\s*(\{[\s\S]*?\});/);
   if (!runtimeMatch) {
     return null;
   }

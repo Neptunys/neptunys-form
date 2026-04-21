@@ -1,0 +1,60 @@
+import { BadRequestException } from '@nestjs/common'
+
+import { Auth, Team, TeamGuard, User } from '@decorator'
+import { APP_HOMEPAGE_URL } from '@environments'
+import { InviteMemberInput } from '@graphql'
+import { helper } from '@neptunysform-inc/utils'
+import { TeamModel, UserModel } from '@model'
+import { Args, Mutation, Resolver } from '@nestjs/graphql'
+import { MailService, TeamService, UserService } from '@service'
+
+@Resolver()
+@Auth()
+export class InviteMemberResolver {
+  constructor(
+    private readonly userService: UserService,
+    private readonly teamService: TeamService,
+    private readonly mailService: MailService
+  ) {}
+
+  @Mutation(returns => Boolean)
+  @TeamGuard()
+  async inviteMember(
+    @Team() team: TeamModel,
+    @User() user: UserModel,
+    @Args('input') input: InviteMemberInput
+  ): Promise<boolean> {
+    if (!team.isOwner) {
+      throw new BadRequestException("You don't have permission to invite member")
+    }
+
+    let exists: string[] = []
+    const members = await this.teamService.findMembersInTeam(input.teamId)
+
+    if (helper.isValid(members)) {
+      exists = (await this.userService.findAll(members.map(member => member.memberId))).map(
+        row => row.email.toLowerCase()
+      )
+    }
+
+    const emails = helper.uniqueArray(
+      input.emails
+        .map(email => email.trim().toLowerCase())
+        .filter(email => helper.isEmail(email) && !exists.includes(email))
+    )
+
+    await this.teamService.createInvitations(input.teamId, emails)
+
+    await Promise.all(
+      emails.map(email =>
+        this.mailService.teamInvitation(email, {
+          userName: user.name,
+          teamName: team.name,
+          link: `${APP_HOMEPAGE_URL}/workspace/${team.id}/invitation/${team.inviteCode}`
+        })
+      )
+    )
+
+    return true
+  }
+}

@@ -4,14 +4,14 @@ services:
     runtime: docker
     plan: free
     region: oregon
-    rootDir: vendor/heyform-upstream
-    dockerfilePath: vendor/heyform-upstream/Dockerfile
-    dockerContext: vendor/heyform-upstream
+    rootDir: vendor/neptunysform-upstream
+    dockerfilePath: vendor/neptunysform-upstream/Dockerfile
+    dockerContext: vendor/neptunysform-upstream
     autoDeployTrigger: commit
     healthCheckPath: /health/ready
     buildFilter:
       paths:
-        - vendor/heyform-upstream/**
+        - vendor/neptunysform-upstream/**
         - render.yaml
         - DEPLOY_RENDER.md
     envVars:

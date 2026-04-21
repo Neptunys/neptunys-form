@@ -16,35 +16,35 @@ Why:
 ## Current Snapshot
 
 - Live readiness endpoint returned `status: ok` with Mongo and Redis both up during the latest audit check.
-- Render service metadata shows auto-deploy enabled in `.heyform-local/render-service.json`.
-- Render service metadata shows one instance and Free plan in `.heyform-local/render-service.json`.
-- Local restore and repoint helpers exist under `.heyform-local/tools/`.
-- A local Mongo export snapshot exists under `.heyform-local/repo-backups/heyform-local-mongo-export-20260415-200519/`.
+- Render service metadata shows auto-deploy enabled in `.neptunysform-local/render-service.json`.
+- Render service metadata shows one instance and Free plan in `.neptunysform-local/render-service.json`.
+- Local restore and repoint helpers exist under `.neptunysform-local/tools/`.
+- A local Mongo export snapshot exists under `.neptunysform-local/repo-backups/neptunysform-local-mongo-export-20260415-200519/`.
 
 ## Audit Table
 
 | Area | Status | Evidence | Meaning | Required action |
 | --- | --- | --- | --- | --- |
-| Live app health | Pass | `.heyform-local/render-service.json`, `render.yaml`, latest `/health/ready` check | Service is currently reachable and dependencies are up | Keep external monitoring on it |
-| Submission write ordering | Pass | `vendor/heyform-upstream/packages/server/src/resolver/endpoint/complete-submission.resolver.ts` | Submission is persisted before async queue work fires | Keep this invariant during future changes |
-| Render hosting tier | Fail | `.heyform-local/render-service.json`, `render.yaml` | Current service remains single-instance Free | Move off Free before serious campaign load |
-| Production release safety | Fail | `.heyform-local/render-service.json`, `render.yaml` | Auto-deploy from `main` is active | Use staging plus manual production promotion |
+| Live app health | Pass | `.neptunysform-local/render-service.json`, `render.yaml`, latest `/health/ready` check | Service is currently reachable and dependencies are up | Keep external monitoring on it |
+| Submission write ordering | Pass | `vendor/neptunysform-upstream/packages/server/src/resolver/endpoint/complete-submission.resolver.ts` | Submission is persisted before async queue work fires | Keep this invariant during future changes |
+| Render hosting tier | Fail | `.neptunysform-local/render-service.json`, `render.yaml` | Current service remains single-instance Free | Move off Free before serious campaign load |
+| Production release safety | Fail | `.neptunysform-local/render-service.json`, `render.yaml` | Auto-deploy from `main` is active | Use staging plus manual production promotion |
 | Mongo backup automation | Unverified | no provider-side backup evidence in workspace | Cannot prove backup schedule or PITR | Verify provider backup policy before cutover |
-| Restore tooling | Pass | `.heyform-local/tools/restore-mongo-backup.py` | Local restore capability exists | Run and document a fresh restore drill |
+| Restore tooling | Pass | `.neptunysform-local/tools/restore-mongo-backup.py` | Local restore capability exists | Run and document a fresh restore drill |
 | Fresh restore drill | Fail | no recent successful restore marker for current live data | Backup usefulness is not yet proven for this cutover cycle | Run restore test before any provider or plan move |
-| Local emergency backup snapshot | Partial | `.heyform-local/repo-backups/heyform-local-mongo-export-20260415-200519/manifest.txt` | There is at least one export snapshot, but it is not enough by itself | Create a fresh pre-cutover backup |
-| Upload object durability | Unverified | `vendor/heyform-upstream/packages/server/src/config/upload/index.ts` | App supports S3-backed uploads, but provider state is not verified here | Confirm live bucket, versioning, retention, and access escrow |
-| Upload fallback risk | Fail | `vendor/heyform-upstream/packages/server/src/config/upload/index.ts` | If S3 config is absent or broken, storage falls back away from durable object storage | Verify live `S3_*` config and bucket setup |
+| Local emergency backup snapshot | Partial | `.neptunysform-local/repo-backups/neptunysform-local-mongo-export-20260415-200519/manifest.txt` | There is at least one export snapshot, but it is not enough by itself | Create a fresh pre-cutover backup |
+| Upload object durability | Unverified | `vendor/neptunysform-upstream/packages/server/src/config/upload/index.ts` | App supports S3-backed uploads, but provider state is not verified here | Confirm live bucket, versioning, retention, and access escrow |
+| Upload fallback risk | Fail | `vendor/neptunysform-upstream/packages/server/src/config/upload/index.ts` | If S3 config is absent or broken, storage falls back away from durable object storage | Verify live `S3_*` config and bucket setup |
 | Secret escrow outside Render | Unverified | `render.yaml`, previous env-loss memory, no vault inventory yet | Cannot prove recovery secrets are safely stored outside Render | Complete `PRODUCTION_SECRETS_INVENTORY.md` |
-| Cookie baseline | Pass | `vendor/heyform-upstream/packages/server/src/config/cookie/index.ts` | Secure production cookies and `httpOnly` session cookies are already in place | Keep this as baseline |
-| CORS hardening | Fail | `vendor/heyform-upstream/packages/server/src/main.ts` | Any origin with credentials is too open for production | Replace with explicit allowlist |
-| Frame/CSP hardening | Fail | `vendor/heyform-upstream/packages/server/src/main.ts` | Frameguard and CSP are disabled globally | Replace with explicit embed-safe policy |
-| Global rate limiting | Partial | `vendor/heyform-upstream/packages/server/src/main.ts` | There is a limiter, but current threshold is generous | Tune for public campaign traffic |
-| Bot protection defaults | Fail | `vendor/heyform-upstream/packages/server/src/resolver/form/create-form.resolver.ts`, `vendor/heyform-upstream/packages/server/src/resolver/endpoint/complete-submission.resolver.ts` | New forms default to no captcha | Turn captcha on for campaign forms by default or by policy |
-| Spam filtering hook | Partial | `vendor/heyform-upstream/packages/server/src/service/endpoint.service.ts` | Akismet and recaptcha hooks exist, but usage depends on config and form settings | Verify live configuration and campaign defaults |
+| Cookie baseline | Pass | `vendor/neptunysform-upstream/packages/server/src/config/cookie/index.ts` | Secure production cookies and `httpOnly` session cookies are already in place | Keep this as baseline |
+| CORS hardening | Fail | `vendor/neptunysform-upstream/packages/server/src/main.ts` | Any origin with credentials is too open for production | Replace with explicit allowlist |
+| Frame/CSP hardening | Fail | `vendor/neptunysform-upstream/packages/server/src/main.ts` | Frameguard and CSP are disabled globally | Replace with explicit embed-safe policy |
+| Global rate limiting | Partial | `vendor/neptunysform-upstream/packages/server/src/main.ts` | There is a limiter, but current threshold is generous | Tune for public campaign traffic |
+| Bot protection defaults | Fail | `vendor/neptunysform-upstream/packages/server/src/resolver/form/create-form.resolver.ts`, `vendor/neptunysform-upstream/packages/server/src/resolver/endpoint/complete-submission.resolver.ts` | New forms default to no captcha | Turn captcha on for campaign forms by default or by policy |
+| Spam filtering hook | Partial | `vendor/neptunysform-upstream/packages/server/src/service/endpoint.service.ts` | Akismet and recaptcha hooks exist, but usage depends on config and form settings | Verify live configuration and campaign defaults |
 | External monitoring and alerting | Unverified | no telemetry provider integration found in server source | No evidence of robust alerting from workspace alone | Add uptime, deploy-failure, backup, and 5xx alerts |
-| Smoke test artifact | Partial | `.heyform-local/smoke/smoke-status.json` | A previous smoke run exists, but not as a formal pre-cutover check | Rerun after every infra change |
-| Rollback tooling | Partial | `.heyform-local/tools/set-render-mongo-uri.cjs` | URI rollback path exists for Mongo target changes | Pair it with a written rollback trigger and operator checklist |
+| Smoke test artifact | Partial | `.neptunysform-local/smoke/smoke-status.json` | A previous smoke run exists, but not as a formal pre-cutover check | Rerun after every infra change |
+| Rollback tooling | Partial | `.neptunysform-local/tools/set-render-mongo-uri.cjs` | URI rollback path exists for Mongo target changes | Pair it with a written rollback trigger and operator checklist |
 
 ## Highest-Risk Findings
 
@@ -52,8 +52,8 @@ Why:
 
 Evidence:
 
-- `.heyform-local/render-service.json` shows `numInstances: 1`
-- `.heyform-local/render-service.json` shows `plan: free`
+- `.neptunysform-local/render-service.json` shows `numInstances: 1`
+- `.neptunysform-local/render-service.json` shows `plan: free`
 - `render.yaml` declares `plan: free`
 
 Risk:
@@ -67,7 +67,7 @@ Risk:
 
 Evidence:
 
-- `.heyform-local/render-service.json` shows `autoDeploy: yes`
+- `.neptunysform-local/render-service.json` shows `autoDeploy: yes`
 - `render.yaml` shows `autoDeployTrigger: commit`
 
 Risk:
@@ -77,7 +77,7 @@ Risk:
 
 ### 3. Security policy is too permissive
 
-Evidence from `vendor/heyform-upstream/packages/server/src/main.ts`:
+Evidence from `vendor/neptunysform-upstream/packages/server/src/main.ts`:
 
 - CORS origin is set to `true`
 - credentials are enabled

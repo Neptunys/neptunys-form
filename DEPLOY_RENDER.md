@@ -1,8 +1,8 @@
 # Render Deploy
 
-This repo is set up to run the full HeyForm app as a single Render web service.
+This repo is set up to run the full NeptunysForm app as a single Render web service.
 
-That is the cleanest free deployment path because the HeyForm server handles:
+That is the cleanest free deployment path because the NeptunysForm server handles:
 
 - GraphQL
 - auth and session cookies
@@ -95,7 +95,7 @@ Example for Cloudflare R2:
 3. Render will detect `render.yaml` at the repo root.
 4. Fill in the prompted secret values.
 5. Deploy the `neptunys-form` web service.
-6. After the service is live, open the Render service URL and create the first HeyForm admin account.
+6. After the service is live, open the Render service URL and create the first NeptunysForm admin account.
 
 ## Deploy Guardrails (Run Every Time)
 
@@ -132,8 +132,8 @@ If the live guard fails right after deploy, trigger a manual redeploy in Render 
 
 The workspace now includes two local Python helpers for database continuity work:
 
-- `scripts/export-heyform-mongo-backup.py` to export a live Mongo database into gzipped JSONL collection files plus a manifest
-- `.heyform-local/tools/restore-mongo-backup.py` to restore one of those exports into another Mongo database
+- `scripts/export-neptunysform-mongo-backup.py` to export a live Mongo database into gzipped JSONL collection files plus a manifest
+- `.neptunysform-local/tools/restore-mongo-backup.py` to restore one of those exports into another Mongo database
 
 Use them to prove backup and restore before changing the live Mongo target.
 

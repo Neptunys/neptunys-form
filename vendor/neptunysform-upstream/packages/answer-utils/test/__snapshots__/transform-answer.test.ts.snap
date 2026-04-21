@@ -1,0 +1,187 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`should convert value to api object 1`] = `
+{
+  "(ID: EF9tbsJj3CNZ) 🐶 Choose the dog ": "Choice 3",
+  "(ID: MVlZfnmjZlye) 👋 Just choose one": "🍍 Pineapple",
+  "(ID: NqCpSqCpteiO) You sig here": " (https://neptunysform.net/sig.jpg)",
+  "(ID: NteSqF9g5cOa6) Input table": "Ivan, 16
+Jack Smith, 24",
+  "(ID: Svky0NLxkN7u) 🎉 Single Choose with other": "Other answer",
+  "(ID: X9F47wrnJImk) 👍 Do you agree with us ": "No",
+  "(ID: bcFvi1syrp66) ☎️  Your MobilePhone ": "+12015551023",
+  "(ID: g6Oayu81jkdqcte) Full name": "Ivan Woods",
+  "(ID: qCpteNRi2SiO) 🈴️ Upload you avatar ": "avatar.jpg (https://neptunysformhq.com/qCpteNRi2SiO_avatar.jpg)",
+  "(ID: qFN5cteg6SOa) 🪐 Rate here ": 5,
+  "(ID: u1NyLxkSvkN7) ✈ Multiple Choose with other": "Choice 2, Other answer",
+  "(ID: vyLu2NkN70xkS) Group Multiple Choose ": "Group Choice 1, Group Choice 2",
+  "(ID: yLxkSvkN7u2N) 🧱 Multiple Choose ": "Choice 2",
+}
+`;
+
+exports[`should convert value to flat json 1`] = `
+{
+  "EF9tbsJj3CNZ": "Choice 3",
+  "MVlZfnmjZlye": "🍍 Pineapple",
+  "NqCpSqCpteiO": " (https://neptunysform.net/sig.jpg)",
+  "NteSqF9g5cOa6": "Ivan, 16
+Jack Smith, 24",
+  "Svky0NLxkN7u": "Other answer",
+  "X9F47wrnJImk": "No",
+  "bcFvi1syrp66": "+12015551023",
+  "g6Oayu81jkdqcte": "Ivan Woods",
+  "qCpteNRi2SiO": "avatar.jpg (https://neptunysformhq.com/qCpteNRi2SiO_avatar.jpg)",
+  "qFN5cteg6SOa": 5,
+  "u1NyLxkSvkN7": "Choice 2, Other answer",
+  "vyLu2NkN70xkS": "Group Choice 1, Group Choice 2",
+  "yLxkSvkN7u2N": "Choice 2",
+}
+`;
+
+exports[`should convert value to html 1`] = `
+"<ol>
+<li>
+  <h3>Group Multiple Choose </h3>
+  <p>Group Choice 1, Group Choice 2</p>
+</li>
+
+<li>
+  <h3>☎️  Your MobilePhone </h3>
+  <p>+12015551023</p>
+</li>
+
+<li>
+  <h3>🧱 Multiple Choose </h3>
+  <p>Choice 2</p>
+</li>
+
+<li>
+  <h3>👋 Just choose one</h3>
+  <p>🍍 Pineapple</p>
+</li>
+
+<li>
+  <h3>👍 Do you agree with us </h3>
+  <p>No</p>
+</li>
+
+<li>
+  <h3>🐶 Choose the dog </h3>
+  <p>Choice 3</p>
+</li>
+
+<li>
+  <h3>🈴️ Upload you avatar </h3>
+  <p>avatar.jpg (https://neptunysformhq.com/qCpteNRi2SiO_avatar.jpg)</p>
+</li>
+
+<li>
+  <h3>You sig here</h3>
+  <p> (https://neptunysform.net/sig.jpg)</p>
+</li>
+
+<li>
+  <h3>🪐 Rate here </h3>
+  <p>5</p>
+</li>
+
+<li>
+  <h3>Full name</h3>
+  <p>Ivan Woods</p>
+</li>
+
+<li>
+  <h3>Input table</h3>
+  <p>Ivan, 16
+Jack Smith, 24</p>
+</li>
+
+<li>
+  <h3>✈ Multiple Choose with other</h3>
+  <p>Choice 2, Other answer</p>
+</li>
+
+<li>
+  <h3>🎉 Single Choose with other</h3>
+  <p>Other answer</p>
+</li>
+</ol>"
+`;
+
+exports[`should convert value to json 1`] = `
+{
+  "EF9tbsJj3CNZ": "Choice 3",
+  "MVlZfnmjZlye": "🍍 Pineapple",
+  "NqCpSqCpteiO": {
+    "filename": "",
+    "url": "https://neptunysform.net/sig.jpg",
+  },
+  "NteSqF9g5cOa6": [
+    {
+      "age": "16",
+      "name": "Ivan",
+    },
+    {
+      "age": "24",
+      "name": "Jack Smith",
+    },
+  ],
+  "Svky0NLxkN7u": "Other answer",
+  "X9F47wrnJImk": "No",
+  "bcFvi1syrp66": "+12015551023",
+  "g6Oayu81jkdqcte": {
+    "firstName": "Ivan",
+    "lastName": "Woods",
+  },
+  "qCpteNRi2SiO": {
+    "filename": "avatar.jpg",
+    "url": "https://neptunysformhq.com/qCpteNRi2SiO_avatar.jpg",
+  },
+  "qFN5cteg6SOa": 5,
+  "u1NyLxkSvkN7": "Choice 2, Other answer",
+  "vyLu2NkN70xkS": "Group Choice 1, Group Choice 2",
+  "yLxkSvkN7u2N": "Choice 2",
+}
+`;
+
+exports[`should convert value to text 1`] = `
+"Group Multiple Choose 
+Group Choice 1, Group Choice 2
+
+☎️  Your MobilePhone 
++12015551023
+
+🧱 Multiple Choose 
+Choice 2
+
+👋 Just choose one
+🍍 Pineapple
+
+👍 Do you agree with us 
+No
+
+🐶 Choose the dog 
+Choice 3
+
+🈴️ Upload you avatar 
+avatar.jpg (https://neptunysformhq.com/qCpteNRi2SiO_avatar.jpg)
+
+You sig here
+ (https://neptunysform.net/sig.jpg)
+
+🪐 Rate here 
+5
+
+Full name
+Ivan Woods
+
+Input table
+Ivan, 16
+Jack Smith, 24
+
+✈ Multiple Choose with other
+Choice 2, Other answer
+
+🎉 Single Choose with other
+Other answer"
+`;

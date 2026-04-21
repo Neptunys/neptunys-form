@@ -1,0 +1,78 @@
+import {
+  Answer,
+  HiddenFieldAnswer,
+  SubmissionCategoryEnum,
+  SubmissionStatusEnum,
+  Variable
+} from '@neptunysform-inc/shared-types-enums'
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
+import { Document } from 'mongoose'
+
+import { UserAgent } from '@utils'
+
+export enum ExportSubmissionFormatEnum {
+  CSV = 'csv',
+  PDF = 'pdf'
+}
+
+@Schema({
+  timestamps: true
+})
+export class SubmissionModel extends Document {
+  @Prop({ required: true, index: true })
+  formId: string
+
+  @Prop({ index: true })
+  sessionId?: string
+
+  @Prop({
+    type: String,
+    required: true,
+    enum: Object.values(SubmissionCategoryEnum),
+    default: SubmissionCategoryEnum.INBOX
+  })
+  category: SubmissionCategoryEnum
+
+  @Prop({ required: true })
+  title: string
+
+  @Prop({ type: [Object], default: [] })
+  answers: Answer[]
+
+  @Prop({ type: [Object], default: [] })
+  hiddenFields?: HiddenFieldAnswer[]
+
+  @Prop({ type: [Object], default: [] })
+  variables?: Variable[]
+
+  @Prop()
+  startAt?: number
+
+  @Prop()
+  endAt?: number
+
+  @Prop({ type: Boolean, default: false, index: true })
+  isPartial?: boolean
+
+  @Prop()
+  ip: string
+
+  @Prop({ type: Object })
+  userAgent: UserAgent
+
+  @Prop({
+    type: Number,
+    required: true,
+    enum: [
+      SubmissionStatusEnum.PUBLIC,
+      SubmissionStatusEnum.PRIVATE,
+      SubmissionStatusEnum.DELETED
+    ],
+    default: SubmissionStatusEnum.PUBLIC
+  })
+  status: SubmissionStatusEnum
+}
+
+export const SubmissionSchema = SchemaFactory.createForClass(SubmissionModel)
+
+SubmissionSchema.index({ formId: 1, sessionId: 1, isPartial: 1 })

@@ -11,5 +11,5 @@ server_build_exit.txt
 supabase/.temp/
 .env*.local
 live-app.js
-.heyform-local/
-vendor/heyform-upstream/packages/webapp/src/assets/fonts/
+.neptunysform-local/
+vendor/neptunysform-upstream/packages/webapp/src/assets/fonts/

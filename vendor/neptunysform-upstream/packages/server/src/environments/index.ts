@@ -1,0 +1,253 @@
+import { loadEnv } from '@heyooo-inc/env'
+import { CaptchaKindEnum } from '@neptunysform-inc/shared-types-enums'
+import * as fs from 'fs'
+import { resolve } from 'path'
+
+import { bytes, commonFileMimeTypes, helper, mime, toBool } from '@neptunysform-inc/utils'
+
+// environment
+export const NODE_ENV: string = process.env.NODE_ENV || 'development'
+export const ROOT_PATH = process.cwd()
+
+// Load environment
+loadEnv(NODE_ENV, ROOT_PATH)
+
+// When running from monorepo root (e.g. `pnpm dev`), also load package-local env files.
+const SERVER_ROOT_PATH = resolve(ROOT_PATH, 'packages/server')
+if (fs.existsSync(SERVER_ROOT_PATH)) {
+  loadEnv(NODE_ENV, SERVER_ROOT_PATH)
+}
+
+const RENDER_EXTERNAL_URL = process.env.RENDER_EXTERNAL_URL
+
+let parsedRedisUrl: URL | undefined
+
+if (process.env.REDIS_URL) {
+  try {
+    parsedRedisUrl = new URL(process.env.REDIS_URL)
+  } catch (_) {}
+}
+
+const parsedRedisDb = parsedRedisUrl?.pathname.replace(/^\/+/, '')
+
+const splitEnvList = (value?: string): string[] =>
+  (value || '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean)
+
+const parseUrl = (value?: string): URL | undefined => {
+  if (!value) {
+    return undefined
+  }
+
+  try {
+    return new URL(value)
+  } catch (_) {
+    return undefined
+  }
+}
+
+const compileRegexList = (value?: string): RegExp[] =>
+  splitEnvList(value)
+    .map(pattern => {
+      try {
+        return new RegExp(pattern)
+      } catch (_) {
+        return null
+      }
+    })
+    .filter((pattern): pattern is RegExp => pattern !== null)
+
+// App serve
+export const APP_LISTEN_PORT: number = +(process.env.APP_LISTEN_PORT || process.env.PORT || 9157)
+export const APP_LISTEN_HOSTNAME: string = process.env.APP_LISTEN_HOSTNAME || '0.0.0.0'
+export const APP_HOMEPAGE_URL: string =
+  process.env.APP_HOMEPAGE_URL ||
+  RENDER_EXTERNAL_URL ||
+  `http://${APP_LISTEN_HOSTNAME}:${APP_LISTEN_PORT}`
+const parsedHomepageUrl = parseUrl(APP_HOMEPAGE_URL)
+export const APP_HOMEPAGE_ORIGIN: string = parsedHomepageUrl?.origin || ''
+export const APP_DISABLE_REGISTRATION: boolean = helper.isTrue(process.env.APP_DISABLE_REGISTRATION)
+export const ADMIN_APPROVAL_EMAIL: string = (process.env.ADMIN_APPROVAL_EMAIL || '').toLowerCase()
+export const ENABLE_GOOGLE_FONTS: boolean =
+  process.env.ENABLE_GOOGLE_FONTS === undefined
+    ? true
+    : helper.isTrue(process.env.ENABLE_GOOGLE_FONTS)
+
+// Cookie
+export const COOKIE_MAX_AGE: string = process.env.COOKIE_MAX_AGE || '1y'
+export const COOKIE_DOMAIN: string =
+  process.env.COOKIE_DOMAIN || parsedHomepageUrl?.hostname || APP_LISTEN_HOSTNAME
+export const SESSION_KEY: string = process.env.SESSION_KEY
+export const SESSION_MAX_AGE: string = process.env.SESSION_MAX_AGE || '15d'
+export const REMEMBER_ME_SESSION_MAX_AGE: string =
+  process.env.REMEMBER_ME_SESSION_MAX_AGE || '30d'
+export const CORS_ALLOW_ALL_ORIGINS: boolean =
+  process.env.CORS_ALLOW_ALL_ORIGINS === undefined
+    ? NODE_ENV !== 'production'
+    : helper.isTrue(process.env.CORS_ALLOW_ALL_ORIGINS)
+export const CORS_ALLOW_CREDENTIALS: boolean =
+  process.env.CORS_ALLOW_CREDENTIALS === undefined
+    ? true
+    : helper.isTrue(process.env.CORS_ALLOW_CREDENTIALS)
+export const CORS_ALLOWED_ORIGINS: string[] = splitEnvList(process.env.CORS_ALLOWED_ORIGINS)
+export const CORS_ALLOWED_ORIGIN_REGEXES: RegExp[] = compileRegexList(
+  process.env.CORS_ALLOWED_ORIGIN_REGEX
+)
+
+// Email templates
+export const EMAIL_TEMPLATES_DIR: string = resolve(ROOT_PATH, 'resources/email-templates')
+
+// Static
+
+export const STATIC_DIR: string = resolve(ROOT_PATH, 'static')
+export const VIEW_DIR: string = resolve(ROOT_PATH, 'view')
+
+// Upload
+export const UPLOAD_FILE_TYPES: string[] = (
+  process.env.UPLOAD_FILE_TYPES
+    ? process.env.UPLOAD_FILE_TYPES.split(',').map(mime)
+    : commonFileMimeTypes
+) as any
+export const UPLOAD_FILE_SIZE: number = +process.env.UPLOAD_FILE_SIZE || bytes('10mb')
+export const UPLOAD_DIR: string = resolve(STATIC_DIR, 'upload')
+
+// Encryption
+export const FORM_ENCRYPTION_KEY: string = process.env.FORM_ENCRYPTION_KEY
+
+// Bcrypt
+export const BCRYPT_SALT: number = +process.env.BCRYPT_SALT || 10
+
+// Mongo
+export const MONGO_URI: string = process.env.MONGO_URI
+export const MONGO_USER: string = process.env.MONGO_USER
+export const MONGO_PASSWORD: string = process.env.MONGO_PASSWORD
+export const MONGO_SSL_CA_PATH: Buffer[] | undefined = process.env.MONGO_SSL_CA_PATH
+  ? [fs.readFileSync(process.env.MONGO_SSL_CA_PATH)]
+  : undefined
+
+// Redis
+export const REDIS_HOST: string = process.env.REDIS_HOST || parsedRedisUrl?.hostname || '127.0.0.1'
+export const REDIS_PORT: number = +(process.env.REDIS_PORT || parsedRedisUrl?.port || 6379)
+export const REDIS_USERNAME: string | undefined =
+  process.env.REDIS_USERNAME || parsedRedisUrl?.username || undefined
+export const REDIS_PASSWORD: string | undefined =
+  process.env.REDIS_PASSWORD || parsedRedisUrl?.password || undefined
+export const REDIS_DB: number = +(process.env.REDIS_DB || parsedRedisDb || 0)
+export const REDIS_TLS: boolean = process.env.REDIS_TLS
+  ? helper.isTrue(process.env.REDIS_TLS)
+  : parsedRedisUrl?.protocol === 'rediss:'
+
+// SMTP
+export const VERIFY_USER_EMAIL: boolean = toBool(process.env.VERIFY_USER_EMAIL, false)
+export const MAIL_PROVIDER: string = (process.env.MAIL_PROVIDER || 'smtp').trim().toLowerCase()
+export const SMTP_FROM: string = process.env.SMTP_FROM
+export const SMTP_HOST: string = process.env.SMTP_HOST
+export const SMTP_PORT: number = +process.env.SMTP_PORT
+export const SMTP_USER: string = process.env.SMTP_USER
+export const SMTP_PASSWORD: string = process.env.SMTP_PASSWORD
+export const SMTP_SERVERNAME: string = process.env.SMTP_SERVERNAME || null
+export const SMTP_SECURE: boolean = helper.isTrue(process.env.SMTP_SECURE)
+export const SMTP_IGNORE_CERT: boolean = helper.isTrue(process.env.SMTP_IGNORE_CERT)
+export const GMAIL_SERVICE_ACCOUNT_EMAIL: string = process.env.GMAIL_SERVICE_ACCOUNT_EMAIL
+export const GMAIL_SERVICE_ACCOUNT_PRIVATE_KEY: string = process.env.GMAIL_SERVICE_ACCOUNT_PRIVATE_KEY
+export const GMAIL_IMPERSONATED_USER: string = process.env.GMAIL_IMPERSONATED_USER
+
+// Google recaptcha
+export const GOOGLE_RECAPTCHA_KEY: string = process.env.GOOGLE_RECAPTCHA_KEY
+export const GOOGLE_RECAPTCHA_SECRET: string = process.env.GOOGLE_RECAPTCHA_SECRET
+
+// Akismet
+export const AKISMET_KEY: string = process.env.AKISMET_KEY
+
+// Social login
+export const APPLE_LOGIN_TEAM_ID: string = process.env.APPLE_LOGIN_TEAM_ID
+export const APPLE_LOGIN_WEB_CLIENT_ID: string = process.env.APPLE_LOGIN_WEB_CLIENT_ID
+export const APPLE_LOGIN_KEY_ID: string = process.env.APPLE_LOGIN_KEY_ID
+export const APPLE_LOGIN_PRIVATE_KEY_PATH: Buffer | undefined = process.env
+  .APPLE_LOGIN_PRIVATE_KEY_PATH
+  ? fs.readFileSync(process.env.APPLE_LOGIN_PRIVATE_KEY_PATH as any)
+  : undefined
+export const DISABLE_LOGIN_WITH_APPLE =
+  helper.isEmpty(APPLE_LOGIN_TEAM_ID) ||
+  helper.isEmpty(APPLE_LOGIN_WEB_CLIENT_ID) ||
+  helper.isEmpty(APPLE_LOGIN_KEY_ID) ||
+  helper.isEmpty(APPLE_LOGIN_PRIVATE_KEY_PATH)
+
+export const GOOGLE_LOGIN_CLIENT_ID: string = process.env.GOOGLE_LOGIN_CLIENT_ID
+export const GOOGLE_LOGIN_CLIENT_SECRET: string = process.env.GOOGLE_LOGIN_CLIENT_SECRET
+export const DISABLE_LOGIN_WITH_GOOGLE =
+  helper.isEmpty(GOOGLE_LOGIN_CLIENT_ID) || helper.isEmpty(GOOGLE_LOGIN_CLIENT_SECRET)
+
+// Stripe
+export const STRIPE_VERSION: string = process.env.STRIPE_VERSION
+export const STRIPE_PUBLISHABLE_KEY: string = process.env.STRIPE_PUBLISHABLE_KEY
+export const STRIPE_SECRET_KEY: string = process.env.STRIPE_SECRET_KEY
+export const STRIPE_CONNECT_CLIENT_ID: string = process.env.STRIPE_CONNECT_CLIENT_ID
+export const STRIPE_WEBHOOK_SECRET_KEY: string = process.env.STRIPE_WEBHOOK_SECRET_KEY
+
+// Bull
+export const BULL_JOB_ATTEMPTS: number = +process.env.BULL_JOB_ATTEMPTS || 3
+export const BULL_JOB_TIMEOUT: string = process.env.BULL_JOB_TIMEOUT || '1m'
+export const BULL_JOB_BACKOFF_DELAY: number = +process.env.BULL_JOB_BACKOFF_DELAY || 3000
+export const BULL_JOB_BACKOFF_TYPE: string = process.env.BULL_JOB_BACKOFF_TYPE || 'fixed'
+export const GLOBAL_RATE_LIMIT_WINDOW: string = process.env.GLOBAL_RATE_LIMIT_WINDOW || '1m'
+export const GLOBAL_RATE_LIMIT_MAX: number = +process.env.GLOBAL_RATE_LIMIT_MAX || 1000
+
+// Time limit on team invite links
+export const INVITE_CODE_EXPIRE_DAYS: number = +process.env.INVITE_CODE_EXPIRE_DAYS || 7
+
+// Form report rate
+export const FORM_REPORT_RATE: string = process.env.FORM_REPORT_RATE || '5s'
+
+// Verification code
+export const VERIFICATION_CODE_EXPIRE: string = process.env.VERIFICATION_CODE_EXPIRE || '10m'
+export const VERIFICATION_CODE_LIMIT: number = +process.env.VERIFICATION_CODE_LIMIT || 5
+export const VERIFY_EMAIL_RESEND_COOLDOWN: string =
+  process.env.VERIFY_EMAIL_RESEND_COOLDOWN || '60s'
+export const VERIFY_EMAIL_RESEND_DAILY_LIMIT: number =
+  +process.env.VERIFY_EMAIL_RESEND_DAILY_LIMIT || 20
+
+// Account Deletion
+export const ACCOUNT_DELETION_SCHEDULE_INTERVAL: string =
+  process.env.ACCOUNT_DELETION_SCHEDULE_INTERVAL || '2d'
+
+// Unsplash
+export const UNSPLASH_CLIENT_ID: string = process.env.UNSPLASH_CLIENT_ID
+
+// OpenAI
+export const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL
+export const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+export const OPENAI_GPT_MODEL = process.env.OPENAI_GPT_MODEL || 'gpt-4o-mini'
+
+// Security headers
+export const HELMET_ENABLE_CSP: boolean = helper.isTrue(process.env.HELMET_ENABLE_CSP)
+export const HELMET_CSP_REPORT_ONLY: boolean = helper.isTrue(process.env.HELMET_CSP_REPORT_ONLY)
+export const HELMET_FRAME_ANCESTORS: string[] = splitEnvList(process.env.HELMET_FRAME_ANCESTORS)
+export const HELMET_REFERRER_POLICY: string =
+  process.env.HELMET_REFERRER_POLICY || 'strict-origin-when-cross-origin'
+
+// New form protection defaults
+const DEFAULT_FORM_CAPTCHA_KIND_RAW = (process.env.DEFAULT_FORM_CAPTCHA_KIND || 'none')
+  .trim()
+  .toLowerCase()
+export const DEFAULT_FORM_CAPTCHA_KIND: CaptchaKindEnum =
+  (DEFAULT_FORM_CAPTCHA_KIND_RAW === 'google_recaptcha' ||
+    DEFAULT_FORM_CAPTCHA_KIND_RAW === 'google-recaptcha' ||
+    DEFAULT_FORM_CAPTCHA_KIND_RAW === 'recaptcha' ||
+    DEFAULT_FORM_CAPTCHA_KIND_RAW === 'google') &&
+  helper.isValid(process.env.GOOGLE_RECAPTCHA_KEY) &&
+  helper.isValid(process.env.GOOGLE_RECAPTCHA_SECRET)
+    ? CaptchaKindEnum.GOOGLE_RECAPTCHA
+    : CaptchaKindEnum.NONE
+export const DEFAULT_FORM_FILTER_SPAM: boolean =
+  helper.isTrue(process.env.DEFAULT_FORM_FILTER_SPAM) && helper.isValid(process.env.AKISMET_KEY)
+
+// S3
+export const S3_ENDPOINT = process.env.S3_ENDPOINT
+export const S3_REGION = process.env.S3_REGION
+export const S3_BUCKET = process.env.S3_BUCKET
+export const S3_ACCESS_KEY_ID = process.env.S3_ACCESS_KEY_ID
+export const S3_SECRET_ACCESS_KEY = process.env.S3_SECRET_ACCESS_KEY
+export const S3_PUBLIC_URL = process.env.S3_PUBLIC_URL

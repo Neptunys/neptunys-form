@@ -1,0 +1,69 @@
+import { Dom, buildUrl, getWindowQueryParams, isMobile } from './utils'
+
+import IconLoading from './assets/icon-loading.svg'
+import { AnyMap, EmbedConfig, StandardSettings } from './type'
+
+const STANDARD_TEMPLATE = `
+<div class="neptunysform__iframe-container">
+  <iframe src="{src}" allow="microphone; camera"></iframe>
+  <div class="neptunysform__loading-container">${IconLoading}</div>
+</div>
+`
+
+export class Standard<T extends StandardSettings> {
+  protected readonly formId: string
+  protected readonly containerId: string
+  protected readonly $container: Dom
+  protected readonly settings: EmbedConfig<T>['settings']
+  protected readonly formUrl: string
+
+  constructor(config: EmbedConfig<T>) {
+    const { formId, type, container, settings, hiddenFields } = config
+    const iframeSettings = settings as AnyMap
+
+    this.formUrl = buildUrl(settings.customUrl.replace(/\/+$/, `/${formId}?`), {
+      ...getWindowQueryParams(),
+      ...hiddenFields,
+      neptunysform_meta_bridge: '1',
+      transparentBackground: iframeSettings.transparentBackground,
+      hideAfterSubmit: iframeSettings.hideAfterSubmit
+    })
+
+    container.addClass('neptunysform__embed')
+    container.addClass(`neptunysform__embed-${type}`)
+
+    this.formId = formId
+    this.containerId = `neptunysform__${type}-${formId}`
+    this.$container = container
+    this.settings = settings
+
+    this.render()
+  }
+
+  protected render() {
+    this.$container.style('width', `${this.settings.width}${this.settings.widthType}`)
+
+    setTimeout(() => {
+      let height = `${this.settings.height}${this.settings.heightType}`
+
+      if (this.settings.autoResizeHeight) {
+        const rect = this.$container.rect()
+
+        height =
+          (isMobile ? window.innerHeight : Math.min(window.innerHeight, rect.width * 0.6)) + 'px'
+      }
+
+      this.$container.style('height', height)
+    }, 0)
+
+    this.$container.append(
+      Dom.compile(STANDARD_TEMPLATE, {
+        src: this.formUrl
+      })
+    )
+
+    this.$container.find('iframe').get(0).onload = () => {
+      this.$container.find('.neptunysform__loading-container').remove()
+    }
+  }
+}

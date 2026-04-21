@@ -33,8 +33,8 @@ const requiredPatterns = [
     regex: /autoDeployTrigger:\s*commit/,
   },
   {
-    description: 'buildFilter includes vendor/heyform-upstream',
-    regex: /buildFilter:[\s\S]*?paths:[\s\S]*?vendor\/heyform-upstream\/\*\*/,
+    description: 'buildFilter includes vendor/neptunysform-upstream',
+    regex: /buildFilter:[\s\S]*?paths:[\s\S]*?vendor\/neptunysform-upstream\/\*\*/,
   },
   {
     description: 'APP_HOMEPAGE_URL key exists',

@@ -1,6 +1,6 @@
 # Production Cutover Checklist
 
-This runbook is for moving the live Heyform stack to a safer production footing before client campaign traffic ramps up.
+This runbook is for moving the live Neptunysform stack to a safer production footing before client campaign traffic ramps up.
 
 Related documents:
 
@@ -33,12 +33,12 @@ Before cutover, production should have:
 
 These already exist in the workspace and should be used during prep:
 
-- Mongo export helper: `scripts/export-heyform-mongo-backup.py`
-- Mongo restore validation helper: `scripts/compare-heyform-mongo-counts.py`
-- Mongo restore helper: `.heyform-local/tools/restore-mongo-backup.py`
-- Render Mongo URI switch helper: `.heyform-local/tools/set-render-mongo-uri.cjs`
-- Existing backup snapshot: `.heyform-local/repo-backups/heyform-local-mongo-export-20260415-200519/`
-- Existing smoke status marker: `.heyform-local/smoke/smoke-status.json`
+- Mongo export helper: `scripts/export-neptunysform-mongo-backup.py`
+- Mongo restore validation helper: `scripts/compare-neptunysform-mongo-counts.py`
+- Mongo restore helper: `.neptunysform-local/tools/restore-mongo-backup.py`
+- Render Mongo URI switch helper: `.neptunysform-local/tools/set-render-mongo-uri.cjs`
+- Existing backup snapshot: `.neptunysform-local/repo-backups/neptunysform-local-mongo-export-20260415-200519/`
+- Existing smoke status marker: `.neptunysform-local/smoke/smoke-status.json`
 
 The last smoke marker currently records:
 
@@ -95,18 +95,18 @@ Create a fresh backup immediately before the move using one of these approaches:
 
 1. Atlas snapshot or backup export from the Mongo provider
 2. `mongodump` against the current production Mongo URI
-3. `scripts/export-heyform-mongo-backup.py` if `mongodump` is unavailable locally
+3. `scripts/export-neptunysform-mongo-backup.py` if `mongodump` is unavailable locally
 
 Example using `mongodump` if available:
 
 ```powershell
-mongodump --uri "<CURRENT_PRODUCTION_MONGO_URI>" --db heyform --archive="heyform-pre-cutover.archive.gz" --gzip
+mongodump --uri "<CURRENT_PRODUCTION_MONGO_URI>" --db neptunysform --archive="neptunysform-pre-cutover.archive.gz" --gzip
 ```
 
 Example using the repo helper:
 
 ```powershell
-python .\scripts\export-heyform-mongo-backup.py --uri "<CURRENT_PRODUCTION_MONGO_URI>" --database heyform --output-dir ".\.heyform-local\repo-backups\heyform-pre-cutover-20260418"
+python .\scripts\export-neptunysform-mongo-backup.py --uri "<CURRENT_PRODUCTION_MONGO_URI>" --database neptunysform --output-dir ".\.neptunysform-local\repo-backups\neptunysform-pre-cutover-20260418"
 ```
 
 Store that backup in two places:
@@ -121,7 +121,7 @@ Backups are not sufficient unless restore succeeds.
 Restore into a temporary Mongo database or temporary cluster using:
 
 ```powershell
-python .\.heyform-local\tools\restore-mongo-backup.py --uri "<TEMP_MONGO_URI>" --backup-dir ".\.heyform-local\repo-backups\heyform-local-mongo-export-20260415-200519" --database heyform_restore_test --marker ".\.heyform-local\tmp-restore-marker.json"
+python .\.neptunysform-local\tools\restore-mongo-backup.py --uri "<TEMP_MONGO_URI>" --backup-dir ".\.neptunysform-local\repo-backups\neptunysform-local-mongo-export-20260415-200519" --database neptunysform_restore_test --marker ".\.neptunysform-local\tmp-restore-marker.json"
 ```
 
 Verify after restore:
@@ -134,7 +134,7 @@ Verify after restore:
 You can compare source and restored collection counts with:
 
 ```powershell
-python .\scripts\compare-heyform-mongo-counts.py --source-uri "<CURRENT_PRODUCTION_MONGO_URI>" --source-database heyform --target-uri "<TEMP_MONGO_URI>" --target-database heyform_restore_test
+python .\scripts\compare-neptunysform-mongo-counts.py --source-uri "<CURRENT_PRODUCTION_MONGO_URI>" --source-database neptunysform --target-uri "<TEMP_MONGO_URI>" --target-database neptunysform_restore_test
 ```
 
 If restore is not tested, do not cut over.
@@ -204,7 +204,7 @@ The smoke test after cutover should verify:
 Use the existing helper:
 
 ```powershell
-node .\.heyform-local\tools\set-render-mongo-uri.cjs --uri "<NEW_PRODUCTION_MONGO_URI>"
+node .\.neptunysform-local\tools\set-render-mongo-uri.cjs --uri "<NEW_PRODUCTION_MONGO_URI>"
 ```
 
 That script updates Render `MONGO_URI` and triggers a `deploy_only` rollout.
