@@ -8,6 +8,7 @@ import {
   ENABLE_GOOGLE_FONTS,
   GOOGLE_RECAPTCHA_KEY,
   STRIPE_PUBLISHABLE_KEY,
+  VERIFY_USER_EMAIL,
   VERIFY_EMAIL_RESEND_COOLDOWN
 } from '@environments'
 import { hs } from '@neptunysform-inc/utils'
@@ -38,6 +39,7 @@ export class DashboardController {
       appDisableRegistration: APP_DISABLE_REGISTRATION,
       cookieDomain: COOKIE_DOMAIN,
       enableGoogleFonts: ENABLE_GOOGLE_FONTS,
+      verifyUserEmail: VERIFY_USER_EMAIL,
       stripePublishableKey: STRIPE_PUBLISHABLE_KEY,
       googleRecaptchaKey: GOOGLE_RECAPTCHA_KEY,
       verifyEmailResendCooldownSeconds: Math.ceil(hs(VERIFY_EMAIL_RESEND_COOLDOWN) / 1000)

@@ -624,6 +624,10 @@ export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId, ex
     }
   }
 
+  function handleThankYouVisible() {
+    sendMessageToParent('FORM_THANK_YOU_VISIBLE', buildEmbedEventPayload())
+  }
+
   async function initCaptcha() {
     // reCAPTCHA initializes lazily on submit.
   }
@@ -706,6 +710,7 @@ export const Renderer: FC<RendererProps> = ({ form, query, locale, contactId, ex
         onQuestionChange={handleQuestionChange}
         onLeadCapture={handleLeadCapture}
         onSubmit={handleSubmit}
+        onThankYouVisible={handleThankYouVisible}
       />
 
       {/* Custom css */}

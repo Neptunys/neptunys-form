@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { getAuthState, getDeviceId, setCookie, setDeviceId } from '@/utils'
 
 import { Toaster } from '@/components'
-import { REDIRECT_COOKIE_NAME } from '@/consts'
+import { REDIRECT_COOKIE_NAME, refreshRuntimeEnv } from '@/consts'
 import '@/i18n'
 import { AuthLayout } from '@/layouts'
 import '@/styles/globals.scss'
@@ -245,24 +245,24 @@ function hasInjectedRuntimeConfig() {
 }
 
 async function loadRuntimeConfig() {
-  if (hasInjectedRuntimeConfig()) {
-    return
+  if (!hasInjectedRuntimeConfig()) {
+    try {
+      const response = await fetch('/api/config', {
+        credentials: 'include'
+      })
+
+      if (response.ok) {
+        const config = await response.json()
+
+        window.neptunysform = {
+          ...(window.neptunysform || {}),
+          ...config
+        }
+      }
+    } catch (_) {}
   }
 
-  try {
-    const response = await fetch('/api/config', {
-      credentials: 'include'
-    })
-
-    if (response.ok) {
-      const config = await response.json()
-
-      window.neptunysform = {
-        ...(window.neptunysform || {}),
-        ...config
-      }
-    }
-  } catch (_) {}
+  refreshRuntimeEnv()
 }
 
 async function bootstrap() {

@@ -1,7 +1,7 @@
 import { IconArrowUpRight, IconCheck, IconClockHour4, IconShare3 } from '@tabler/icons-react'
 import clsx from 'clsx'
 import type { FC } from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { isURL, useTranslation } from '../utils'
 
@@ -33,6 +33,7 @@ export const ThankYou: FC<BlockProps> = ({ field, className, children, ...restPr
   const { state } = useStore()
   const { t } = useTranslation()
   const [shareState, setShareState] = useState<'idle' | 'copied' | 'shared'>('idle')
+  const hasReportedVisibleRef = useRef(false)
   const buttonLinkUrl = useMemo(
     () =>
       typeof field.properties?.buttonLinkUrl === 'string' && field.properties.buttonLinkUrl
@@ -52,6 +53,15 @@ export const ThankYou: FC<BlockProps> = ({ field, className, children, ...restPr
     (buttonLinkUrl ? t('Continue') : t('Submit another response'))
   const showPrimaryAction = Boolean(field.properties?.buttonText || buttonLinkUrl)
   const showResponsePanel = field.properties?.showResponsePanel !== false
+
+  useEffect(() => {
+    if (hasReportedVisibleRef.current) {
+      return
+    }
+
+    hasReportedVisibleRef.current = true
+    state.onThankYouVisible?.()
+  }, [state.onThankYouVisible])
 
   useEffect(() => {
     let redirectUrl = field.properties?.redirectUrl

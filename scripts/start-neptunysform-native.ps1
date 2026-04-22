@@ -163,6 +163,61 @@ function Get-MongodPathFromService {
   return $null
 }
 
+function Get-HttpStatusCode {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Url
+  )
+
+  try {
+    $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 10
+    return [int]$response.StatusCode
+  }
+  catch {
+    if ($_.Exception.Response) {
+      try {
+        return [int]$_.Exception.Response.StatusCode
+      }
+      catch {
+      }
+    }
+
+    return $null
+  }
+}
+
+function Get-LogTail {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Path,
+
+    [int]$LineCount = 40
+  )
+
+  if (-not (Test-Path $Path)) {
+    return 'missing'
+  }
+
+  return (Get-Content -Path $Path -Tail $LineCount | Out-String -Width 260).TrimEnd()
+}
+
+function Get-ExitedProcessName {
+  param(
+    [Parameter(Mandatory = $true)]
+    [hashtable]$ProcessState
+  )
+
+  foreach ($entry in $ProcessState.GetEnumerator()) {
+    $processId = $entry.Value.pid
+
+    if ($null -eq (Get-Process -Id $processId -ErrorAction SilentlyContinue)) {
+      return $entry.Key
+    }
+  }
+
+  return $null
+}
+
 if (-not (Test-MongoListener)) {
   $mongoService = Get-Service -Name MongoDB -ErrorAction SilentlyContinue
 
@@ -248,6 +303,75 @@ foreach ($spec in $processSpecs) {
 
 $statePath = Join-Path $stateRoot 'processes.json'
 $state | ConvertTo-Json -Depth 4 | Set-Content -Path $statePath -Encoding UTF8
+
+$readinessChecks = @(
+  @{
+    Name = 'App shell'
+    Url = "$homepageUrl/sign-up"
+    ExpectedStatus = 200
+  },
+  @{
+    Name = 'Runtime config'
+    Url = "$homepageUrl/api/config"
+    ExpectedStatus = 200
+  }
+)
+
+$deadline = (Get-Date).AddMinutes(4)
+$lastObservedStatuses = @{}
+$ready = $false
+
+while ((Get-Date) -lt $deadline) {
+  $exitedProcessName = Get-ExitedProcessName -ProcessState $state
+
+  if ($null -ne $exitedProcessName) {
+    $stderrPath = $state[$exitedProcessName].stderr
+    $stdoutPath = $state[$exitedProcessName].stdout
+    throw "Process '$exitedProcessName' exited during startup.`nSTDERR:`n$(Get-LogTail -Path $stderrPath)`n`nSTDOUT:`n$(Get-LogTail -Path $stdoutPath)"
+  }
+
+  $pendingChecks = @()
+
+  foreach ($check in $readinessChecks) {
+    $status = Get-HttpStatusCode -Url $check.Url
+    $lastObservedStatuses[$check.Name] = $status
+
+    if ($status -ne $check.ExpectedStatus) {
+      $pendingChecks += "$($check.Name) => $status"
+    }
+  }
+
+  if ($pendingChecks.Count -eq 0) {
+    $ready = $true
+    break
+  }
+
+  Start-Sleep -Milliseconds 500
+}
+
+if (-not $ready) {
+  Write-Host ''
+  Write-Host 'Startup readiness check failed:'
+
+  foreach ($check in $readinessChecks) {
+    Write-Host "  $($check.Name): expected $($check.ExpectedStatus), observed $($lastObservedStatuses[$check.Name])"
+  }
+
+  Write-Host ''
+  Write-Host 'Server stderr:'
+  Write-Host (Get-LogTail -Path $state.server.stderr)
+  Write-Host ''
+  Write-Host 'Server stdout:'
+  Write-Host (Get-LogTail -Path $state.server.stdout)
+  Write-Host ''
+  Write-Host 'Webapp stderr:'
+  Write-Host (Get-LogTail -Path $state.webapp.stderr)
+  Write-Host ''
+  Write-Host 'Webapp stdout:'
+  Write-Host (Get-LogTail -Path $state.webapp.stdout)
+
+  throw 'NeptunysForm local stack did not become ready within 4 minutes.'
+}
 
 Write-Host ''
 Write-Host 'NeptunysForm native local stack started:'

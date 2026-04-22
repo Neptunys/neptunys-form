@@ -362,6 +362,247 @@ const EmbedComponent = () => {
       customDomain: workspace?.customDomain
     })
 
+    if (embedType === 'standard') {
+      return `<div
+	id="${containerId}"
+	data-neptunysform-id="${formId}"
+	data-neptunysform-type="standard"
+	data-neptunysform-custom-url="${publicUrl}"
+	data-neptunysform-hiddenfield-neptunysform_meta_bridge="1"
+	${attributes.join('\n\t')}
+></div>
+<script>
+  (function () {
+    var container = document.getElementById(${JSON.stringify(containerId)});
+
+    if (!container) {
+      return;
+    }
+
+    var hiddenFieldPrefix = 'data-neptunysform-hiddenfield-';
+    var initializedPixels = {};
+    var latestPayload = null;
+    var isVisible = false;
+    var quizTracked = false;
+    var leadTracked = false;
+    var leadFallbackTimeoutId = 0;
+
+    function readSetting(name, fallbackValue) {
+      var value = container.getAttribute(name);
+      return value === null || value === '' ? fallbackValue : value;
+    }
+
+    function isTruthy(value) {
+      return value === '1' || value === 'true';
+    }
+
+    function dispatchNeptunysformEvent(eventName, payload) {
+      window.dispatchEvent(
+        new CustomEvent('neptunysform:event', {
+          detail: {
+            eventName: eventName,
+            payload: payload || {}
+          }
+        })
+      );
+    }
+
+    function buildQueryParams() {
+      var params = new URLSearchParams(window.location.search);
+
+      container.getAttributeNames().forEach(function (name) {
+        if (name.indexOf(hiddenFieldPrefix) !== 0) {
+          return;
+        }
+
+        var key = name.slice(hiddenFieldPrefix.length);
+
+        if (params.has(key)) {
+          return;
+        }
+
+        var value = container.getAttribute(name);
+
+        if (value !== null) {
+          params.set(key, value);
+        }
+      });
+
+      params.set('neptunysform_meta_bridge', '1');
+
+      var transparentBackground = readSetting('data-neptunysform-transparent-background', '');
+      if (transparentBackground) {
+        params.set('transparentBackground', transparentBackground);
+      }
+
+      var hideAfterSubmit = readSetting('data-neptunysform-hide-after-submit', '');
+      if (hideAfterSubmit) {
+        params.set('hideAfterSubmit', hideAfterSubmit);
+      }
+
+      return params;
+    }
+
+    function appendQuery(url, params) {
+      var query = params.toString();
+
+      if (!query) {
+        return url;
+      }
+
+      return url + (url.indexOf('?') === -1 ? '?' : '&') + query;
+    }
+
+    function ensureMetaPixel(payload) {
+      if (typeof window.fbq !== 'function' || !payload || !payload.metaPixelEnabled) {
+        return false;
+      }
+
+      var pixelId = typeof payload.metaPixelId === 'string' ? payload.metaPixelId.trim() : '';
+
+      if (pixelId && !initializedPixels[pixelId]) {
+        window.fbq('set', 'autoConfig', false, pixelId);
+        window.fbq('init', pixelId);
+        initializedPixels[pixelId] = true;
+      }
+
+      return true;
+    }
+
+    function maybeTrackQuizView() {
+      if (!isVisible || quizTracked || !latestPayload || !ensureMetaPixel(latestPayload)) {
+        return;
+      }
+
+      quizTracked = true;
+      dispatchNeptunysformEvent('FORM_VISIBLE', latestPayload);
+      window.fbq('trackCustom', 'Quizview', latestPayload);
+    }
+
+    function trackLead(payload) {
+      if (leadTracked || !payload || !ensureMetaPixel(payload)) {
+        return;
+      }
+
+      leadTracked = true;
+      window.fbq('track', 'Lead', payload);
+    }
+
+    function scheduleLeadFallback(payload) {
+      if (leadTracked || leadFallbackTimeoutId) {
+        return;
+      }
+
+      leadFallbackTimeoutId = window.setTimeout(function () {
+        leadFallbackTimeoutId = 0;
+        trackLead(payload);
+      }, 1000);
+    }
+
+    function cancelLeadFallback() {
+      if (!leadFallbackTimeoutId) {
+        return;
+      }
+
+      window.clearTimeout(leadFallbackTimeoutId);
+      leadFallbackTimeoutId = 0;
+    }
+
+    function syncFrameHeight() {
+      var widthType = readSetting('data-neptunysform-width-type', '%');
+      var widthValue = readSetting('data-neptunysform-width', '100');
+      var heightType = readSetting('data-neptunysform-height-type', 'px');
+      var heightValue = readSetting('data-neptunysform-height', '500');
+      var autoResizeHeight = isTruthy(readSetting('data-neptunysform-auto-resize-height', 'false'));
+
+      container.style.width = widthValue + widthType;
+
+      if (!autoResizeHeight) {
+        container.style.height = heightValue + heightType;
+        return;
+      }
+
+      var rect = container.getBoundingClientRect();
+      var containerWidth = rect.width || container.clientWidth || window.innerWidth;
+      var computedHeight =
+        window.innerWidth <= 768
+          ? window.innerHeight
+          : Math.min(window.innerHeight, containerWidth * 0.6);
+
+      container.style.height = Math.max(420, Math.round(computedHeight)) + 'px';
+    }
+
+    syncFrameHeight();
+
+    var iframe = document.createElement('iframe');
+    iframe.src = appendQuery(readSetting('data-neptunysform-custom-url', ''), buildQueryParams());
+    iframe.title = 'NeptunysForm';
+    iframe.allow = 'microphone; camera';
+    iframe.style.width = '100%';
+    iframe.style.height = '100%';
+    iframe.style.border = '0';
+    iframe.style.display = 'block';
+    iframe.style.background = 'transparent';
+
+    container.replaceChildren(iframe);
+
+    if (typeof window.IntersectionObserver === 'function') {
+      var observer = new IntersectionObserver(
+        function (entries) {
+          entries.forEach(function (entry) {
+            if (!entry.isIntersecting || entry.intersectionRatio < 0.35) {
+              return;
+            }
+
+            isVisible = true;
+            maybeTrackQuizView();
+            observer.disconnect();
+          });
+        },
+        {
+          threshold: [0.35]
+        }
+      );
+
+      observer.observe(container);
+    } else {
+      isVisible = true;
+    }
+
+    window.addEventListener('resize', syncFrameHeight);
+
+    window.addEventListener('message', function (event) {
+      if (event.source !== iframe.contentWindow) {
+        return;
+      }
+
+      var data = event.data;
+
+      if (!data || data.source !== 'NEPTUNYSFORM' || typeof data.eventName !== 'string') {
+        return;
+      }
+
+      var payload = data.payload && typeof data.payload === 'object' ? data.payload : {};
+      latestPayload = payload;
+
+      dispatchNeptunysformEvent(data.eventName, payload);
+      maybeTrackQuizView();
+
+      if (data.eventName === 'FORM_SUBMITTED') {
+        scheduleLeadFallback(payload);
+        return;
+      }
+
+      if (data.eventName === 'FORM_THANK_YOU_VISIBLE') {
+        cancelLeadFallback();
+        trackLead(payload);
+      }
+    });
+  })();
+</script>
+`
+    }
+
     return `<div
 	id="${containerId}"
 	data-neptunysform-id="${formId}"

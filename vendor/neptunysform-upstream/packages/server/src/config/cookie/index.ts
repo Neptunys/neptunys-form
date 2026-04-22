@@ -3,8 +3,19 @@ import { CookieOptions } from 'express'
 import { COOKIE_DOMAIN, COOKIE_MAX_AGE, NODE_ENV, SESSION_MAX_AGE } from '@environments'
 import { ms } from '@neptunysform-inc/utils'
 
+function resolveCookieDomain() {
+  const normalized = String(COOKIE_DOMAIN || '').toLowerCase().trim()
+
+  if (!normalized || normalized === 'localhost' || normalized === '127.0.0.1' || normalized === '::1') {
+    // Host-only cookies are required for local dev so both localhost and 127.0.0.1 work reliably.
+    return undefined
+  }
+
+  return COOKIE_DOMAIN
+}
+
 const commonOptions = {
-  domain: COOKIE_DOMAIN,
+  domain: resolveCookieDomain(),
   sameSite: 'lax',
   signed: false,
   secure: NODE_ENV === 'production'
