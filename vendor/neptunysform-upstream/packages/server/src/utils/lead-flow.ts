@@ -1244,15 +1244,23 @@ export function buildLeadSheetRow(payload: LeadCapturePayload) {
   return row
 }
 
-export function buildLeadAnswerSheetRows(payload: LeadCapturePayload): LeadAnswerSheetRow[] {
+export function buildLeadAnswerSheetRows(
+  payload: LeadCapturePayload,
+  allowedFieldIds?: string[]
+): LeadAnswerSheetRow[] {
   const submittedAt = formatUtcDateTime(payload.submittedAtIso)
-  const answerItems = helper.isValidArray(payload.answerItems)
+  const allAnswerItems = helper.isValidArray(payload.answerItems)
     ? payload.answerItems
     : Object.entries(payload.answersByTitle).map(([question, answer], index) => ({
         fieldId: String(index + 1),
         question,
         answer
       }))
+
+  const answerItems =
+    Array.isArray(allowedFieldIds) && allowedFieldIds.length > 0
+      ? allAnswerItems.filter(item => allowedFieldIds.includes(item.fieldId))
+      : allAnswerItems
 
   const row: LeadAnswerSheetRow = {
     'Lead ID': payload.submissionId,

@@ -105,6 +105,22 @@ export default function ProjectGoogleSheets() {
     [forms]
   )
 
+  const allAnswerFields = useMemo(
+    () =>
+      forms.flatMap(form =>
+        (form.drafts || []).map(field => ({
+          id: field.id,
+          label: (() => {
+            const t = field.title
+            if (!t) return field.label || field.id
+            if (typeof t === 'string') return t || field.label || field.id
+            return (t as any[])[0]?.insert || field.label || field.id
+          })()
+        }))
+      ),
+    [forms]
+  )
+
   const sourceOptions = useMemo(
     () => TRAFFIC_SOURCE_PRESETS.map(option => ({ value: option.value, label: option.label })),
     []
@@ -140,7 +156,12 @@ export default function ProjectGoogleSheets() {
   }, [baseShareLink, campaign, sourcePreset])
 
   const { loading: testLoading, runAsync: runTestAsync } = useRequest(
-    (values: AnyMap) => ProjectService.testGoogleSheets(projectId, buildGoogleSheetsConfig(googleSheetsApp, values)),
+    (values: AnyMap) => ProjectService.testGoogleSheets(projectId, {
+      ...buildGoogleSheetsConfig(googleSheetsApp, values),
+      ...(Array.isArray(values.includedAnswerFieldIds) && values.includedAnswerFieldIds.length > 0
+        ? { includedAnswerFieldIds: values.includedAnswerFieldIds }
+        : {})
+    }),
     {
       manual: true
     }
@@ -186,7 +207,12 @@ export default function ProjectGoogleSheets() {
   async function saveProjectGoogleSheets(values: AnyMap) {
     const enableGoogleSheetsLeadSync = Boolean(values.enableGoogleSheetsLeadSync)
     const googleSheetsLeadConfig = enableGoogleSheetsLeadSync
-      ? buildGoogleSheetsConfig(googleSheetsApp, values)
+      ? {
+          ...buildGoogleSheetsConfig(googleSheetsApp, values),
+          ...(Array.isArray(values.includedAnswerFieldIds) && values.includedAnswerFieldIds.length > 0
+            ? { includedAnswerFieldIds: values.includedAnswerFieldIds }
+            : {})
+        }
       : null
 
     await ProjectService.update(projectId, {
@@ -378,6 +404,35 @@ export default function ProjectGoogleSheets() {
                   {getVisibleIntegrationSettings(googleSheetsApp.id, googleSheetsApp.settings, draftValues).map(setting => (
                     <IntegrationSettingsItem key={setting.name} setting={setting} />
                   ))}
+
+                  {allAnswerFields.length > 0 && (
+                    <Form.Item
+                      name="includedAnswerFieldIds"
+                      label="Answer columns in Sheets"
+                      description="Choose which question answers appear as columns in the Answers tab. Leave all unchecked to include every answer."
+                    >
+                      <div className="mt-2 space-y-2">
+                        {allAnswerFields.map(field => (
+                          <label key={field.id} className="flex cursor-pointer items-center gap-x-2 text-sm">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-gray-300"
+                              checked={(draftValues.includedAnswerFieldIds || []).includes(field.id)}
+                              onChange={e => {
+                                const current: string[] = googleSheetsForm.getFieldValue('includedAnswerFieldIds') || []
+                                const next = e.target.checked
+                                  ? [...current, field.id]
+                                  : current.filter((id: string) => id !== field.id)
+                                googleSheetsForm.setFieldsValue({ includedAnswerFieldIds: next })
+                                setDraftValues((prev: AnyMap) => ({ ...prev, includedAnswerFieldIds: next }))
+                              }}
+                            />
+                            <span>{field.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </Form.Item>
+                  )}
 
                   <div className="flex justify-end">
                     <Button.Ghost

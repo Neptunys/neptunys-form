@@ -1557,7 +1557,7 @@ function groupTestPayloadsByDestination(config: GoogleSheetsConfig, payloads: Le
     const destination = resolveSheetDestination(config, payload)
     const key = [destination.spreadsheetId, destination.sheetName, destination.answersSheetName].join('::')
     const row = applyColumnMapping(buildLeadSheetRow(payload), payload, config)
-    const answerRows = buildLeadAnswerSheetRows(payload).map(answerRow => ({ ...answerRow }))
+    const answerRows = buildLeadAnswerSheetRows(payload, config.includedAnswerFieldIds).map(answerRow => ({ ...answerRow }))
     const existingGroup = groups.get(key) || {
       ...destination,
       leadHeaders: [...BASE_LEAD_SHEET_HEADERS],
@@ -1684,7 +1684,7 @@ async function writeLeadRow(
   const enrichedPayload = trafficSource ? { ...payload, trafficSource } : payload
   const row = applyColumnMapping(buildLeadSheetRow(enrichedPayload), enrichedPayload, config)
   const headers = normalizeHeaders(BASE_LEAD_SHEET_HEADERS, row)
-  const answerRows: LeadAnswerSheetRow[] = buildLeadAnswerSheetRows(enrichedPayload)
+  const answerRows: LeadAnswerSheetRow[] = buildLeadAnswerSheetRows(enrichedPayload, config.includedAnswerFieldIds)
 
   const worksheetInfo = await ensureWorksheet(sheets, destination.spreadsheetId, destination.sheetName)
   const answersWorksheetInfo = await ensureWorksheet(
