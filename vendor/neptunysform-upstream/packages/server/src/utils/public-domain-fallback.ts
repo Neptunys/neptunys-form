@@ -2,7 +2,9 @@ import { helper } from '@neptunysform-inc/utils'
 
 import { APP_HOMEPAGE_URL, COOKIE_DOMAIN } from '@environments'
 
-const PUBLIC_DOMAIN_ROOT_FORM_FALLBACKS: Record<string, string> = {}
+const PUBLIC_DOMAIN_ROOT_FORM_FALLBACKS: Record<string, string> = {
+  'form.neptunysengine.com': '5HSYliMx'
+}
 
 const CONFIGURED_RUNTIME_HOSTS = [APP_HOMEPAGE_URL, COOKIE_DOMAIN]
   .map(value => normalizeDomainHostname(value))
