@@ -89,7 +89,7 @@ export default function ProjectGoogleSheets() {
       return {
         googleSheetsApp: apps.find((app: AppType) => app.id === 'googlesheets'),
         leadFlow,
-        forms: formResult.forms as FormType[]
+        forms: formResult.data.forms as FormType[]
       }
     },
     {
