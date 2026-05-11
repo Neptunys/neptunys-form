@@ -1,14 +1,6 @@
 import { helper } from '@neptunysform-inc/utils'
 
-import { APP_HOMEPAGE_URL, COOKIE_DOMAIN } from '@environments'
-
-const PUBLIC_DOMAIN_ROOT_FORM_FALLBACKS: Record<string, string> = {
-  'form.neptunysengine.com': '5HSYliMx'
-}
-
-const CONFIGURED_RUNTIME_HOSTS = [APP_HOMEPAGE_URL, COOKIE_DOMAIN]
-  .map(value => normalizeDomainHostname(value))
-  .filter((value): value is string => helper.isValid(value))
+const PUBLIC_DOMAIN_ROOT_FORM_FALLBACKS: Record<string, string> = {}
 
 function normalizeDomainHostname(value?: string) {
   if (!helper.isValid(value)) {
@@ -43,10 +35,6 @@ export function hasPublicDomainRootFallbackHost(hostname?: string) {
 
   if (!normalizedHostname) {
     return false
-  }
-
-  if (CONFIGURED_RUNTIME_HOSTS.includes(normalizedHostname)) {
-    return true
   }
 
   return helper.isValid(getPublicDomainRootFallbackFormId(normalizedHostname))
