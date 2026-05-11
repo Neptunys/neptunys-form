@@ -618,6 +618,11 @@ export const FORMS_GQL = gql`
       suspended
       status
       updatedAt
+      drafts {
+        id
+        title
+        kind
+      }
     }
   }
 `

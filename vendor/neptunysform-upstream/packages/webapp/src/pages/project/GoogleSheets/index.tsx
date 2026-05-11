@@ -13,6 +13,7 @@ import {
 } from '@/utils'
 import { AppType, FormType } from '@/types'
 import { helper } from '@neptunysform-inc/utils'
+import { UNSELECTABLE_FIELD_KINDS } from '@neptunysform-inc/shared-types-enums'
 import { useWorkspaceStore } from '@/store'
 
 interface ProjectLeadFlowType {
@@ -69,6 +70,8 @@ export default function ProjectGoogleSheets() {
   const [sourcePreset, setSourcePreset] = useState(TRAFFIC_SOURCE_PRESETS[0].value)
   const [campaign, setCampaign] = useState('military_quiz')
   const [selectedFormId, setSelectedFormId] = useState<string>()
+  const [pickerFormId, setPickerFormId] = useState<string>()
+  const [fieldSelections, setFieldSelections] = useState<Record<string, string[]>>({})
 
   const {
     data,
@@ -175,18 +178,32 @@ export default function ProjectGoogleSheets() {
 
     setEnabled(nextEnabled)
     setDraftValues(initialValues)
+
+    const saved = leadFlow?.googleSheetsLeadConfig?.includedAnswerFieldsByForm
+    if (helper.isObject(saved)) {
+      setFieldSelections(saved as Record<string, string[]>)
+    }
   }, [initialValues])
 
   useEffect(() => {
     if (!selectedFormId && forms.length > 0) {
       setSelectedFormId(forms[0].id)
     }
-  }, [forms, selectedFormId])
+    if (!pickerFormId && forms.length > 0) {
+      setPickerFormId(forms[0].id)
+    }
+  }, [forms, selectedFormId, pickerFormId])
 
   async function saveProjectGoogleSheets(values: AnyMap) {
     const enableGoogleSheetsLeadSync = Boolean(values.enableGoogleSheetsLeadSync)
-    const googleSheetsLeadConfig = enableGoogleSheetsLeadSync
+    const baseConfig = enableGoogleSheetsLeadSync
       ? buildGoogleSheetsConfig(googleSheetsApp, values)
+      : null
+    const googleSheetsLeadConfig = baseConfig
+      ? {
+          ...baseConfig,
+          ...(Object.keys(fieldSelections).length > 0 ? { includedAnswerFieldsByForm: fieldSelections } : {})
+        }
       : null
 
     await ProjectService.update(projectId, {
@@ -378,6 +395,64 @@ export default function ProjectGoogleSheets() {
                   {getVisibleIntegrationSettings(googleSheetsApp.id, googleSheetsApp.settings, draftValues).map(setting => (
                     <IntegrationSettingsItem key={setting.name} setting={setting} />
                   ))}
+
+                  {forms.length > 0 && (() => {
+                    const pickerForm = forms.find(f => f.id === pickerFormId) || forms[0]
+                    const questionFields = (pickerForm?.drafts || []).filter(
+                      f => !UNSELECTABLE_FIELD_KINDS.includes(f.kind as any)
+                    )
+                    const pickerSelected = fieldSelections[pickerForm?.id || ''] || []
+
+                    return (
+                      <div className="space-y-3 rounded-xl border border-zinc-200/70 p-4">
+                        <div className="space-y-0.5">
+                          <div className="text-sm font-medium">Answer columns in leads sheet</div>
+                          <p className="text-secondary text-xs leading-5">Select a form then tick the answers you want as extra columns in the Leads tab. Uncheck all to show none from that form.</p>
+                        </div>
+
+                        <Select
+                          value={pickerFormId || pickerForm?.id}
+                          options={formOptions}
+                          placeholder="Select form"
+                          onChange={setPickerFormId}
+                        />
+
+                        {questionFields.length > 0 ? (
+                          <div className="space-y-1.5">
+                            {questionFields.map(field => {
+                              const label = (() => {
+                                const t = field.title
+                                if (!t) return field.id
+                                if (typeof t === 'string') return t || field.id
+                                return (t as any[])[0]?.insert || field.id
+                              })()
+
+                              return (
+                                <label key={field.id} className="flex cursor-pointer items-center gap-x-2 text-sm">
+                                  <input
+                                    type="checkbox"
+                                    className="h-4 w-4 shrink-0 rounded border-gray-300"
+                                    checked={pickerSelected.includes(field.id)}
+                                    onChange={e => {
+                                      const fid = pickerForm.id
+                                      const current = fieldSelections[fid] || []
+                                      const next = e.target.checked
+                                        ? [...current, field.id]
+                                        : current.filter(id => id !== field.id)
+                                      setFieldSelections(prev => ({ ...prev, [fid]: next }))
+                                    }}
+                                  />
+                                  <span className="truncate">{label}</span>
+                                </label>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-secondary text-xs">No questions found for this form.</p>
+                        )}
+                      </div>
+                    )
+                  })()}
 
                   <div className="flex justify-end">
                     <Button.Ghost
