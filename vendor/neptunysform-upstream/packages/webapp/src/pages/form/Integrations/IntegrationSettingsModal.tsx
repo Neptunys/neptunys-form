@@ -39,7 +39,8 @@ const SettingsForm: FC<IntegrationSettingsProps> = ({ app, onValuesChange }) => 
 
   const { formId } = useParam()
   const { closeModal } = useAppStore()
-  const { updateIntegration } = useFormStore()
+  const { updateIntegration, formFields } = useFormStore()
+  const [integrationForm] = Form.useForm()
   const initialValues = useMemo(() => getInitialValues(app), [app])
   const [draftValues, setDraftValues] = useState<AnyMap>(initialValues)
 
@@ -87,6 +88,7 @@ const SettingsForm: FC<IntegrationSettingsProps> = ({ app, onValuesChange }) => 
   return (
     <Form.Simple
       className="space-y-4"
+      form={integrationForm}
       initialValues={initialValues}
       fetch={fetch}
       refreshDeps={[formId, app.id]}
@@ -100,6 +102,33 @@ const SettingsForm: FC<IntegrationSettingsProps> = ({ app, onValuesChange }) => 
       {getVisibleIntegrationSettings(app.id, app.settings, draftValues).map(setting => (
         <IntegrationSettingsItem key={setting.name} setting={setting} />
       ))}
+
+      {app.id === 'googlesheets' && formFields.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-sm font-medium">Show answers in leads sheet</div>
+          <p className="text-secondary text-xs leading-5">Select which question answers appear as extra columns in the main Leads tab. Leave all unchecked to show none.</p>
+          <div className="space-y-1.5 pt-1">
+            {formFields.map((field: Any) => (
+              <label key={field.id} className="flex cursor-pointer items-center gap-x-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300"
+                  checked={(draftValues.includedAnswerFieldIds || []).includes(field.id)}
+                  onChange={e => {
+                    const current: string[] = integrationForm.getFieldValue('includedAnswerFieldIds') || []
+                    const next = e.target.checked
+                      ? [...current, field.id]
+                      : current.filter((id: string) => id !== field.id)
+                    integrationForm.setFieldsValue({ includedAnswerFieldIds: next })
+                    setDraftValues((prev: AnyMap) => ({ ...prev, includedAnswerFieldIds: next }))
+                  }}
+                />
+                <span className="truncate">{field.title || field.id}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       {app.id === 'googlesheets' && (
         <div className="flex justify-end">

@@ -4,6 +4,7 @@ import * as mongoose from 'mongoose'
 import { helper } from '@neptunysform-inc/utils'
 
 import {
+  applyIncludedAnswerColumns,
   buildLeadAnswerSheetRows,
   buildLeadCapturePayload,
   buildLeadSheetRow,
@@ -1556,8 +1557,12 @@ function groupTestPayloadsByDestination(config: GoogleSheetsConfig, payloads: Le
   for (const payload of payloads) {
     const destination = resolveSheetDestination(config, payload)
     const key = [destination.spreadsheetId, destination.sheetName, destination.answersSheetName].join('::')
-    const row = applyColumnMapping(buildLeadSheetRow(payload), payload, config)
-    const answerRows = buildLeadAnswerSheetRows(payload, config.includedAnswerFieldIds).map(answerRow => ({ ...answerRow }))
+    const row = applyIncludedAnswerColumns(
+      applyColumnMapping(buildLeadSheetRow(payload), payload, config),
+      payload,
+      config.includedAnswerFieldIds
+    )
+    const answerRows = buildLeadAnswerSheetRows(payload).map(answerRow => ({ ...answerRow }))
     const existingGroup = groups.get(key) || {
       ...destination,
       leadHeaders: [...BASE_LEAD_SHEET_HEADERS],
@@ -1682,9 +1687,13 @@ async function writeLeadRow(
   const sheets = google.sheets({ version: 'v4', auth })
   const trafficSource = await resolveTrafficSource(payload.formId, submission, payload)
   const enrichedPayload = trafficSource ? { ...payload, trafficSource } : payload
-  const row = applyColumnMapping(buildLeadSheetRow(enrichedPayload), enrichedPayload, config)
+  const row = applyIncludedAnswerColumns(
+    applyColumnMapping(buildLeadSheetRow(enrichedPayload), enrichedPayload, config),
+    enrichedPayload,
+    config.includedAnswerFieldIds
+  )
   const headers = normalizeHeaders(BASE_LEAD_SHEET_HEADERS, row)
-  const answerRows: LeadAnswerSheetRow[] = buildLeadAnswerSheetRows(enrichedPayload, config.includedAnswerFieldIds)
+  const answerRows: LeadAnswerSheetRow[] = buildLeadAnswerSheetRows(enrichedPayload)
 
   const worksheetInfo = await ensureWorksheet(sheets, destination.spreadsheetId, destination.sheetName)
   const answersWorksheetInfo = await ensureWorksheet(

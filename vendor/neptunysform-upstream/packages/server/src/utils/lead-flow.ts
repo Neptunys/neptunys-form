@@ -1244,23 +1244,15 @@ export function buildLeadSheetRow(payload: LeadCapturePayload) {
   return row
 }
 
-export function buildLeadAnswerSheetRows(
-  payload: LeadCapturePayload,
-  allowedFieldIds?: string[]
-): LeadAnswerSheetRow[] {
+export function buildLeadAnswerSheetRows(payload: LeadCapturePayload): LeadAnswerSheetRow[] {
   const submittedAt = formatUtcDateTime(payload.submittedAtIso)
-  const allAnswerItems = helper.isValidArray(payload.answerItems)
+  const answerItems = helper.isValidArray(payload.answerItems)
     ? payload.answerItems
     : Object.entries(payload.answersByTitle).map(([question, answer], index) => ({
         fieldId: String(index + 1),
         question,
         answer
       }))
-
-  const answerItems =
-    Array.isArray(allowedFieldIds) && allowedFieldIds.length > 0
-      ? allAnswerItems.filter(item => allowedFieldIds.includes(item.fieldId))
-      : allAnswerItems
 
   const row: LeadAnswerSheetRow = {
     'Lead ID': payload.submissionId,
@@ -1273,4 +1265,36 @@ export function buildLeadAnswerSheetRows(
   })
 
   return [row]
+}
+
+export function applyIncludedAnswerColumns(
+  row: Record<string, string | number | boolean>,
+  payload: LeadCapturePayload,
+  includedFieldIds?: string[]
+): Record<string, string | number | boolean> {
+  if (!Array.isArray(includedFieldIds) || includedFieldIds.length === 0) {
+    return row
+  }
+
+  const allAnswerItems = helper.isValidArray(payload.answerItems)
+    ? payload.answerItems
+    : Object.entries(payload.answersByTitle).map(([question, answer], index) => ({
+        fieldId: String(index + 1),
+        question,
+        answer
+      }))
+
+  const filtered = allAnswerItems.filter(item => includedFieldIds.includes(item.fieldId))
+
+  if (filtered.length === 0) {
+    return row
+  }
+
+  const updatedRow = { ...row }
+
+  filtered.forEach(item => {
+    updatedRow[item.question] = item.answer
+  })
+
+  return updatedRow
 }
