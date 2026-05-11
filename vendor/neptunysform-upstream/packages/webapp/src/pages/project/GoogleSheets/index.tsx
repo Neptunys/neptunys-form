@@ -420,8 +420,17 @@ export default function ProjectGoogleSheets() {
                         {questionFields.length > 0 ? (
                           <div className="space-y-1.5">
                             {questionFields.map(field => {
+                              const extractText = (node: any): string => {
+                                if (typeof node === 'string') return node
+                                if (Array.isArray(node)) {
+                                  const [first, second] = node
+                                  if (typeof first === 'string' && Array.isArray(second)) return second.map(extractText).join('')
+                                  return node.map(extractText).join('')
+                                }
+                                return ''
+                              }
                               const label = Array.isArray(field.title)
-                                ? (field.title as any[]).map(op => typeof op?.insert === 'string' ? op.insert : '').join('').trim() || field.id
+                                ? extractText(field.title).trim() || field.id
                                 : (field.title as string) || field.id
 
                               return (
