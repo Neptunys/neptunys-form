@@ -13,7 +13,6 @@ import {
 } from '@/utils'
 import { AppType, FormType } from '@/types'
 import { helper } from '@neptunysform-inc/utils'
-import { htmlUtils } from '@neptunysform-inc/answer-utils'
 import { UNSELECTABLE_FIELD_KINDS } from '@neptunysform-inc/shared-types-enums'
 import { useWorkspaceStore } from '@/store'
 
@@ -421,7 +420,9 @@ export default function ProjectGoogleSheets() {
                         {questionFields.length > 0 ? (
                           <div className="space-y-1.5">
                             {questionFields.map(field => {
-                              const label = htmlUtils.plain(field.title as string) || field.id
+                              const label = Array.isArray(field.title)
+                                ? (field.title as any[]).map(op => typeof op?.insert === 'string' ? op.insert : '').join('').trim() || field.id
+                                : (field.title as string) || field.id
 
                               return (
                                 <label key={field.id} className="flex cursor-pointer items-center gap-x-2 text-sm">
