@@ -1,5 +1,5 @@
 import { COUNTRIES, FlagIcon } from '@neptunysform-inc/form-renderer'
-import { IconBuilding, IconCheck, IconChevronDown, IconChevronRight, IconMail, IconPhone, IconUser } from '@tabler/icons-react'
+import { IconBuilding, IconBriefcase, IconCalendar, IconCheck, IconChevronDown, IconChevronRight, IconHash, IconHome, IconId, IconMail, IconMapPin, IconPhone, IconUser } from '@tabler/icons-react'
 import clsx from 'clsx'
 import type { FC, ReactNode } from 'react'
 import { useMemo } from 'react'
@@ -125,6 +125,27 @@ export const ContactInfo: FC<BlockProps> = ({ field, locale, ...restProps }) => 
             />
           </ContactFieldShell>
         )}
+
+        {((field.properties?.customFields as any[] | undefined) || [])
+          .filter((cf: any) => cf?.visible)
+          .map((cf: any, i: number) => {
+            const iconMap: Record<string, ReactNode> = {
+              user: <IconUser />, mail: <IconMail />, phone: <IconPhone />, building: <IconBuilding />,
+              briefcase: <IconBriefcase />, calendar: <IconCalendar />, hash: <IconHash />,
+              home: <IconHome />, id: <IconId />, pin: <IconMapPin />
+            }
+            const cfIcon = iconMap[cf.icon || 'hash'] ?? <IconHash />
+            return (
+              <ContactFieldShell key={i} enabled={showFieldIcons} icon={cfIcon} className="w-full">
+                <input
+                  type="text"
+                  className="neptunysform-input"
+                  placeholder={cf.label}
+                  disabled={true}
+                />
+              </ContactFieldShell>
+            )
+          })}
 
         {showConsent && (
           <div className="w-full pt-1">
