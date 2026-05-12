@@ -248,6 +248,40 @@ export default function ContactInfoSettings({ field }: RequiredSettingsProps) {
           />
         </div>
 
+        <div className="flex items-center justify-between">
+          <label className="text-sm/6 font-medium">Custom field (below email)</label>
+
+          <Switch
+            value={field.properties?.showCustomField ?? false}
+            onChange={value => updateProperties({ showCustomField: value })}
+          />
+        </div>
+
+        {(field.properties?.showCustomField) && (
+          <>
+            <div className="space-y-1">
+              <label className="text-sm/6">Custom field label</label>
+
+              <Input
+                placeholder="Additional information"
+                value={field.properties?.customFieldLabel}
+                onChange={value =>
+                  updateProperties({ customFieldLabel: typeof value === 'string' ? value.trim() || undefined : value })
+                }
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="text-sm/6">Custom field required</label>
+
+              <Switch
+                value={field.properties?.customFieldRequired ?? true}
+                onChange={value => updateProperties({ customFieldRequired: value })}
+              />
+            </div>
+          </>
+        )}
+
         {showConsent && (
           <>
             <div className="space-y-1">

@@ -78,6 +78,9 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
   const consentText = field.properties?.consentText || 'I consent to being contacted about my enquiry.'
   const consentLinkLabel = field.properties?.consentLinkLabel
   const consentLinkUrl = field.properties?.consentLinkUrl
+  const showCustomField = field.properties?.showCustomField ?? false
+  const customFieldLabel = field.properties?.customFieldLabel || 'Additional information'
+  const customFieldRequired = field.properties?.customFieldRequired ?? true
   const legacyRequired = Boolean(field.validations?.required)
   const firstNameRequired = showFirstName && (field.properties?.firstNameRequired ?? legacyRequired)
   const lastNameRequired = showLastName && (field.properties?.lastNameRequired ?? legacyRequired)
@@ -104,17 +107,7 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
   const hasRequiredFields =
     firstNameRequired || lastNameRequired || phoneNumberRequired || emailRequired || companyRequired
 
-  const isRequired = useMemo(() => {
-    if (hasRequiredFields || field.validations?.required) {
-      return true
-    }
-
-    if (state.errorFieldId === field.id) {
-      return hasFilled(state.values[field.id])
-    }
-
-    return false
-  }, [field.id, field.validations?.required, hasRequiredFields, state.errorFieldId, state.values])
+  const isRequired = true
 
   function getValues(values: any) {
     const normalizedValue = normalizeContactInfoValue(values)
@@ -129,7 +122,8 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
       email: normalizedValue.email,
       phoneNumber: normalizedValue.phoneNumber,
       company: normalizedValue.company,
-      ...(showConsent ? { consentAccepted: helper.isTrue((normalizedValue as any).consentAccepted) } : {})
+      ...(showConsent ? { consentAccepted: helper.isTrue((normalizedValue as any).consentAccepted) } : {}),
+      ...(showCustomField ? { customField: (normalizedValue as any).customField ?? '' } : {})
     }
   }
 
@@ -297,6 +291,22 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
                 ]}
               >
                 <Input name="organization" autoComplete="organization" placeholder={t('Company')} />
+              </FormField>
+            </ContactFieldShell>
+          )}
+
+          {showCustomField && (
+            <ContactFieldShell enabled={showFieldIcons} icon={<IconMail />} className="w-full">
+              <FormField
+                name="customField"
+                rules={[
+                  {
+                    required: customFieldRequired,
+                    message: t('This field is required')
+                  }
+                ]}
+              >
+                <Input placeholder={customFieldLabel} />
               </FormField>
             </ContactFieldShell>
           )}

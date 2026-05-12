@@ -119,7 +119,7 @@ export const Form: FC<FormProps> = ({
   const showBackButton = useMemo(() => state.scrollIndex! > 0, [state.scrollIndex])
 
   const isSkippable = useMemo(() => {
-    return !field.validations?.required && field.kind !== 'statement' && field.kind !== 'group'
+    return !field.validations?.required && field.kind !== 'statement' && field.kind !== 'group' && field.kind !== 'contact_info'
   }, [])
 
   async function handleFinish(formValue: any) {
