@@ -206,6 +206,59 @@ export default function ContactInfoSettings({ field }: RequiredSettingsProps) {
         />
       ))}
 
+      {(field.properties?.customFields as any[] | undefined || []).map((cf: any, idx: number) => (
+        <div key={idx} className="hf-card-muted flex items-center gap-2 rounded-xl px-3 py-2">
+          <Input
+            className="flex-1 text-sm"
+            placeholder="Field label"
+            value={cf.label}
+            onChange={val => {
+              const next = [...(field.properties?.customFields as any[] || [])]
+              next[idx] = { ...next[idx], label: val }
+              updateProperties({ customFields: next })
+            }}
+          />
+          <Tooltip label={cf.visible ? 'Hide this field' : 'Show this field'}>
+            <Button.Link size="sm" iconOnly className={cn(cf.visible ? 'text-primary' : 'text-secondary')} onClick={() => {
+              const next = [...(field.properties?.customFields as any[] || [])]
+              next[idx] = { ...next[idx], visible: !cf.visible }
+              updateProperties({ customFields: next })
+            }}>
+              {cf.visible ? <IconEye className="h-4 w-4" /> : <IconEyeOff className="h-4 w-4" />}
+            </Button.Link>
+          </Tooltip>
+          <Tooltip label={cf.required ? 'Make optional' : 'Make required'}>
+            <Button.Link size="sm" iconOnly className={cn(cf.required ? 'text-primary' : 'text-secondary')} onClick={() => {
+              const next = [...(field.properties?.customFields as any[] || [])]
+              next[idx] = { ...next[idx], required: !cf.required }
+              updateProperties({ customFields: next })
+            }}>
+              <IconStar className="h-4 w-4" />
+            </Button.Link>
+          </Tooltip>
+          <Tooltip label="Remove field">
+            <Button.Link size="sm" iconOnly className="text-secondary" onClick={() => {
+              const next = (field.properties?.customFields as any[] || []).filter((_: any, i: number) => i !== idx)
+              updateProperties({ customFields: next })
+            }}>
+              <IconTrash className="h-4 w-4" />
+            </Button.Link>
+          </Tooltip>
+        </div>
+      ))}
+
+      {((field.properties?.customFields as any[] | undefined)?.length ?? 0) < 4 && (
+        <Button.Ghost
+          className="w-full"
+          onClick={() => {
+            const next = [...(field.properties?.customFields as any[] || []), { label: 'Custom field', visible: true, required: true }]
+            updateProperties({ customFields: next })
+          }}
+        >
+          <IconPlus className="mr-1 h-4 w-4" /> Add custom field
+        </Button.Ghost>
+      )}
+
       {showPhoneNumber && (
         <div className="space-y-1">
           <label className="text-sm/6">Default country</label>
@@ -247,40 +300,6 @@ export default function ContactInfoSettings({ field }: RequiredSettingsProps) {
             onChange={value => updateProperties({ showConsent: value })}
           />
         </div>
-
-        <div className="flex items-center justify-between">
-          <label className="text-sm/6 font-medium">Custom field (below email)</label>
-
-          <Switch
-            value={field.properties?.showCustomField ?? false}
-            onChange={value => updateProperties({ showCustomField: value })}
-          />
-        </div>
-
-        {(field.properties?.showCustomField) && (
-          <>
-            <div className="space-y-1">
-              <label className="text-sm/6">Custom field label</label>
-
-              <Input
-                placeholder="Additional information"
-                value={field.properties?.customFieldLabel}
-                onChange={value =>
-                  updateProperties({ customFieldLabel: typeof value === 'string' ? value.trim() || undefined : value })
-                }
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <label className="text-sm/6">Custom field required</label>
-
-              <Switch
-                value={field.properties?.customFieldRequired ?? true}
-                onChange={value => updateProperties({ customFieldRequired: value })}
-              />
-            </div>
-          </>
-        )}
 
         {showConsent && (
           <>

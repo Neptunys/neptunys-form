@@ -278,13 +278,55 @@ class SharedPropertyInput {
   showResponsePanel?: boolean
 
   @Field({ nullable: true })
+  @IsOptional()
+  @IsIn(['classic', 'score_report'])
+  thankYouMode?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsIn(['speedometer', 'progress_bar', 'compact'])
+  reportVisualStyle?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsIn([10, 100])
+  reportScaleMax?: number
+
+  @Field({ nullable: true })
   @IsUrl()
   sourceUrl?: string
 
   @Field({ nullable: true })
   @IsOptional()
-  @IsUrl()
   buttonLinkUrl?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  reportScoreVariableId?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  reportScoreLabel?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  reportInsightTitle?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  reportInsightBody?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  reportVideoUrl?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  reportVideoTitle?: string
+
+  @Field({ nullable: true })
+  @IsOptional()
+  reportVideoDescription?: string
 
   @Field({ nullable: true })
   @IsOptional()
@@ -310,6 +352,10 @@ export class PropertyInput extends SharedPropertyInput {
   @IsOptional()
   @IsIn(['subtle', 'boxed'])
   consentStyle?: string
+
+  @Field(type => GraphQLJSON, { nullable: true })
+  @IsOptional()
+  customFields?: any[]
 
   @Field(type => [FormChildFieldInput], { nullable: true })
   fields?: FormField[]
@@ -1443,6 +1489,9 @@ export class PropertyType {
 
   @Field({ nullable: true })
   consentStyle?: string
+
+  @Field(type => GraphQLJSON, { nullable: true })
+  customFields?: any[]
 
   @Field({ nullable: true })
   defaultCountryCode?: string

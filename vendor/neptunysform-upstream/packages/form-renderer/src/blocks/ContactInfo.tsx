@@ -78,9 +78,8 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
   const consentText = field.properties?.consentText || 'I consent to being contacted about my enquiry.'
   const consentLinkLabel = field.properties?.consentLinkLabel
   const consentLinkUrl = field.properties?.consentLinkUrl
-  const showCustomField = field.properties?.showCustomField ?? false
-  const customFieldLabel = field.properties?.customFieldLabel || 'Additional information'
-  const customFieldRequired = field.properties?.customFieldRequired ?? true
+  const customFields: Array<{ label: string; visible: boolean; required: boolean }> =
+    Array.isArray(field.properties?.customFields) ? (field.properties!.customFields as any[]).filter((cf: any) => cf?.visible) : []
   const legacyRequired = Boolean(field.validations?.required)
   const firstNameRequired = showFirstName && (field.properties?.firstNameRequired ?? legacyRequired)
   const lastNameRequired = showLastName && (field.properties?.lastNameRequired ?? legacyRequired)
@@ -123,7 +122,7 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
       phoneNumber: normalizedValue.phoneNumber,
       company: normalizedValue.company,
       ...(showConsent ? { consentAccepted: helper.isTrue((normalizedValue as any).consentAccepted) } : {}),
-      ...(showCustomField ? { customField: (normalizedValue as any).customField ?? '' } : {})
+      ...(customFields.length > 0 ? Object.fromEntries(customFields.map((cf, i) => [`customField_${i}`, (normalizedValue as any)[`customField_${i}`] ?? ''])) : {})
     }
   }
 
@@ -295,21 +294,21 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
             </ContactFieldShell>
           )}
 
-          {showCustomField && (
-            <ContactFieldShell enabled={showFieldIcons} icon={<IconMail />} className="w-full">
+          {customFields.map((cf, i) => (
+            <ContactFieldShell key={i} enabled={showFieldIcons} icon={<IconMail />} className="w-full">
               <FormField
-                name="customField"
+                name={`customField_${i}`}
                 rules={[
                   {
-                    required: customFieldRequired,
+                    required: cf.required,
                     message: t('This field is required')
                   }
                 ]}
               >
-                <Input placeholder={customFieldLabel} />
+                <Input placeholder={cf.label} />
               </FormField>
             </ContactFieldShell>
-          )}
+          ))}
 
           {showConsent && (
             <FormField name="consentAccepted">
