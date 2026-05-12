@@ -228,6 +228,10 @@ class SharedPropertyInput {
   @IsOptional()
   mapToContacts?: boolean
 
+  @Field(type => GraphQLJSON, { nullable: true })
+  @IsOptional()
+  customFields?: any[]
+
   @Field({ nullable: true })
   @IsOptional()
   @IsIn(['subtle', 'boxed'])
