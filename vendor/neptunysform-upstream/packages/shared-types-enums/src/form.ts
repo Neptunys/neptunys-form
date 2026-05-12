@@ -184,6 +184,7 @@ export interface Property {
   showConsent?: boolean
   consentStyle?: 'subtle' | 'boxed'
   mapToContacts?: boolean
+  customFields?: Array<{ label: string; visible: boolean; required: boolean; icon?: string }>
 
   // PhoneNumber
   defaultCountryCode?: string
@@ -220,11 +221,21 @@ export interface Property {
   defaultChecked?: boolean
 
   // Thank You
+  thankYouMode?: 'classic' | 'score_report'
   showResponsePanel?: boolean
   buttonLinkUrl?: string
   redirectUrl?: string
   redirectOnCompletion?: boolean
   redirectDelay?: number
+  reportVisualStyle?: 'speedometer' | 'progress_bar' | 'compact'
+  reportScaleMax?: 10 | 100
+  reportScoreVariableId?: string
+  reportScoreLabel?: string
+  reportInsightTitle?: string
+  reportInsightBody?: string
+  reportVideoUrl?: string
+  reportVideoTitle?: string
+  reportVideoDescription?: string
 }
 
 export interface Validation {

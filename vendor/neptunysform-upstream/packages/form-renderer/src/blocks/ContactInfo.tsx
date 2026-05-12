@@ -1,4 +1,4 @@
-import { IconBuilding, IconMail, IconPhone, IconUser } from '@tabler/icons-react'
+import { IconBuilding, IconBriefcase, IconCalendar, IconHash, IconHome, IconId, IconMail, IconMapPin, IconPhone, IconUser } from '@tabler/icons-react'
 import clsx from 'clsx'
 import { isValidPhoneNumber } from 'libphonenumber-js'
 import type { FC, ReactNode } from 'react'
@@ -78,8 +78,9 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
   const consentText = field.properties?.consentText || 'I consent to being contacted about my enquiry.'
   const consentLinkLabel = field.properties?.consentLinkLabel
   const consentLinkUrl = field.properties?.consentLinkUrl
-  const customFields: Array<{ label: string; visible: boolean; required: boolean }> =
-    Array.isArray(field.properties?.customFields) ? (field.properties!.customFields as any[]).filter((cf: any) => cf?.visible) : []
+  const customFields = Array.isArray(field.properties?.customFields)
+    ? (field.properties!.customFields as Array<{ label: string; visible: boolean; required: boolean; icon?: string }>).filter(cf => cf?.visible)
+    : []
   const legacyRequired = Boolean(field.validations?.required)
   const firstNameRequired = showFirstName && (field.properties?.firstNameRequired ?? legacyRequired)
   const lastNameRequired = showLastName && (field.properties?.lastNameRequired ?? legacyRequired)
@@ -294,21 +295,24 @@ export const ContactInfo: FC<BlockProps> = ({ field, ...restProps }) => {
             </ContactFieldShell>
           )}
 
-          {customFields.map((cf, i) => (
-            <ContactFieldShell key={i} enabled={showFieldIcons} icon={<IconMail />} className="w-full">
-              <FormField
-                name={`customField_${i}`}
-                rules={[
-                  {
-                    required: cf.required,
-                    message: t('This field is required')
-                  }
-                ]}
-              >
-                <Input placeholder={cf.label} />
-              </FormField>
-            </ContactFieldShell>
-          ))}
+          {customFields.map((cf, i) => {
+            const iconMap: Record<string, ReactNode> = {
+              user: <IconUser />, mail: <IconMail />, phone: <IconPhone />, building: <IconBuilding />,
+              briefcase: <IconBriefcase />, calendar: <IconCalendar />, hash: <IconHash />,
+              home: <IconHome />, id: <IconId />, pin: <IconMapPin />
+            }
+            const cfIcon = iconMap[cf.icon || 'hash'] ?? <IconHash />
+            return (
+              <ContactFieldShell key={i} enabled={showFieldIcons} icon={cfIcon} className="w-full">
+                <FormField
+                  name={`customField_${i}`}
+                  rules={[{ required: cf.required, message: t('This field is required') }]}
+                >
+                  <Input placeholder={cf.label} />
+                </FormField>
+              </ContactFieldShell>
+            )
+          })}
 
           {showConsent && (
             <FormField name="consentAccepted">

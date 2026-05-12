@@ -206,44 +206,67 @@ export default function ContactInfoSettings({ field }: RequiredSettingsProps) {
         />
       ))}
 
-      {(field.properties?.customFields as any[] | undefined || []).map((cf: any, idx: number) => (
-        <div key={idx} className="hf-card-muted flex items-center gap-2 rounded-xl px-3 py-2">
-          <Input
-            className="flex-1 text-sm"
-            placeholder="Field label"
-            value={cf.label}
+      {((field.properties?.customFields as any[] | undefined) || []).map((cf: any, idx: number) => (
+        <div key={idx} className="hf-card-muted space-y-2 rounded-xl px-3 py-2">
+          <div className="flex items-center gap-2">
+            <Input
+              className="flex-1 text-sm"
+              placeholder="Field label"
+              value={cf.label}
+              onChange={val => {
+                const next = [...((field.properties?.customFields as any[]) || [])]
+                next[idx] = { ...next[idx], label: val }
+                updateProperties({ customFields: next })
+              }}
+            />
+            <Tooltip label={cf.visible ? 'Hide this field' : 'Show this field'}>
+              <Button.Link size="sm" iconOnly className={cn(cf.visible ? 'text-primary' : 'text-secondary')} onClick={() => {
+                const next = [...((field.properties?.customFields as any[]) || [])]
+                next[idx] = { ...next[idx], visible: !cf.visible }
+                updateProperties({ customFields: next })
+              }}>
+                {cf.visible ? <IconEye className="h-4 w-4" /> : <IconEyeOff className="h-4 w-4" />}
+              </Button.Link>
+            </Tooltip>
+            <Tooltip label={cf.required ? 'Make optional' : 'Make required'}>
+              <Button.Link size="sm" iconOnly className={cn(cf.required ? 'text-primary' : 'text-secondary')} onClick={() => {
+                const next = [...((field.properties?.customFields as any[]) || [])]
+                next[idx] = { ...next[idx], required: !cf.required }
+                updateProperties({ customFields: next })
+              }}>
+                <IconStar className="h-4 w-4" />
+              </Button.Link>
+            </Tooltip>
+            <Tooltip label="Remove field">
+              <Button.Link size="sm" iconOnly className="text-secondary" onClick={() => {
+                const next = ((field.properties?.customFields as any[]) || []).filter((_: any, i: number) => i !== idx)
+                updateProperties({ customFields: next })
+              }}>
+                <IconTrash className="h-4 w-4" />
+              </Button.Link>
+            </Tooltip>
+          </div>
+          <Select
+            className="w-full"
+            value={cf.icon || 'hash'}
+            options={[
+              { value: 'hash', label: '# Number / ID' },
+              { value: 'user', label: '👤 Person' },
+              { value: 'mail', label: '✉️ Email' },
+              { value: 'phone', label: '📞 Phone' },
+              { value: 'building', label: '🏢 Building' },
+              { value: 'briefcase', label: '💼 Briefcase' },
+              { value: 'calendar', label: '📅 Calendar' },
+              { value: 'home', label: '🏠 Home' },
+              { value: 'id', label: '🪪 ID Card' },
+              { value: 'pin', label: '📍 Location' },
+            ]}
             onChange={val => {
-              const next = [...(field.properties?.customFields as any[] || [])]
-              next[idx] = { ...next[idx], label: val }
+              const next = [...((field.properties?.customFields as any[]) || [])]
+              next[idx] = { ...next[idx], icon: val }
               updateProperties({ customFields: next })
             }}
           />
-          <Tooltip label={cf.visible ? 'Hide this field' : 'Show this field'}>
-            <Button.Link size="sm" iconOnly className={cn(cf.visible ? 'text-primary' : 'text-secondary')} onClick={() => {
-              const next = [...(field.properties?.customFields as any[] || [])]
-              next[idx] = { ...next[idx], visible: !cf.visible }
-              updateProperties({ customFields: next })
-            }}>
-              {cf.visible ? <IconEye className="h-4 w-4" /> : <IconEyeOff className="h-4 w-4" />}
-            </Button.Link>
-          </Tooltip>
-          <Tooltip label={cf.required ? 'Make optional' : 'Make required'}>
-            <Button.Link size="sm" iconOnly className={cn(cf.required ? 'text-primary' : 'text-secondary')} onClick={() => {
-              const next = [...(field.properties?.customFields as any[] || [])]
-              next[idx] = { ...next[idx], required: !cf.required }
-              updateProperties({ customFields: next })
-            }}>
-              <IconStar className="h-4 w-4" />
-            </Button.Link>
-          </Tooltip>
-          <Tooltip label="Remove field">
-            <Button.Link size="sm" iconOnly className="text-secondary" onClick={() => {
-              const next = (field.properties?.customFields as any[] || []).filter((_: any, i: number) => i !== idx)
-              updateProperties({ customFields: next })
-            }}>
-              <IconTrash className="h-4 w-4" />
-            </Button.Link>
-          </Tooltip>
         </div>
       ))}
 
